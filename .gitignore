@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# build outputs
+dist/
+build/
+
+# uploads (runtime data — never commit)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# editor / os
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# coverage / misc
+coverage/
+.vercel/
+.turbo/
+*.tsbuildinfo
