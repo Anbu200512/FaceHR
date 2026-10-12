@@ -1,8 +1,11 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const config = require('../config/config');
 
-const uploadsDir = path.join(__dirname, '..', 'uploads');
+// Storage location is configurable via UPLOAD_DIR so it can point at a
+// persistent disk on Render. Defaults to server/uploads for local development.
+const uploadsDir = config.uploadsDir;
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];

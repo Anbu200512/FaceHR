@@ -4,11 +4,23 @@ const pad = (n) => String(n).padStart(2, '0');
 export function resolveAsset(url) {
   if (!url) return null;
   if (/^https?:\/\//.test(url)) return url;
-  if (url.startsWith('/uploads/')) {
-    const base = import.meta.env.VITE_UPLOAD_BASE_URL || '';
-    return `${base}${url}`;
-  }
   if (url.startsWith('data:')) return url;
+  if (url.startsWith('/uploads/')) {
+    // Explicit upload base (e.g. https://api.onrender.com) wins.
+    const explicit = import.meta.env.VITE_UPLOAD_BASE_URL;
+    if (explicit) return `${explicit.replace(/\/$/, '')}${url}`;
+    // Otherwise derive it from an absolute API base so images still resolve when
+    // only VITE_API_BASE_URL is configured (e.g. https://api.onrender.com/api).
+    const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+    if (/^https?:\/\//.test(apiBase)) {
+      try {
+        return `${new URL(apiBase).origin}${url}`;
+      } catch {
+        /* fall through */
+      }
+    }
+    return url;
+  }
   return url;
 }
 

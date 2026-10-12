@@ -102,7 +102,7 @@ facehr/
 ```bash
 git clone <your-repo-url>
 cd facehr
- npm instal --workspaces
+npm install --workspaces
 ```
 
 ### 2. Configure environment
