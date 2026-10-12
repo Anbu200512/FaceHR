@@ -143,7 +143,7 @@ This starts **both** the API (`http://localhost:5000`) and the Vite client (`htt
 
 ## 🌐 Environment Variables
 
-Everything is documented in **`.env.example`** in the repo root.
+Everything is documented in **`.env.example`** in the repo root
 
 **Server (`server/.env`)**
 | Variable | Purpose | Default |
