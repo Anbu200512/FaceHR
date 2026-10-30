@@ -274,4 +274,5 @@ Use a real webcam (`localhost` or HTTPS) for face flows — browsers block `getU
 
 MIT © FaceHR
 #   F a c e H R  
+ #   F a c e H R  
  
