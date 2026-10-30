@@ -4,7 +4,7 @@
 
 **Smart HR Management with Face-Based Attendance**
 
-A full-stack **MERN** (MongoDB · Express · React · Node) Human Resources management system featuring **real face recognition check-in / check-out** in the browser, role-based dashboards, leave management, departments, reports and exports, dark mode, and a fully responsive UI.
+A full-stack **PERN** (PostgreSQL · Express · React · Node) Human Resources management system featuring **real face recognition check-in / check-out** in the browser, role-based dashboards, leave management, departments, reports and exports, dark mode, and a fully responsive UI.
 
 </div>
 
@@ -49,7 +49,7 @@ A full-stack **MERN** (MongoDB · Express · React · Node) Human Resources mana
 | Frontend  | React 18, Vite 6, Tailwind CSS 3, React Router 6, react-hook-form, axios, lucide-react, Recharts, jsPDF |
 | Face AI   | face-api.js 0.22 (tinyFaceDetector + faceLandmark68 + faceRecognitionNet) — descriptors computed client-side |
 | Backend   | Node.js, Express |
-| Database  | MongoDB (Mongoose) |
+| Database  | PostgreSQL 14+ via Prisma ORM |
 | Auth      | JWT + bcrypt (rate-limited login/register endpoints) |
 | Build     | npm workspaces (`client/` + `server/`) |
 
@@ -64,14 +64,13 @@ facehr/
 ├── server/
 │   ├── .env                  # local backend config (dev only)
 │   ├── server.js             # express entry (mounts /api routes, seeds)
-│   ├── config/               # config, db, seed (default admin)
-│   ├── models/               # User, Employee, Department, Designation,
-│   │                         # Attendance, FaceProfile, Leave, Notification, Setting
-│   ├── middleware/           # auth, upload, rateLimiter, validate, error
+│   ├── prisma/               # schema.prisma + seed script
+│   ├── config/               # config, prisma client, db (connect), seed (default admin)
+│   ├── middleware/           # auth, upload, rateLimiter, validate, error, mongoCompat
 │   ├── services/             # faceService, faceVerification, attendanceService,
-│   │                         # notificationService
+│   │                         # notificationService, attendanceSettingsService
 │   ├── controllers/          # auth, employee, face, attendance, report, leave,
-│   │                         # department, designation, notification, setting
+│   │                         # department, designation, notification, setting, dashboard
 │   ├── routes/
 │   └── face-models/          # downloaded face-api weights (server side, optional)
 └── client/
@@ -95,8 +94,8 @@ facehr/
 ## 🚀 Getting Started (Local)
 
 ### Prerequisites
-- **Node.js ≥ 18** (tested on v22)
-- **MongoDB** running locally (`mongod`), or a **MongoDB Atlas** connection string.
+- **Node.js ≥ 18** (tested on v22/v24)
+- **PostgreSQL 14+** running locally, or a hosted PostgreSQL URL (Neon, Supabase, Render).
 
 ### 1. Clone & install
 ```bash
@@ -110,7 +109,17 @@ npm install --workspaces
 # Backend — copy and edit, then move into server/
 cp .env.example server/.env
 ```
-Fill in `MONGODB_URI`, `JWT_SECRET`, etc. (see [Environment Variables](#environment-variables)).
+Fill in `DATABASE_URL`, `JWT_SECRET`, etc. (see [Environment Variables](#environment-variables)).
+
+Then create the database schema (from the repo root):
+```bash
+# Option A (recommended): versioned migration
+npm run db:migrate --workspace server
+
+# Option B: quick sync for local prototyping
+npm run db:push --workspace server
+```
+Default departments, locations, designations, settings and the admin account are seeded automatically on first server start (or run `npm run db:seed --workspace server`).
 
 ```bash
 # Frontend
@@ -150,7 +159,7 @@ Everything is documented in **`.env.example`** in the repo root
 |----------|---------|---------|
 | `PORT` | API port | `5000` |
 | `NODE_ENV` | `development` / `production` | `development` |
-| `MONGODB_URI` | MongoDB connection string | `mongodb://127.0.0.1:27017/facehr` |
+| `DATABASE_URL` | PostgreSQL connection string (`postgresql://user:password@host:5432/facehr?schema=public`) | — |
 | `JWT_SECRET` | JWT signing secret (use a long random string) | — |
 | `JWT_EXPIRES_IN` | Token lifetime | `7d` |
 | `CLIENT_URL` | Allowed CORS origin(s) | `http://localhost:5173` |
@@ -200,10 +209,14 @@ Leaf CRUD (+ `approve`/`reject`), Department & Designation CRUD, `GET /leaves/mi
 
 ## ☁️ Deployment
 
-A proven, low-cost setup: **Vercel (frontend)** + **Render / Railway (API)** + **MongoDB Atlas (database)**.
+A proven, low-cost setup: **Vercel (frontend)** + **Render / Railway (API)** + **Neon / Supabase / Render PostgreSQL (database)**.
 
-### MongoDB Atlas
-1. Create a free cluster, add a database user, and copy the connection string into `MONGODB_URI`.
+### PostgreSQL
+1. Create a database (Neon, Supabase, Render Postgres, or self-hosted) and copy its connection string into `DATABASE_URL`.
+2. Run the migrations against the production database (add this to the API build/pre-deploy step):
+   ```bash
+   npm run db:deploy --workspace server
+   ```
 
 ### API (Render / Railway)
 1. Set the root build/start commands to the `server` workspace:
@@ -239,12 +252,11 @@ A proven, low-cost setup: **Vercel (frontend)** + **Render / Railway (API)** + *
 
 ## 🧪 Testing
 
-The backend was validated with an in-memory MongoDB harness (35 smoke tests) covering auth, employee CRUD, face registration, check-in/out, leaves, departments, and reports:
+There is no bundled automated test suite. Verify a local setup end-to-end:
 
-```bash
-# Backend smoke suite (in-memory Mongo; requires the temp harness path)
-node <path-to>/smoke.js
-```
+1. `GET /api/health` returns `{ success: true }`.
+2. Log in with the seeded admin account.
+3. Create an employee, then check in/out and review the dashboard/report views.
 
 Use a real webcam (`localhost` or HTTPS) for face flows — browsers block `getUserMedia` on insecure origins except `localhost`.
 
@@ -261,3 +273,5 @@ Use a real webcam (`localhost` or HTTPS) for face flows — browsers block `getU
 ## 📄 License
 
 MIT © FaceHR
+#   F a c e H R  
+ 
