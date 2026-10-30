@@ -4,6 +4,18 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const env = process.env.NODE_ENV || 'development';
 const isDev = env !== 'production';
 
+// Fail fast in production: never boot with dev fallbacks for critical secrets.
+if (!isDev) {
+  const missing = ['DATABASE_URL', 'JWT_SECRET'].filter((k) => !process.env[k]);
+  if (missing.length) {
+    console.error(
+      `[FaceHR] FATAL: missing required production environment variable(s): ${missing.join(', ')}. ` +
+        'Set them in the Render dashboard (Environment section) and redeploy.'
+    );
+    process.exit(1);
+  }
+}
+
 // Allowed frontend origins. In production only the configured CLIENT_URL(s) are
 // allowed; local dev origins are appended automatically outside production.
 const clientUrls = (process.env.CLIENT_URL || 'http://localhost:5173')

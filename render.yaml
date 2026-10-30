@@ -1,0 +1,41 @@
+# Render blueprint for the FaceHR API.
+# First deploy: create a "Web Service" from this repo — Render picks this up
+# automatically. Existing service: copy the values below into the dashboard.
+services:
+  - type: web
+    name: facehr-api
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    # Applies committed Prisma migrations on every deploy (before new code goes live).
+    releaseCommand: npm run db:deploy
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # --- set these in the Render dashboard (sync: false = you type the value) ---
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        sync: false # your Vercel URL, e.g. https://facehr.vercel.app
+      - key: UPLOAD_BASE_URL
+        sync: false # this service's public URL, e.g. https://facehr-api.onrender.com
+      - key: ADMIN_PASSWORD
+        sync: false # strong password for the seeded admin account
+      # --- optional (sensible defaults already in code) ---
+      - key: ADMIN_EMAIL
+        value: admin@facehr.com
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: FACE_MATCH_THRESHOLD
+        value: "0.6"
+      - key: OFFICE_START_TIME
+        value: "09:30"
+      - key: HALF_DAY_THRESHOLD_HOURS
+        value: "4"
+      - key: COMPANY_NAME
+        value: FaceHR

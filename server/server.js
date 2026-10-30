@@ -50,11 +50,18 @@ try {
 }
 
 // ---- routes ----
-app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'FaceHR API is running',
+app.get('/api/health', async (req, res) => {
+  let db = 'up';
+  try {
+    await require('./config/prisma').$queryRaw`SELECT 1`;
+  } catch (e) {
+    db = 'down';
+  }
+  res.status(db === 'down' ? 503 : 200).json({
+    success: db === 'up',
+    message: db === 'up' ? 'FaceHR API is running' : 'Database unreachable',
     timestamp: new Date().toISOString(),
+    db,
     face: faceService.status(),
   });
 });
@@ -94,13 +101,29 @@ const start = async () => {
       console.log(`[FaceHR] API running on http://localhost:${config.port}`);
     });
 
-    const shutdown = async () => {
-      server.close();
+    let shuttingDown = false;
+    const shutdown = async (signal) => {
+      if (shuttingDown) return;
+      shuttingDown = true;
+      console.log(`[FaceHR] ${signal} received, shutting down...`);
+      // Give in-flight requests up to 10s to finish before force-exit.
+      const forceExit = setTimeout(() => process.exit(1), 10000);
+      forceExit.unref();
+      await new Promise((resolve) => server.close(resolve));
       await connectDB.disconnectDB();
       process.exit(0);
     };
-    process.on('SIGINT', shutdown);
-    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+    // Last-resort handlers: log instead of dying silently (Render restarts the process).
+    process.on('unhandledRejection', (reason) => {
+      console.error('[FaceHR] Unhandled promise rejection:', reason);
+    });
+    process.on('uncaughtException', (err) => {
+      console.error('[FaceHR] Uncaught exception:', err);
+      process.exit(1);
+    });
   } catch (err) {
     console.error('[FaceHR] Failed to start server:', err.message);
     process.exit(1);

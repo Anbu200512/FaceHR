@@ -71,16 +71,14 @@ async function seedAdmin() {
 }
 
 async function seedSettings() {
-  await prisma.setting.upsert({
-    where: { key: 'officeStartTime' },
-    update: { value: config.officeStartTime },
-    create: { key: 'officeStartTime', value: config.officeStartTime },
-  });
-  await prisma.setting.upsert({
-    where: { key: 'halfDayThresholdHours' },
-    update: { value: config.halfDayThresholdHours },
-    create: { key: 'halfDayThresholdHours', value: config.halfDayThresholdHours },
-  });
+  // Seed defaults only when the key does NOT exist yet, so values an admin
+  // changes in the UI survive redeploys/restarts.
+  const ensure = async (key, value) => {
+    const existing = await prisma.setting.findUnique({ where: { key } });
+    if (!existing) await prisma.setting.create({ data: { key, value } });
+  };
+  await ensure('officeStartTime', config.officeStartTime);
+  await ensure('halfDayThresholdHours', config.halfDayThresholdHours);
 }
 
 module.exports = { seedDefaultDepartments, seedDefaultLocations, seedDefaultDesignations, seedAdmin, seedSettings };
