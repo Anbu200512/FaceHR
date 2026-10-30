@@ -1,4 +1,4 @@
-const Setting = require('../models/Setting');
+const prisma = require('../config/prisma');
 const config = require('../config/config');
 
 const FACE_KEY = 'attendanceFaceEnabled';
@@ -30,7 +30,9 @@ function sanitizeLocation(raw) {
 }
 
 async function getAttendanceSettings() {
-  const rows = await Setting.find({ key: { $in: [FACE_KEY, GEO_KEY, LOCATION_KEY] } });
+  const rows = await prisma.setting.findMany({
+    where: { key: { in: [FACE_KEY, GEO_KEY, LOCATION_KEY] } },
+  });
   const map = {};
   rows.forEach((r) => {
     map[r.key] = r.value;
@@ -79,10 +81,22 @@ async function updateAttendanceSettings(payload = {}) {
   merged.longitude = Math.round(merged.longitude * 1e6) / 1e6;
   merged.allowedRadius = Math.round(merged.allowedRadius);
 
-  await Setting.bulkWrite([
-    { updateOne: { filter: { key: FACE_KEY }, update: { $set: { key: FACE_KEY, value: faceEnabled } }, upsert: true } },
-    { updateOne: { filter: { key: GEO_KEY }, update: { $set: { key: GEO_KEY, value: geoEnabled } }, upsert: true } },
-    { updateOne: { filter: { key: LOCATION_KEY }, update: { $set: { key: LOCATION_KEY, value: merged } }, upsert: true } },
+  await prisma.$transaction([
+    prisma.setting.upsert({
+      where: { key: FACE_KEY },
+      update: { value: faceEnabled },
+      create: { key: FACE_KEY, value: faceEnabled },
+    }),
+    prisma.setting.upsert({
+      where: { key: GEO_KEY },
+      update: { value: geoEnabled },
+      create: { key: GEO_KEY, value: geoEnabled },
+    }),
+    prisma.setting.upsert({
+      where: { key: LOCATION_KEY },
+      update: { value: merged },
+      create: { key: LOCATION_KEY, value: merged },
+    }),
   ]);
 
   return { faceEnabled, geoEnabled, location: merged };

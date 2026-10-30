@@ -1,8 +1,10 @@
-const Notification = require('../models/Notification');
+const prisma = require('../config/prisma');
 
 async function createNotification({ user = null, title, message = '', type = 'info', link = '' }) {
   try {
-    return await Notification.create({ user, title, message, type, link });
+    return await prisma.notification.create({
+      data: { userId: user || null, title, message, type, link },
+    });
   } catch (err) {
     console.warn(`[Notification] failed: ${err.message}`);
     return null;

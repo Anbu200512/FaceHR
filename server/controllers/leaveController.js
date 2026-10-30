@@ -1,11 +1,21 @@
-const Leave = require('../models/Leave');
-const Employee = require('../models/Employee');
-const User = require('../models/User');
+const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 const { createNotification } = require('../services/notificationService');
 const { startOfDay, diffDays, toDateKey } = require('../utils/date');
 
 const LEAVE_TYPES = ['Casual Leave', 'Sick Leave', 'Earned Leave', 'Maternity Leave', 'Paternity Leave', 'Unpaid Leave', 'Other'];
+
+const EMPLOYEE_INCLUDE = {
+  select: {
+    id: true,
+    firstName: true,
+    lastName: true,
+    employeeId: true,
+    profilePhoto: true,
+    department: { select: { id: true, name: true } },
+    designation: { select: { id: true, name: true } },
+  },
+};
 
 // @route  POST /api/leaves  (employee applies)
 const applyLeave = asyncHandler(async (req, res) => {
@@ -20,7 +30,7 @@ const applyLeave = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid leave type' });
   }
 
-  const emp = await Employee.findById(employeeId);
+  const emp = await prisma.employee.findUnique({ where: { id: employeeId } });
   if (!emp) return res.status(404).json({ success: false, message: 'Employee not found' });
 
   const s = startOfDay(new Date(startDate));
@@ -30,33 +40,40 @@ const applyLeave = asyncHandler(async (req, res) => {
   const days = diffDays(s, e);
 
   // duplicate check: overlapping leave for same employee
-  const overlapping = await Leave.findOne({
-    employee: employeeId,
-    status: { $in: ['Pending', 'Approved'] },
-    startDate: { $lte: e },
-    endDate: { $gte: s },
+  const overlapping = await prisma.leave.findFirst({
+    where: {
+      employeeRefId: employeeId,
+      status: { in: ['Pending', 'Approved'] },
+      startDate: { lte: e },
+      endDate: { gte: s },
+    },
   });
   if (overlapping) {
     return res.status(409).json({ success: false, message: 'You already have a pending or approved leave covering these dates' });
   }
 
-  const leave = await Leave.create({
-    employee: employeeId,
-    employeeId: emp.employeeId,
-    leaveType,
-    startDate: s,
-    endDate: e,
-    days,
-    reason: String(reason || '').trim(),
+  const leave = await prisma.leave.create({
+    data: {
+      employeeRefId: employeeId,
+      employeeId: emp.employeeId,
+      leaveType,
+      startDate: s,
+      endDate: e,
+      days,
+      reason: String(reason || '').trim(),
+    },
   });
 
-  const admins = await User.find({ role: 'admin', active: true }).select('_id');
+  const admins = await prisma.user.findMany({
+    where: { role: 'admin', active: true },
+    select: { id: true },
+  });
   await Promise.all(
     admins.map((a) =>
       createNotification({
-        user: a._id,
+        user: a.id,
         title: 'Leave request received',
-        message: `${emp.fullName} requested ${days} day(s) of ${leaveType}.`,
+        message: `${emp.firstName} ${emp.lastName} requested ${days} day(s) of ${leaveType}.`,
         type: 'leave',
         link: '/admin/leaves',
       })
@@ -72,28 +89,40 @@ const getLeaves = asyncHandler(async (req, res) => {
   const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || 10, 1), 100);
   const { status, search, from, to } = req.query;
 
-  const filter = {};
-  if (status && ['Pending', 'Approved', 'Rejected'].includes(status)) filter.status = status;
+  const where = {};
+  if (status && ['Pending', 'Approved', 'Rejected'].includes(status)) where.status = status;
   if (from || to) {
     const s = from ? startOfDay(new Date(from)) : new Date(0);
     const e = to ? startOfDay(new Date(to)) : new Date(8640000000000000);
-    filter.$or = [{ startDate: { $lte: e }, endDate: { $gte: s } }];
+    where.startDate = { lte: e };
+    where.endDate = { gte: s };
   }
   if (search) {
-    const re = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-    const emps = await Employee.find({ $or: [{ firstName: re }, { lastName: re }, { employeeId: re }] }).select('_id').lean();
-    filter.employee = { $in: emps.map((e) => e._id) };
+    const emps = await prisma.employee.findMany({
+      where: {
+        OR: [
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { employeeId: { contains: search, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true },
+    });
+    where.employeeRefId = { in: emps.map((e) => e.id) };
   }
 
   const [total, leaves] = await Promise.all([
-    Leave.countDocuments(filter),
-    Leave.find(filter)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * pageSize)
-      .limit(pageSize)
-      .populate('employee', 'firstName lastName employeeId profilePhoto department designation')
-      .populate('reviewedBy', 'name')
-      .lean(),
+    prisma.leave.count({ where }),
+    prisma.leave.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        employee: EMPLOYEE_INCLUDE,
+        reviewedBy: { select: { id: true, name: true } },
+      },
+    }),
   ]);
 
   res.json({ success: true, data: leaves, meta: { total, page, pageSize, totalPages: Math.ceil(total / pageSize) } });
@@ -101,7 +130,10 @@ const getLeaves = asyncHandler(async (req, res) => {
 
 // @route  GET /api/leaves/mine  (employee)
 const getMyLeaves = asyncHandler(async (req, res) => {
-  const leaves = await Leave.find({ employee: req.user.employee }).sort({ createdAt: -1 }).lean();
+  const leaves = await prisma.leave.findMany({
+    where: { employeeRefId: req.user.employee },
+    orderBy: { createdAt: 'desc' },
+  });
   res.json({ success: true, data: leaves });
 });
 
@@ -111,7 +143,9 @@ const getLeaveBalance = asyncHandler(async (req, res) => {
   const start = new Date(year, 0, 1);
   const end = new Date(year + 1, 0, 1);
 
-  const leaves = await Leave.find({ employee: req.user.employee, startDate: { $lt: end }, endDate: { $gte: start } }).lean();
+  const leaves = await prisma.leave.findMany({
+    where: { employeeRefId: req.user.employee, startDate: { lt: end }, endDate: { gte: start } },
+  });
 
   const used = leaves.filter((l) => l.status === 'Approved').reduce((s, l) => s + l.days, 0);
   const pending = leaves.filter((l) => l.status === 'Pending').reduce((s, l) => s + l.days, 0);
@@ -132,55 +166,42 @@ const getLeaveBalance = asyncHandler(async (req, res) => {
   });
 });
 
-// @route  PUT /api/leaves/:id/approve
-const approveLeave = asyncHandler(async (req, res) => {
-  const leave = await Leave.findById(req.params.id).populate('employee', 'firstName lastName employeeId');
+async function reviewLeave(req, res, status) {
+  const leave = await prisma.leave.findUnique({
+    where: { id: req.params.id },
+    include: { employee: { select: { id: true, firstName: true, lastName: true, employeeId: true } } },
+  });
   if (!leave) return res.status(404).json({ success: false, message: 'Leave not found' });
   if (leave.status !== 'Pending') return res.status(400).json({ success: false, message: `Leave is already ${leave.status.toLowerCase()}` });
 
-  leave.status = 'Approved';
-  leave.reviewedBy = req.user.id;
-  leave.adminNote = String(req.body.adminNote || '').trim();
-  await leave.save();
+  const adminNote = String(req.body.adminNote || '').trim();
+  const updated = await prisma.leave.update({
+    where: { id: leave.id },
+    data: { status, reviewedById: req.user.id, adminNote },
+  });
 
-  const user = await User.findOne({ employee: leave.employee._id });
+  const user = await prisma.user.findFirst({ where: { employeeRefId: leave.employeeRefId } });
   if (user) {
+    const approved = status === 'Approved';
     await createNotification({
-      user: user._id,
-      title: 'Leave approved',
-      message: `Your ${leave.leaveType} (${toDateKey(leave.startDate)} to ${toDateKey(leave.endDate)}) was approved.`,
-      type: 'success',
+      user: user.id,
+      title: approved ? 'Leave approved' : 'Leave rejected',
+      message: approved
+        ? `Your ${leave.leaveType} (${toDateKey(leave.startDate)} to ${toDateKey(leave.endDate)}) was approved.`
+        : `Your ${leave.leaveType} leave request was rejected.${adminNote ? ` Reason: ${adminNote}` : ''}`,
+      type: approved ? 'success' : 'warning',
       link: '/employee/leave',
     });
   }
 
-  res.json({ success: true, message: 'Leave approved' });
-});
+  return res.json({ success: true, message: `Leave ${status.toLowerCase()}`, data: updated });
+}
+
+// @route  PUT /api/leaves/:id/approve
+const approveLeave = asyncHandler((req, res) => reviewLeave(req, res, 'Approved'));
 
 // @route  PUT /api/leaves/:id/reject
-const rejectLeave = asyncHandler(async (req, res) => {
-  const leave = await Leave.findById(req.params.id).populate('employee', 'firstName lastName employeeId');
-  if (!leave) return res.status(404).json({ success: false, message: 'Leave not found' });
-  if (leave.status !== 'Pending') return res.status(400).json({ success: false, message: `Leave is already ${leave.status.toLowerCase()}` });
-
-  leave.status = 'Rejected';
-  leave.reviewedBy = req.user.id;
-  leave.adminNote = String(req.body.adminNote || '').trim();
-  await leave.save();
-
-  const user = await User.findOne({ employee: leave.employee._id });
-  if (user) {
-    await createNotification({
-      user: user._id,
-      title: 'Leave rejected',
-      message: `Your ${leave.leaveType} leave request was rejected.${leave.adminNote ? ` Reason: ${leave.adminNote}` : ''}`,
-      type: 'warning',
-      link: '/employee/leave',
-    });
-  }
-
-  res.json({ success: true, message: 'Leave rejected' });
-});
+const rejectLeave = asyncHandler((req, res) => reviewLeave(req, res, 'Rejected'));
 
 // @route  GET /api/leaves/summary  (admin - organization-wide leave snapshot)
 const getLeaveSummary = asyncHandler(async (req, res) => {
@@ -190,31 +211,33 @@ const getLeaveSummary = asyncHandler(async (req, res) => {
   const today = startOfDay(new Date());
 
   const [activeEmployees, approved, pending, upcoming, pendingList] = await Promise.all([
-    Employee.countDocuments({ status: 'Active' }),
-    Leave.aggregate([
-      { $match: { status: 'Approved', startDate: { $lt: end }, endDate: { $gte: start } } },
-      { $group: { _id: null, days: { $sum: '$days' } } },
-    ]),
-    Leave.countDocuments({ status: 'Pending' }),
-    Leave.find({
-      status: 'Approved',
-      startDate: { $gte: today },
-      endDate: { $gte: start },
-    })
-      .sort({ startDate: 1 })
-      .limit(5)
-      .populate('employee', 'firstName lastName employeeId profilePhoto department')
-      .lean(),
-    Leave.find({ status: 'Pending' })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate('employee', 'firstName lastName employeeId profilePhoto department')
-      .lean(),
+    prisma.employee.count({ where: { status: 'Active' } }),
+    prisma.leave.aggregate({
+      where: { status: 'Approved', startDate: { lt: end }, endDate: { gte: start } },
+      _sum: { days: true },
+    }),
+    prisma.leave.count({ where: { status: 'Pending' } }),
+    prisma.leave.findMany({
+      where: {
+        status: 'Approved',
+        startDate: { gte: today },
+        endDate: { gte: start },
+      },
+      orderBy: { startDate: 'asc' },
+      take: 5,
+      include: { employee: EMPLOYEE_INCLUDE },
+    }),
+    prisma.leave.findMany({
+      where: { status: 'Pending' },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      include: { employee: EMPLOYEE_INCLUDE },
+    }),
   ]);
 
   const allowance = 12; // matches the per-employee allowance used by the leave balance endpoint
   const total = activeEmployees * allowance;
-  const used = approved[0]?.days || 0;
+  const used = approved._sum.days || 0;
 
   res.json({
     success: true,

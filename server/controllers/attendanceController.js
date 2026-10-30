@@ -1,7 +1,4 @@
-const Employee = require('../models/Employee');
-const Attendance = require('../models/Attendance');
-const Leave = require('../models/Leave');
-const FaceProfile = require('../models/FaceProfile');
+const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 const { saveBuffer } = require('../middleware/upload');
 const { haversineDistanceMeters } = require('../utils/geo');
@@ -99,23 +96,22 @@ async function computeDayStatus(employees, date) {
   const dayEnd = endOfDay(date);
 
   const [records, leaves] = await Promise.all([
-    Attendance.find({ date: { $gte: dayStart, $lt: dayEnd } })
-      .populate('employee', 'firstName lastName employeeId profilePhoto department office')
-      .lean(),
-    Leave.find({ status: 'Approved', startDate: { $lt: dayEnd }, endDate: { $gte: dayStart } })
-      .select('employee')
-      .lean(),
+    prisma.attendance.findMany({ where: { date: { gte: dayStart, lt: dayEnd } } }),
+    prisma.leave.findMany({
+      where: { status: 'Approved', startDate: { lt: dayEnd }, endDate: { gte: dayStart } },
+      select: { employeeRefId: true },
+    }),
   ]);
 
   const recMap = new Map();
-  records.forEach((r) => recMap.set(String(r.employee._id), r));
+  records.forEach((r) => recMap.set(String(r.employeeRefId), r));
   const leaveSet = new Set();
-  leaves.forEach((l) => leaveSet.add(String(l.employee._id)));
+  leaves.forEach((l) => leaveSet.add(String(l.employeeRefId)));
 
   return employees.map((emp) => {
-    const rec = recMap.get(String(emp._id));
+    const rec = recMap.get(String(emp.id));
     if (rec) return { employee: emp, record: rec, status: rec.status };
-    if (leaveSet.has(String(emp._id))) return { employee: emp, record: null, status: 'On Leave' };
+    if (leaveSet.has(String(emp.id))) return { employee: emp, record: null, status: 'On Leave' };
     return { employee: emp, record: null, status: 'Absent' };
   });
 }
@@ -125,7 +121,7 @@ const checkIn = asyncHandler(async (req, res) => {
   const employee = req.user.employee;
   if (!employee) return res.status(403).json({ success: false, message: 'Only employees can check in' });
 
-  const empDoc = await Employee.findById(employee);
+  const empDoc = await prisma.employee.findUnique({ where: { id: employee } });
   if (!empDoc) return res.status(404).json({ success: false, message: 'Employee profile not found' });
   if (empDoc.status !== 'Active') {
     return res.status(403).json({ success: false, message: 'Your account is inactive. Please contact HR.' });
@@ -145,7 +141,7 @@ const checkIn = asyncHandler(async (req, res) => {
   }
 
   const today = startOfDay(new Date());
-  const existing = await Attendance.findOne({ employee: req.user.employee, date: today });
+  const existing = await prisma.attendance.findFirst({ where: { employeeRefId: employee, date: today } });
 
   if (existing) {
     if (existing.checkInTime && existing.checkOutTime) {
@@ -178,7 +174,7 @@ const checkIn = asyncHandler(async (req, res) => {
   }
 
   const verification = await verifyAgainstProfile({
-    employeeId: req.user.employee,
+    employeeId: employee,
     buffer: req.file.buffer,
     clientDescriptor: parseDescriptor(req.body.descriptor),
   });
@@ -195,20 +191,22 @@ const checkIn = asyncHandler(async (req, res) => {
   const { status, lateMinutes } = await evaluateCheckInStatus(today, now);
 
   try {
-    const record = await Attendance.create({
-      employee: req.user.employee,
-      employeeId: empDoc.employeeId,
-      date: today,
-      dayName: getDayName(today),
-      checkInTime: now,
-      status,
-      lateMinutes,
-      checkInPhoto,
-      checkInLocation,
-      checkInDistanceFromCompany,
-      checkInMatchDistance: verification.distance,
-      faceVerified: true,
-      deviceInfo: summarizeDevice(req),
+    const record = await prisma.attendance.create({
+      data: {
+        employeeRefId: employee,
+        employeeId: empDoc.employeeId,
+        date: today,
+        dayName: getDayName(today),
+        checkInTime: now,
+        status,
+        lateMinutes,
+        checkInPhoto,
+        ...(checkInLocation ? { checkInLocation } : {}),
+        ...(checkInDistanceFromCompany !== null ? { checkInDistanceFromCompany } : {}),
+        checkInMatchDistance: verification.distance,
+        faceVerified: true,
+        deviceInfo: summarizeDevice(req),
+      },
     });
 
     return res.status(201).json({
@@ -217,7 +215,7 @@ const checkIn = asyncHandler(async (req, res) => {
       data: record,
     });
   } catch (err) {
-    if (err.code === 11000) {
+    if (err.code === 'P2002') {
       return res.status(409).json({
         success: false,
         message: 'You have already checked in today.',
@@ -247,7 +245,7 @@ const checkOut = asyncHandler(async (req, res) => {
   }
 
   const today = startOfDay(new Date());
-  const record = await Attendance.findOne({ employee: req.user.employee, date: today });
+  const record = await prisma.attendance.findFirst({ where: { employeeRefId: employee, date: today } });
   if (!record || !record.checkInTime) {
     return res.status(400).json({
       success: false,
@@ -275,7 +273,7 @@ const checkOut = asyncHandler(async (req, res) => {
   }
 
   const verification = await verifyAgainstProfile({
-    employeeId: req.user.employee,
+    employeeId: employee,
     buffer: req.file.buffer,
     clientDescriptor: parseDescriptor(req.body.descriptor),
   });
@@ -291,19 +289,23 @@ const checkOut = asyncHandler(async (req, res) => {
   const workingHoursMinutes = Math.max(0, Math.round((now - record.checkInTime) / 60000));
   const status = await computeFinalStatus(record.checkInTime, now, record.status);
 
-  record.checkOutTime = now;
-  record.checkOutPhoto = checkOutPhoto;
-  record.checkOutLocation = checkOutLocation;
-  record.checkOutDistanceFromCompany = geofence.distance;
-  record.checkOutMatchDistance = verification.distance;
-  record.workingHoursMinutes = workingHoursMinutes;
-  record.status = status;
-  await record.save();
+  const updated = await prisma.attendance.update({
+    where: { id: record.id },
+    data: {
+      checkOutTime: now,
+      checkOutPhoto,
+      ...(checkOutLocation ? { checkOutLocation } : {}),
+      checkOutDistanceFromCompany: geofence.distance,
+      checkOutMatchDistance: verification.distance,
+      workingHoursMinutes,
+      status,
+    },
+  });
 
   res.json({
     success: true,
     message: 'Check-out successful',
-    data: record,
+    data: updated,
     summary: { workingHours: formatDuration(workingHoursMinutes) },
   });
 });
@@ -314,34 +316,52 @@ const getRecords = asyncHandler(async (req, res) => {
   const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || 10, 1), 100);
   const { date, status, department, search } = req.query;
 
-  const filter = {};
+  const where = {};
   if (date) {
-    filter.date = { $gte: startOfDay(new Date(date)), $lt: endOfDay(new Date(date)) };
+    where.date = { gte: startOfDay(new Date(date)), lt: endOfDay(new Date(date)) };
   }
-  if (status && !['Absent', 'On Leave'].includes(status)) filter.status = status;
+  if (status && !['Absent', 'On Leave'].includes(status)) where.status = status;
 
-  const employeeFilter = {};
-  if (department) employeeFilter.department = department;
+  const employeeWhere = {};
+  if (department) employeeWhere.departmentId = department;
   if (search) {
-    const re = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-    employeeFilter.$or = [{ firstName: re }, { lastName: re }, { employeeId: re }, { email: re }];
+    employeeWhere.OR = [
+      { firstName: { contains: search, mode: 'insensitive' } },
+      { lastName: { contains: search, mode: 'insensitive' } },
+      { employeeId: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+    ];
   }
-  if (Object.keys(employeeFilter).length) {
-    const emps = await Employee.find(employeeFilter).select('_id').lean();
-    filter.employee = { $in: emps.map((e) => e._id) };
+  if (Object.keys(employeeWhere).length) {
+    const emps = await prisma.employee.findMany({ where: employeeWhere, select: { id: true } });
+    where.employeeRefId = { in: emps.map((e) => e.id) };
   }
 
-  const sort = {};
-  sort[req.query.sortBy === 'checkInTime' ? 'checkInTime' : 'date'] = req.query.order === 'asc' ? 1 : -1;
+  const sortField = req.query.sortBy === 'checkInTime' ? 'checkInTime' : 'date';
+  const order = req.query.order === 'asc' ? 'asc' : 'desc';
 
   const [total, records] = await Promise.all([
-    Attendance.countDocuments(filter),
-    Attendance.find(filter)
-      .sort({ ...sort, createdAt: -1 })
-      .skip((page - 1) * pageSize)
-      .limit(pageSize)
-      .populate({ path: 'employee', select: 'firstName lastName employeeId email profilePhoto department designation', populate: 'department designation' })
-      .lean(),
+    prisma.attendance.count({ where }),
+    prisma.attendance.findMany({
+      where,
+      orderBy: [{ [sortField]: order }, { createdAt: 'desc' }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        employee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            employeeId: true,
+            email: true,
+            profilePhoto: true,
+            department: { select: { id: true, name: true } },
+            designation: { select: { id: true, name: true } },
+          },
+        },
+      },
+    }),
   ]);
 
   res.json({
@@ -356,7 +376,10 @@ const getToday = asyncHandler(async (req, res) => {
   const today = new Date();
 
   if (req.user.role === 'employee' && req.user.employee) {
-    const employees = await Employee.find({ _id: req.user.employee }).select('firstName lastName employeeId profilePhoto').lean();
+    const employees = await prisma.employee.findMany({
+      where: { id: req.user.employee },
+      select: { id: true, firstName: true, lastName: true, employeeId: true, profilePhoto: true },
+    });
     const rows = await computeDayStatus(employees, today);
     return res.json({ success: true, data: { date: toDateKey(today), rows } });
   }
@@ -364,12 +387,13 @@ const getToday = asyncHandler(async (req, res) => {
   const reqDate = req.query.date ? new Date(req.query.date) : today;
   const department = req.query.department;
 
-  const empFilter = { status: 'Active' };
-  if (department) empFilter.department = department;
-  const employees = await Employee.find(empFilter)
-    .populate('department', 'name')
-    .sort({ firstName: 1 })
-    .lean();
+  const where = { status: 'Active' };
+  if (department) where.departmentId = department;
+  const employees = await prisma.employee.findMany({
+    where,
+    include: { department: { select: { id: true, name: true } } },
+    orderBy: { firstName: 'asc' },
+  });
 
   const rows = await computeDayStatus(employees, reqDate);
 
@@ -405,7 +429,7 @@ const getMonthly = asyncHandler(async (req, res) => {
   const employeeId = req.params.employeeId || req.user.employee;
   if (!employeeId) return res.status(400).json({ success: false, message: 'Employee is required' });
 
-  const emp = await Employee.findById(employeeId);
+  const emp = await prisma.employee.findUnique({ where: { id: employeeId } });
   if (!emp) return res.status(404).json({ success: false, message: 'Employee not found' });
   if (req.user.role === 'employee' && String(req.user.employee) !== String(employeeId)) {
     return res.status(403).json({ success: false, message: 'You can only view your own attendance' });
@@ -416,13 +440,18 @@ const getMonthly = asyncHandler(async (req, res) => {
   const { start, end } = monthRange(y, m);
 
   const [records, leaves] = await Promise.all([
-    Attendance.find({ employee: employeeId, date: { $gte: start, $lt: end } }).sort({ date: 1 }).lean(),
-    Leave.find({
-      employee: employeeId,
-      status: 'Approved',
-      startDate: { $lt: end },
-      endDate: { $gte: start },
-    }).lean(),
+    prisma.attendance.findMany({
+      where: { employeeRefId: employeeId, date: { gte: start, lt: end } },
+      orderBy: { date: 'asc' },
+    }),
+    prisma.leave.findMany({
+      where: {
+        employeeRefId: employeeId,
+        status: 'Approved',
+        startDate: { lt: end },
+        endDate: { gte: start },
+      },
+    }),
   ]);
 
   const recMap = new Map(records.map((r) => [toDateKey(r.date), r]));
@@ -463,7 +492,12 @@ const getMonthly = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: {
-      employee: { _id: emp._id, employeeId: emp.employeeId, fullName: emp.fullName },
+      employee: {
+        id: emp.id,
+        _id: emp.id,
+        employeeId: emp.employeeId,
+        fullName: `${emp.firstName} ${emp.lastName}`.trim(),
+      },
       year: y,
       month: m,
       days,
@@ -487,7 +521,7 @@ const getMonthly = asyncHandler(async (req, res) => {
 async function performMarkAttendance(employeeId, mode, req) {
   if (!employeeId) return { status: 400, message: 'Employee is required' };
 
-  const empDoc = await Employee.findById(employeeId);
+  const empDoc = await prisma.employee.findUnique({ where: { id: employeeId } });
   if (!empDoc) return { status: 404, message: 'Employee profile not found' };
   if (empDoc.status !== 'Active') {
     return { status: 403, message: 'This employee account is inactive. Please contact HR.' };
@@ -515,7 +549,7 @@ async function performMarkAttendance(employeeId, mode, req) {
   }
 
   const today = startOfDay(new Date());
-  const existing = await Attendance.findOne({ employee: employeeId, date: today });
+  const existing = await prisma.attendance.findFirst({ where: { employeeRefId: employeeId, date: today } });
 
   if (mode === 'check-in') {
     if (existing && existing.checkInTime && existing.checkOutTime) {
@@ -559,20 +593,22 @@ async function performMarkAttendance(employeeId, mode, req) {
   if (mode === 'check-in') {
     const { status, lateMinutes } = await evaluateCheckInStatus(today, now);
     try {
-      const record = await Attendance.create({
-        employee: employeeId,
-        employeeId: empDoc.employeeId,
-        date: today,
-        dayName: getDayName(today),
-        checkInTime: now,
-        status,
-        lateMinutes,
-        checkInPhoto: photo,
-        checkInLocation: location,
-        checkInDistanceFromCompany: distanceFromCompany,
-        checkInMatchDistance: matchDistance,
-        faceVerified,
-        deviceInfo,
+      const record = await prisma.attendance.create({
+        data: {
+          employeeRefId: employeeId,
+          employeeId: empDoc.employeeId,
+          date: today,
+          dayName: getDayName(today),
+          checkInTime: now,
+          status,
+          lateMinutes,
+          checkInPhoto: photo,
+          ...(location ? { checkInLocation: location } : {}),
+          ...(distanceFromCompany !== null ? { checkInDistanceFromCompany: distanceFromCompany } : {}),
+          checkInMatchDistance: matchDistance,
+          faceVerified,
+          deviceInfo,
+        },
       });
       return {
         status: 201,
@@ -580,7 +616,7 @@ async function performMarkAttendance(employeeId, mode, req) {
         data: record,
       };
     } catch (err) {
-      if (err.code === 11000) {
+      if (err.code === 'P2002') {
         return { status: 409, message: 'This employee has already checked in today.', code: 'ALREADY_CHECKED_IN' };
       }
       throw err;
@@ -590,20 +626,24 @@ async function performMarkAttendance(employeeId, mode, req) {
   const workingHoursMinutes = Math.max(0, Math.round((now - existing.checkInTime) / 60000));
   const status = await computeFinalStatus(existing.checkInTime, now, existing.status);
 
-  existing.checkOutTime = now;
-  existing.checkOutPhoto = photo;
-  existing.checkOutLocation = location;
-  existing.checkOutDistanceFromCompany = distanceFromCompany;
-  existing.checkOutMatchDistance = matchDistance;
-  existing.faceVerified = existing.faceVerified || faceVerified;
-  existing.workingHoursMinutes = workingHoursMinutes;
-  existing.status = status;
-  await existing.save();
+  const updated = await prisma.attendance.update({
+    where: { id: existing.id },
+    data: {
+      checkOutTime: now,
+      checkOutPhoto: photo,
+      ...(location ? { checkOutLocation: location } : {}),
+      checkOutDistanceFromCompany: distanceFromCompany,
+      checkOutMatchDistance: matchDistance,
+      faceVerified: existing.faceVerified || faceVerified,
+      workingHoursMinutes,
+      status,
+    },
+  });
 
   return {
     status: 200,
     message: 'Check-out successful',
-    data: existing,
+    data: updated,
     summary: { workingHours: formatDuration(workingHoursMinutes) },
   };
 }

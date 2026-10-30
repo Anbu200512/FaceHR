@@ -7,7 +7,7 @@
  * descriptor using a configurable Euclidean-distance threshold.
  */
 const config = require('../config/config');
-const FaceProfile = require('../models/FaceProfile');
+const prisma = require('../config/prisma');
 const faceService = require('./faceService');
 
 /**
@@ -48,7 +48,9 @@ function parseDescriptor(value) {
 }
 
 async function verifyAgainstProfile({ employeeId, buffer, clientDescriptor }) {
-  const profile = await FaceProfile.findOne({ employee: employeeId, active: true });
+  const profile = await prisma.faceProfile.findFirst({
+    where: { employeeRefId: employeeId, active: true },
+  });
   if (!profile || !faceService.descriptorIsValid(profile.descriptor)) {
     return {
       ok: false,

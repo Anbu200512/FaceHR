@@ -1,10 +1,6 @@
 const bcrypt = require('bcryptjs');
-const User = require('../models/User');
-const Department = require('../models/Department');
-const Designation = require('../models/Designation');
-const Location = require('../models/Location');
-const Setting = require('../models/Setting');
-const config = require('../config/config');
+const prisma = require('./prisma');
+const config = require('./config');
 
 const DEFAULT_DEPARTMENTS = ['Development', 'Human Resources', 'Marketing', 'Sales', 'Finance', 'Operations'];
 
@@ -28,55 +24,63 @@ const DEFAULT_DESIGNATIONS = [
 ];
 
 async function seedDefaultDepartments() {
-  const count = await Department.countDocuments();
+  const count = await prisma.department.count();
   if (count === 0) {
-    await Department.insertMany(DEFAULT_DEPARTMENTS.map((name) => ({ name, description: '', active: true })));
+    await prisma.department.createMany({
+      data: DEFAULT_DEPARTMENTS.map((name) => ({ name, description: '', active: true })),
+    });
     console.log('[Seed] Default departments created');
   }
 }
 
 async function seedDefaultLocations() {
-  const count = await Location.countDocuments();
+  const count = await prisma.location.count();
   if (count === 0) {
-    await Location.insertMany(DEFAULT_LOCATIONS.map((l) => ({ ...l, active: true })));
+    await prisma.location.createMany({
+      data: DEFAULT_LOCATIONS.map((l) => ({ ...l, active: true })),
+    });
     console.log('[Seed] Default locations created');
   }
 }
 
 async function seedDefaultDesignations() {
-  const count = await Designation.countDocuments();
+  const count = await prisma.designation.count();
   if (count === 0) {
-    await Designation.insertMany(DEFAULT_DESIGNATIONS.map((name) => ({ name, description: '' })));
+    await prisma.designation.createMany({
+      data: DEFAULT_DESIGNATIONS.map((name) => ({ name, description: '' })),
+    });
     console.log('[Seed] Default designations created');
   }
 }
 
 async function seedAdmin() {
-  const exists = await User.findOne({ role: 'admin' });
+  const exists = await prisma.user.findFirst({ where: { role: 'admin' } });
   if (!exists) {
     const hashed = await bcrypt.hash(config.adminPassword, 10);
-    await User.create({
-      name: config.adminName,
-      email: config.adminEmail,
-      password: hashed,
-      role: 'admin',
-      active: true,
+    await prisma.user.create({
+      data: {
+        name: config.adminName,
+        email: config.adminEmail,
+        password: hashed,
+        role: 'admin',
+        active: true,
+      },
     });
     console.log(`[Seed] Default admin created: ${config.adminEmail}`);
   }
 }
 
 async function seedSettings() {
-  await Setting.updateOne(
-    { key: 'officeStartTime' },
-    { $set: { value: config.officeStartTime } },
-    { upsert: true }
-  );
-  await Setting.updateOne(
-    { key: 'halfDayThresholdHours' },
-    { $set: { value: config.halfDayThresholdHours } },
-    { upsert: true }
-  );
+  await prisma.setting.upsert({
+    where: { key: 'officeStartTime' },
+    update: { value: config.officeStartTime },
+    create: { key: 'officeStartTime', value: config.officeStartTime },
+  });
+  await prisma.setting.upsert({
+    where: { key: 'halfDayThresholdHours' },
+    update: { value: config.halfDayThresholdHours },
+    create: { key: 'halfDayThresholdHours', value: config.halfDayThresholdHours },
+  });
 }
 
 module.exports = { seedDefaultDepartments, seedDefaultLocations, seedDefaultDesignations, seedAdmin, seedSettings };

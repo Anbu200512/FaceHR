@@ -1,4 +1,4 @@
-const Setting = require('../models/Setting');
+const prisma = require('../config/prisma');
 const config = require('../config/config');
 
 const DEFAULTS = {
@@ -8,7 +8,7 @@ const DEFAULTS = {
 };
 
 async function getSettings() {
-  const rows = await Setting.find({});
+  const rows = await prisma.setting.findMany();
   const map = {};
   rows.forEach((r) => {
     map[r.key] = r.value;
@@ -27,7 +27,11 @@ async function updateSetting(key, value) {
     err.statusCode = 400;
     throw err;
   }
-  return Setting.findOneAndUpdate({ key }, { key, value }, { upsert: true, new: true });
+  return prisma.setting.upsert({
+    where: { key },
+    update: { value },
+    create: { key, value },
+  });
 }
 
 /**

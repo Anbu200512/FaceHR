@@ -14,10 +14,19 @@ const errorHandler = (err, req, res, next) => {
   } else if (err.name === 'ValidationError') {
     status = 400;
     message = Object.values(err.errors).map((e) => e.message).join(', ');
-  } else if (err.code === 11000) {
+  } else if (err.code === 'P2002') {
     status = 409;
-    const field = Object.keys(err.keyPattern || {})[0] || '';
-    message = field ? `Record already exists: ${field}` : 'Duplicate record found';
+    const fields = Array.isArray(err.meta?.target) ? err.meta.target.join(', ') : err.meta?.target || '';
+    message = fields ? `Record already exists: ${fields}` : 'Duplicate record found';
+  } else if (err.code === 'P2025') {
+    status = 404;
+    message = 'Record not found';
+  } else if (err.code === 'P2003') {
+    status = 409;
+    message = 'This record is still referenced by other data and cannot be changed';
+  } else if (err.name === 'PrismaClientValidationError') {
+    status = 400;
+    message = 'Invalid request data';
   } else if (err.name === 'CastError') {
     status = 400;
     message = 'Invalid identifier provided';

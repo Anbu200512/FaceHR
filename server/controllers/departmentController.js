@@ -1,20 +1,22 @@
-const Department = require('../models/Department');
-const Employee = require('../models/Employee');
+const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
+
+const HEAD_SELECT = { id: true, firstName: true, lastName: true, employeeId: true, profilePhoto: true };
 
 // @route  GET /api/departments
 const getDepartments = asyncHandler(async (req, res) => {
-  const departments = await Department.find({})
-    .populate('head', 'firstName lastName employeeId profilePhoto')
-    .lean();
-  const counts = await Employee.aggregate([
-    { $match: { department: { $ne: null } } },
-    { $group: { _id: '$department', count: { $sum: 1 } } },
-  ]);
-  const countMap = new Map(counts.map((c) => [String(c._id), c.count]));
+  const departments = await prisma.department.findMany({
+    include: { head: { select: HEAD_SELECT } },
+  });
+  const counts = await prisma.employee.groupBy({
+    by: ['departmentId'],
+    where: { departmentId: { not: null } },
+    _count: { _all: true },
+  });
+  const countMap = new Map(counts.map((c) => [String(c.departmentId), c._count._all]));
   const data = departments.map((d) => ({
     ...d,
-    employeeCount: countMap.get(String(d._id)) || 0,
+    employeeCount: countMap.get(String(d.id)) || 0,
   }));
   res.json({ success: true, data });
 });
@@ -25,40 +27,55 @@ const createDepartment = asyncHandler(async (req, res) => {
   if (!name || !String(name).trim()) {
     return res.status(400).json({ success: false, message: 'Department name is required' });
   }
-  const exists = await Department.findOne({ name: { $regex: `^${String(name).trim()}$`, $options: 'i' } });
+  const exists = await prisma.department.findFirst({
+    where: { name: { equals: String(name).trim(), mode: 'insensitive' } },
+  });
   if (exists) return res.status(409).json({ success: false, message: 'A department with this name already exists' });
 
-  const department = await Department.create({
-    name: String(name).trim(),
-    description: String(description || '').trim(),
-    head: head || null,
+  const department = await prisma.department.create({
+    data: {
+      name: String(name).trim(),
+      description: String(description || '').trim(),
+      headId: head || null,
+    },
+    include: { head: { select: HEAD_SELECT } },
   });
-  res.status(201).json({ success: true, message: 'Department created', data: await Department.findById(department._id).populate('head', 'firstName lastName') });
+  res.status(201).json({ success: true, message: 'Department created', data: department });
 });
 
 // @route  PUT /api/departments/:id
 const updateDepartment = asyncHandler(async (req, res) => {
-  const department = await Department.findById(req.params.id);
+  const department = await prisma.department.findUnique({ where: { id: req.params.id } });
   if (!department) return res.status(404).json({ success: false, message: 'Department not found' });
 
+  const data = {};
   if (req.body.name) {
-    const dup = await Department.findOne({ name: { $regex: `^${String(req.body.name).trim()}$`, $options: 'i' }, _id: { $ne: department._id } });
+    const dup = await prisma.department.findFirst({
+      where: {
+        name: { equals: String(req.body.name).trim(), mode: 'insensitive' },
+        id: { not: department.id },
+      },
+    });
     if (dup) return res.status(409).json({ success: false, message: 'A department with this name already exists' });
-    department.name = String(req.body.name).trim();
+    data.name = String(req.body.name).trim();
   }
-  if (req.body.description !== undefined) department.description = String(req.body.description).trim();
-  if (req.body.head !== undefined) department.head = req.body.head || null;
-  await department.save();
+  if (req.body.description !== undefined) data.description = String(req.body.description).trim();
+  if (req.body.head !== undefined) data.headId = req.body.head || null;
 
-  res.json({ success: true, message: 'Department updated', data: await Department.findById(department._id).populate('head', 'firstName lastName employeeId') });
+  const updated = await prisma.department.update({
+    where: { id: department.id },
+    data,
+    include: { head: { select: HEAD_SELECT } },
+  });
+  res.json({ success: true, message: 'Department updated', data: updated });
 });
 
 // @route  DELETE /api/departments/:id
 const deleteDepartment = asyncHandler(async (req, res) => {
-  const department = await Department.findById(req.params.id);
+  const department = await prisma.department.findUnique({ where: { id: req.params.id } });
   if (!department) return res.status(404).json({ success: false, message: 'Department not found' });
 
-  const count = await Employee.countDocuments({ department: department._id });
+  const count = await prisma.employee.count({ where: { departmentId: department.id } });
   if (count > 0) {
     return res.status(409).json({
       success: false,
@@ -66,7 +83,7 @@ const deleteDepartment = asyncHandler(async (req, res) => {
     });
   }
 
-  await department.deleteOne();
+  await prisma.department.delete({ where: { id: department.id } });
   res.json({ success: true, message: 'Department deleted' });
 });
 

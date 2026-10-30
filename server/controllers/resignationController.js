@@ -1,10 +1,19 @@
-const Resignation = require('../models/Resignation');
-const Employee = require('../models/Employee');
-const User = require('../models/User');
+const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 const { createNotification } = require('../services/notificationService');
 
 const REASONS = ['Salary', 'Better Opportunity', 'Personal Reason', 'Relocation', 'Other'];
+
+const EMPLOYEE_INCLUDE = {
+  select: {
+    id: true,
+    firstName: true,
+    lastName: true,
+    employeeId: true,
+    profilePhoto: true,
+    department: { select: { id: true, name: true } },
+  },
+};
 
 // @route  POST /api/resignations  (employee submits)
 const applyResignation = asyncHandler(async (req, res) => {
@@ -23,30 +32,35 @@ const applyResignation = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid resignation date' });
   }
 
-  const emp = await Employee.findById(employeeId);
+  const emp = await prisma.employee.findUnique({ where: { id: employeeId } });
   if (!emp) return res.status(404).json({ success: false, message: 'Employee not found' });
 
-  const pending = await Resignation.findOne({ employee: employeeId, status: 'Pending' });
+  const pending = await prisma.resignation.findFirst({ where: { employeeRefId: employeeId, status: 'Pending' } });
   if (pending) {
     return res.status(409).json({ success: false, message: 'You already have a pending resignation request' });
   }
 
-  const resignation = await Resignation.create({
-    employee: employeeId,
-    employeeId: emp.employeeId,
-    reason,
-    resignationDate: date,
-    feedback: String(feedback || '').trim(),
-    comments: String(comments || '').trim(),
+  const resignation = await prisma.resignation.create({
+    data: {
+      employeeRefId: employeeId,
+      employeeId: emp.employeeId,
+      reason,
+      resignationDate: date,
+      feedback: String(feedback || '').trim(),
+      comments: String(comments || '').trim(),
+    },
   });
 
-  const admins = await User.find({ role: 'admin', active: true }).select('_id');
+  const admins = await prisma.user.findMany({
+    where: { role: 'admin', active: true },
+    select: { id: true },
+  });
   await Promise.all(
     admins.map((a) =>
       createNotification({
-        user: a._id,
+        user: a.id,
         title: 'Resignation request received',
-        message: `${emp.fullName} (${emp.employeeId}) submitted a resignation request.`,
+        message: `${emp.firstName} ${emp.lastName} (${emp.employeeId}) submitted a resignation request.`,
         type: 'employee',
         link: '/admin',
       })
@@ -62,18 +76,21 @@ const getResignations = asyncHandler(async (req, res) => {
   const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || 10, 1), 100);
   const { status } = req.query;
 
-  const filter = {};
-  if (status && ['Pending', 'Approved', 'Rejected'].includes(status)) filter.status = status;
+  const where = {};
+  if (status && ['Pending', 'Approved', 'Rejected'].includes(status)) where.status = status;
 
   const [total, resignations] = await Promise.all([
-    Resignation.countDocuments(filter),
-    Resignation.find(filter)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * pageSize)
-      .limit(pageSize)
-      .populate('employee', 'firstName lastName employeeId profilePhoto department')
-      .populate('reviewedBy', 'name')
-      .lean(),
+    prisma.resignation.count({ where }),
+    prisma.resignation.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        employee: EMPLOYEE_INCLUDE,
+        reviewedBy: { select: { id: true, name: true } },
+      },
+    }),
   ]);
 
   res.json({ success: true, data: resignations, meta: { total, page, pageSize, totalPages: Math.ceil(total / pageSize) } });
@@ -81,58 +98,48 @@ const getResignations = asyncHandler(async (req, res) => {
 
 // @route  GET /api/resignations/mine  (employee)
 const getMyResignations = asyncHandler(async (req, res) => {
-  const resignations = await Resignation.find({ employee: req.user.employee }).sort({ createdAt: -1 }).lean();
+  const resignations = await prisma.resignation.findMany({
+    where: { employeeRefId: req.user.employee },
+    orderBy: { createdAt: 'desc' },
+  });
   res.json({ success: true, data: resignations });
 });
 
-// @route  PUT /api/resignations/:id/approve  (admin)
-const approveResignation = asyncHandler(async (req, res) => {
-  const resignation = await Resignation.findById(req.params.id).populate('employee', 'firstName lastName employeeId');
+async function reviewResignation(req, res, status) {
+  const resignation = await prisma.resignation.findUnique({
+    where: { id: req.params.id },
+    include: { employee: { select: { id: true, firstName: true, lastName: true, employeeId: true } } },
+  });
   if (!resignation) return res.status(404).json({ success: false, message: 'Resignation request not found' });
   if (resignation.status !== 'Pending') return res.status(400).json({ success: false, message: `Request is already ${resignation.status.toLowerCase()}` });
 
-  resignation.status = 'Approved';
-  resignation.reviewedBy = req.user.id;
-  resignation.adminNote = String(req.body.adminNote || '').trim();
-  await resignation.save();
+  const adminNote = String(req.body.adminNote || '').trim();
+  const updated = await prisma.resignation.update({
+    where: { id: resignation.id },
+    data: { status, reviewedById: req.user.id, adminNote },
+  });
 
-  const user = await User.findOne({ employee: resignation.employee._id });
+  const user = await prisma.user.findFirst({ where: { employeeRefId: resignation.employeeRefId } });
   if (user) {
+    const approved = status === 'Approved';
     await createNotification({
-      user: user._id,
-      title: 'Resignation approved',
-      message: `Your resignation request has been approved.${resignation.adminNote ? ` Note: ${resignation.adminNote}` : ''}`,
-      type: 'success',
+      user: user.id,
+      title: approved ? 'Resignation approved' : 'Resignation request rejected',
+      message: approved
+        ? `Your resignation request has been approved.${adminNote ? ` Note: ${adminNote}` : ''}`
+        : `Your resignation request was rejected.${adminNote ? ` Reason: ${adminNote}` : ''}`,
+      type: approved ? 'success' : 'warning',
       link: '/employee/resignation',
     });
   }
 
-  res.json({ success: true, message: 'Resignation request approved' });
-});
+  return res.json({ success: true, message: `Resignation request ${status.toLowerCase()}`, data: updated });
+}
+
+// @route  PUT /api/resignations/:id/approve  (admin)
+const approveResignation = asyncHandler((req, res) => reviewResignation(req, res, 'Approved'));
 
 // @route  PUT /api/resignations/:id/reject  (admin)
-const rejectResignation = asyncHandler(async (req, res) => {
-  const resignation = await Resignation.findById(req.params.id).populate('employee', 'firstName lastName employeeId');
-  if (!resignation) return res.status(404).json({ success: false, message: 'Resignation request not found' });
-  if (resignation.status !== 'Pending') return res.status(400).json({ success: false, message: `Request is already ${resignation.status.toLowerCase()}` });
-
-  resignation.status = 'Rejected';
-  resignation.reviewedBy = req.user.id;
-  resignation.adminNote = String(req.body.adminNote || '').trim();
-  await resignation.save();
-
-  const user = await User.findOne({ employee: resignation.employee._id });
-  if (user) {
-    await createNotification({
-      user: user._id,
-      title: 'Resignation request rejected',
-      message: `Your resignation request was rejected.${resignation.adminNote ? ` Reason: ${resignation.adminNote}` : ''}`,
-      type: 'warning',
-      link: '/employee/resignation',
-    });
-  }
-
-  res.json({ success: true, message: 'Resignation request rejected' });
-});
+const rejectResignation = asyncHandler((req, res) => reviewResignation(req, res, 'Rejected'));
 
 module.exports = { applyResignation, getResignations, getMyResignations, approveResignation, rejectResignation };

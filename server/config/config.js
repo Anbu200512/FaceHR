@@ -17,7 +17,7 @@ const config = {
   env,
   isDev,
   port: parseInt(process.env.PORT, 10) || 5000,
-  mongodbUri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/facehr',
+  databaseUrl: process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/facehr?schema=public',
   jwtSecret: process.env.JWT_SECRET || 'facehr-dev-secret-change-me',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   clientUrls,

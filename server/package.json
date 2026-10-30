@@ -7,9 +7,20 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "postinstall": "prisma generate",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "db:seed": "node prisma/seed.js",
+    "db:studio": "prisma studio",
+    "db:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pg-dev.ps1 start",
+    "db:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pg-dev.ps1 stop",
+    "db:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pg-dev.ps1 status",
     "models:download": "node scripts/download-face-models.js"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -17,9 +28,9 @@
     "express-rate-limit": "^7.5.0",
     "express-validator": "^7.2.1",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.9.5",
     "multer": "^1.4.5-lts.1",
-    "nodemailer": "^10.0.10"
+    "nodemailer": "^10.0.10",
+    "prisma": "^6.19.3"
   },
   "optionalDependencies": {
     "@tensorflow/tfjs-node": "^4.22.0",
@@ -27,5 +38,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma"
   }
 }

@@ -1,16 +1,16 @@
-const Designation = require('../models/Designation');
-const Employee = require('../models/Employee');
+const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 
 // @route  GET /api/designations
 const getDesignations = asyncHandler(async (req, res) => {
-  const designations = await Designation.find({}).lean();
-  const counts = await Employee.aggregate([
-    { $match: { designation: { $ne: null } } },
-    { $group: { _id: '$designation', count: { $sum: 1 } } },
-  ]);
-  const countMap = new Map(counts.map((c) => [String(c._id), c.count]));
-  const data = designations.map((d) => ({ ...d, employeeCount: countMap.get(String(d._id)) || 0 }));
+  const designations = await prisma.designation.findMany();
+  const counts = await prisma.employee.groupBy({
+    by: ['designationId'],
+    where: { designationId: { not: null } },
+    _count: { _all: true },
+  });
+  const countMap = new Map(counts.map((c) => [String(c.designationId), c._count._all]));
+  const data = designations.map((d) => ({ ...d, employeeCount: countMap.get(String(d.id)) || 0 }));
   res.json({ success: true, data });
 });
 
@@ -20,41 +20,53 @@ const createDesignation = asyncHandler(async (req, res) => {
   if (!name || !String(name).trim()) {
     return res.status(400).json({ success: false, message: 'Designation name is required' });
   }
-  const exists = await Designation.findOne({ name: { $regex: `^${String(name).trim()}$`, $options: 'i' } });
+  const exists = await prisma.designation.findFirst({
+    where: { name: { equals: String(name).trim(), mode: 'insensitive' } },
+  });
   if (exists) return res.status(409).json({ success: false, message: 'A designation with this name already exists' });
 
-  const designation = await Designation.create({
-    name: String(name).trim(),
-    description: String(description || '').trim(),
+  const designation = await prisma.designation.create({
+    data: {
+      name: String(name).trim(),
+      description: String(description || '').trim(),
+    },
   });
   res.status(201).json({ success: true, message: 'Designation created', data: designation });
 });
 
 // @route  PUT /api/designations/:id
 const updateDesignation = asyncHandler(async (req, res) => {
-  const designation = await Designation.findById(req.params.id);
+  const designation = await prisma.designation.findUnique({ where: { id: req.params.id } });
   if (!designation) return res.status(404).json({ success: false, message: 'Designation not found' });
+
+  const data = {};
   if (req.body.name) {
-    const dup = await Designation.findOne({ name: { $regex: `^${String(req.body.name).trim()}$`, $options: 'i' }, _id: { $ne: designation._id } });
+    const dup = await prisma.designation.findFirst({
+      where: {
+        name: { equals: String(req.body.name).trim(), mode: 'insensitive' },
+        id: { not: designation.id },
+      },
+    });
     if (dup) return res.status(409).json({ success: false, message: 'A designation with this name already exists' });
-    designation.name = String(req.body.name).trim();
+    data.name = String(req.body.name).trim();
   }
-  if (req.body.description !== undefined) designation.description = String(req.body.description).trim();
-  await designation.save();
-  res.json({ success: true, message: 'Designation updated', data: designation });
+  if (req.body.description !== undefined) data.description = String(req.body.description).trim();
+
+  const updated = await prisma.designation.update({ where: { id: designation.id }, data });
+  res.json({ success: true, message: 'Designation updated', data: updated });
 });
 
 // @route  DELETE /api/designations/:id
 const deleteDesignation = asyncHandler(async (req, res) => {
-  const designation = await Designation.findById(req.params.id);
+  const designation = await prisma.designation.findUnique({ where: { id: req.params.id } });
   if (!designation) return res.status(404).json({ success: false, message: 'Designation not found' });
 
-  const count = await Employee.countDocuments({ designation: designation._id });
+  const count = await prisma.employee.count({ where: { designationId: designation.id } });
   if (count > 0) {
     return res.status(409).json({ success: false, message: `Cannot delete: ${count} employee(s) use this designation.` });
   }
 
-  await designation.deleteOne();
+  await prisma.designation.delete({ where: { id: designation.id } });
   res.json({ success: true, message: 'Designation deleted' });
 });
 

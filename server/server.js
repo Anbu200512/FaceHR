@@ -5,6 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const config = require('./config/config');
+const mongoCompat = require('./middleware/mongoCompat');
 const faceService = require('./services/faceService');
 const {
   seedDefaultDepartments,
@@ -35,6 +36,7 @@ app.use(
 );
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+app.use(mongoCompat);
 app.use('/uploads', express.static(config.uploadsDir));
 
 // ---- optional: serve built client in production ----
@@ -88,9 +90,17 @@ const start = async () => {
     // Initialize face service in the background (non-blocking, graceful)
     faceService.init().catch((err) => console.warn('[FaceService] init error:', err.message));
 
-    app.listen(config.port, () => {
+    const server = app.listen(config.port, () => {
       console.log(`[FaceHR] API running on http://localhost:${config.port}`);
     });
+
+    const shutdown = async () => {
+      server.close();
+      await connectDB.disconnectDB();
+      process.exit(0);
+    };
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
   } catch (err) {
     console.error('[FaceHR] Failed to start server:', err.message);
     process.exit(1);

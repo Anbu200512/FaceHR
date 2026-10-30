@@ -1,9 +1,4 @@
-const Employee = require('../models/Employee');
-const Attendance = require('../models/Attendance');
-const Leave = require('../models/Leave');
-const Resignation = require('../models/Resignation');
-const Department = require('../models/Department');
-const Location = require('../models/Location');
+const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 const { computeDayStatus } = require('./attendanceController');
 const { startOfDay, monthRange, toDateKey, isWeekend, diffDays } = require('../utils/date');
@@ -11,8 +6,10 @@ const { startOfDay, monthRange, toDateKey, isWeekend, diffDays } = require('../u
 const ALLOWANCE = 12;
 const PRESENT_STATUSES = ['Present', 'Late', 'Half Day'];
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function sanitizeId(value) {
-  return value && /^[0-9a-fA-F]{24}$/.test(String(value)) ? value : null;
+  return value && UUID_RE.test(String(value)) ? String(value) : null;
 }
 
 // Classify a single employee for a single day snapshot.
@@ -58,20 +55,24 @@ function groupBreakdown(items, keyOf, nameOf, { onlyKey } = {}) {
 
 async function computeLeaveSummary(employees, year, monthIndex) {
   const { start, end } = monthRange(year, monthIndex);
-  const empIds = employees.map((e) => e._id);
+  const empIds = employees.map((e) => e.id);
 
   const [approved, pending] = await Promise.all([
-    Leave.find({
-      employee: { $in: empIds },
-      status: 'Approved',
-      startDate: { $lt: end },
-      endDate: { $gte: start },
-    }).lean(),
-    Leave.countDocuments({
-      employee: { $in: empIds },
-      status: 'Pending',
-      startDate: { $lt: end },
-      endDate: { $gte: start },
+    prisma.leave.findMany({
+      where: {
+        employeeRefId: { in: empIds },
+        status: 'Approved',
+        startDate: { lt: end },
+        endDate: { gte: start },
+      },
+    }),
+    prisma.leave.count({
+      where: {
+        employeeRefId: { in: empIds },
+        status: 'Pending',
+        startDate: { lt: end },
+        endDate: { gte: start },
+      },
     }),
   ]);
 
@@ -93,19 +94,21 @@ async function computeLeaveSummary(employees, year, monthIndex) {
 }
 
 async function computeUpcoming(employees) {
-  const empIds = employees.map((e) => e._id);
+  const empIds = employees.map((e) => e.id);
   const today = startOfDay(new Date());
   const [upcoming, pendingList] = await Promise.all([
-    Leave.find({ employee: { $in: empIds }, status: 'Approved', startDate: { $gte: today } })
-      .sort({ startDate: 1 })
-      .limit(5)
-      .populate('employee', 'firstName lastName employeeId profilePhoto')
-      .lean(),
-    Leave.find({ employee: { $in: empIds }, status: 'Pending' })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate('employee', 'firstName lastName employeeId profilePhoto')
-      .lean(),
+    prisma.leave.findMany({
+      where: { employeeRefId: { in: empIds }, status: 'Approved', startDate: { gte: today } },
+      orderBy: { startDate: 'asc' },
+      take: 5,
+      include: { employee: { select: { id: true, firstName: true, lastName: true, employeeId: true, profilePhoto: true } } },
+    }),
+    prisma.leave.findMany({
+      where: { employeeRefId: { in: empIds }, status: 'Pending' },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      include: { employee: { select: { id: true, firstName: true, lastName: true, employeeId: true, profilePhoto: true } } },
+    }),
   ]);
 
   const birthdays = [];
@@ -118,7 +121,8 @@ async function computeUpcoming(employees) {
     const days = Math.round((startOfDay(next) - today) / 86400000);
     if (days >= 0 && days <= 7) {
       birthdays.push({
-        _id: e._id,
+        id: e.id,
+        _id: e.id,
         name: `${e.firstName} ${e.lastName}`.trim(),
         employee: { firstName: e.firstName, lastName: e.lastName, profilePhoto: e.profilePhoto },
         date: next,
@@ -134,22 +138,41 @@ async function computeUpcoming(employees) {
 
 // Employees who joined during the selected month (organization-wide).
 async function getNewJoinersList(start, end) {
-  return Employee.find({ status: 'Active', joiningDate: { $gte: start, $lt: end } })
-    .sort({ joiningDate: -1 })
-    .limit(8)
-    .populate('department', 'name')
-    .populate('office', 'name')
-    .select('firstName lastName profilePhoto employeeId joiningDate department office')
-    .lean();
+  return prisma.employee.findMany({
+    where: { status: 'Active', joiningDate: { gte: start, lt: end } },
+    orderBy: { joiningDate: 'desc' },
+    take: 8,
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      profilePhoto: true,
+      employeeId: true,
+      joiningDate: true,
+      department: { select: { id: true, name: true } },
+      office: { select: { id: true, name: true } },
+    },
+  });
 }
 
 // Resignation requests whose resignation date falls in the selected month.
 async function getResignationsMonth(start, end) {
-  return Resignation.find({ resignationDate: { $gte: start, $lt: end } })
-    .sort({ resignationDate: -1, createdAt: -1 })
-    .limit(8)
-    .populate('employee', 'firstName lastName profilePhoto department')
-    .lean();
+  return prisma.resignation.findMany({
+    where: { resignationDate: { gte: start, lt: end } },
+    orderBy: [{ resignationDate: 'desc' }, { createdAt: 'desc' }],
+    take: 8,
+    include: {
+      employee: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          profilePhoto: true,
+          department: { select: { id: true, name: true } },
+        },
+      },
+    },
+  });
 }
 
 // Monthly new joiners / resignations / net change for the last 6 months ending at the selected month.
@@ -161,19 +184,21 @@ async function computeGrowthTrend(year, monthIndex) {
   }
 
   const [joinersAgg, resignAgg] = await Promise.all([
-    Employee.aggregate([
-      { $match: { status: 'Active', joiningDate: { $ne: null } } },
-      { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$joiningDate' } }, count: { $sum: 1 } } },
-    ]),
-    Employee.aggregate([
-      { $match: { status: 'Inactive' } },
-      { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$updatedAt' } }, count: { $sum: 1 } } },
-    ]),
+    prisma.$queryRaw`
+      SELECT to_char("joiningDate", 'YYYY-MM') AS month, COUNT(*)::int AS count
+      FROM employees
+      WHERE status = 'Active' AND "joiningDate" IS NOT NULL
+      GROUP BY 1`,
+    prisma.$queryRaw`
+      SELECT to_char("updatedAt", 'YYYY-MM') AS month, COUNT(*)::int AS count
+      FROM employees
+      WHERE status = 'Inactive'
+      GROUP BY 1`,
   ]);
 
   const monthKey = (m) => `${m.year}-${String(m.monthIndex + 1).padStart(2, '0')}`;
-  const jm = new Map(joinersAgg.map((g) => [g._id, g.count]));
-  const rm = new Map(resignAgg.map((g) => [g._id, g.count]));
+  const jm = new Map(joinersAgg.map((g) => [g.month, g.count]));
+  const rm = new Map(resignAgg.map((g) => [g.month, g.count]));
 
   return months.map((m) => {
     const k = monthKey(m);
@@ -190,14 +215,18 @@ async function computeGrowthTrend(year, monthIndex) {
 }
 
 async function buildDepartmentRows(items, departmentFilter) {
-  const depts = await Department.find({}).sort({ name: 1 }).lean();
-  const grouped = groupBreakdown(items, (it) => (it.emp.department?._id ? String(it.emp.department._id) : null), (it) => it.emp.department?.name || 'Unassigned');
-  const map = new Map(grouped.map((g) => [String(g.id), g]));
+  const depts = await prisma.department.findMany({ orderBy: { name: 'asc' } });
+  const grouped = groupBreakdown(
+    items,
+    (it) => (it.emp.department?.id ? String(it.emp.department.id) : null),
+    (it) => it.emp.department?.name || 'Unassigned'
+  );
+  const map = new Map(grouped.map((g) => [g.id === null ? 'null' : String(g.id), g]));
 
   let rows = depts.map((d) => {
-    const g = map.get(String(d._id));
+    const g = map.get(String(d.id));
     return {
-      id: d._id,
+      id: d.id,
       name: d.name,
       employees: g?.employees || 0,
       present: g?.present || 0,
@@ -206,7 +235,8 @@ async function buildDepartmentRows(items, departmentFilter) {
       onLeave: g?.onLeave || 0,
     };
   });
-  if (map.has('null')) rows.push({ id: null, name: 'Unassigned', ...map.get('null') });
+  const unassigned = map.get('null');
+  if (unassigned) rows.push({ ...unassigned, id: null, name: 'Unassigned' });
   if (departmentFilter) rows = rows.filter((r) => String(r.id) === String(departmentFilter));
   return rows;
 }
@@ -220,21 +250,32 @@ async function computeOrgSummary(employees, year, monthIndex, location, departme
   const other = employees.filter((e) => e.gender === 'Other').length;
   const newJoiners = employees.filter((e) => e.joiningDate && e.joiningDate >= start && e.joiningDate < end).length;
 
-  const resignFilter = { status: 'Inactive', updatedAt: { $gte: start, $lt: end } };
-  if (location) resignFilter.office = location;
-  if (department) resignFilter.department = department;
-  const resignations = await Employee.countDocuments(resignFilter);
+  const resignWhere = { status: 'Inactive', updatedAt: { gte: start, lt: end } };
+  if (location) resignWhere.officeId = location;
+  if (department) resignWhere.departmentId = department;
+  const resignations = await prisma.employee.count({ where: resignWhere });
 
   return { male, female, other, newJoiners, resignations };
 }
 
 // Most recent resignation requests for the admin dashboard widget.
 async function getRecentResignations(limit = 6) {
-  return Resignation.find({})
-    .sort({ createdAt: -1 })
-    .limit(limit)
-    .populate('employee', 'firstName lastName employeeId profilePhoto department')
-    .lean();
+  return prisma.resignation.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    include: {
+      employee: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          employeeId: true,
+          profilePhoto: true,
+          department: { select: { id: true, name: true } },
+        },
+      },
+    },
+  });
 }
 
 // Organization-wide HR metrics. Employee-derived values respect the selected
@@ -243,18 +284,21 @@ async function computeHrSummary(year, monthIndex, location, department) {
   const { start, end } = monthRange(year, monthIndex);
   const now = new Date();
 
-  const activeFilter = { status: 'Active' };
-  const resignFilter = { status: 'Inactive', updatedAt: { $gte: start, $lt: end } };
+  const activeWhere = { status: 'Active' };
+  const resignWhere = { status: 'Inactive', updatedAt: { gte: start, lt: end } };
   if (location) {
-    activeFilter.office = location;
-    resignFilter.office = location;
+    activeWhere.officeId = location;
+    resignWhere.officeId = location;
   }
   if (department) {
-    activeFilter.department = department;
-    resignFilter.department = department;
+    activeWhere.departmentId = department;
+    resignWhere.departmentId = department;
   }
 
-  const active = await Employee.find(activeFilter).select('gender joiningDate dateOfBirth').lean();
+  const active = await prisma.employee.findMany({
+    where: activeWhere,
+    select: { gender: true, joiningDate: true, dateOfBirth: true },
+  });
 
   const totalEmployees = active.length;
   const male = active.filter((e) => e.gender === 'Male').length;
@@ -276,11 +320,13 @@ async function computeHrSummary(year, monthIndex, location, department) {
   const averageAge = ageCount > 0 ? Math.round((ageSum / ageCount / (365.25 * 24 * 3600 * 1000)) * 10) / 10 : null;
 
   const [resignations, pendingLeaves, pendingResignations, upcomingApprovedLeaves, onLeaveToday] = await Promise.all([
-    Employee.countDocuments(resignFilter),
-    Leave.countDocuments({ status: 'Pending' }),
-    Resignation.countDocuments({ status: 'Pending' }),
-    Leave.countDocuments({ status: 'Approved', startDate: { $gte: startOfDay(now) } }),
-    Leave.countDocuments({ status: 'Approved', startDate: { $lte: startOfDay(now) }, endDate: { $gte: startOfDay(now) } }),
+    prisma.employee.count({ where: resignWhere }),
+    prisma.leave.count({ where: { status: 'Pending' } }),
+    prisma.resignation.count({ where: { status: 'Pending' } }),
+    prisma.leave.count({ where: { status: 'Approved', startDate: { gte: startOfDay(now) } } }),
+    prisma.leave.count({
+      where: { status: 'Approved', startDate: { lte: startOfDay(now) }, endDate: { gte: startOfDay(now) } },
+    }),
   ]);
 
   return {
@@ -302,25 +348,25 @@ async function computeHrSummary(year, monthIndex, location, department) {
 // Filtered to requests whose resignationDate falls within the selected month,
 // and (when a location/department filter is active) to employees in that set.
 async function getResignationBreakdown(start, end, location, department) {
-  const match = { resignationDate: { $gte: start, $lt: end } };
+  const where = { resignationDate: { gte: start, lt: end } };
   if (location || department) {
-    const empFilter = {};
-    if (location) empFilter.office = location;
-    if (department) empFilter.department = department;
-    const empIds = await Employee.find(empFilter).distinct('_id');
-    match.employee = { $in: empIds };
+    const empWhere = {};
+    if (location) empWhere.officeId = location;
+    if (department) empWhere.departmentId = department;
+    const empIds = await prisma.employee.findMany({ where: empWhere, select: { id: true } });
+    where.employeeRefId = { in: empIds.map((e) => e.id) };
   }
-  const grouped = await Resignation.aggregate([
-    { $match: match },
-    { $group: { _id: '$reason', count: { $sum: 1 } } },
-    { $sort: { count: -1 } },
-  ]);
-  const total = grouped.reduce((s, g) => s + g.count, 0);
-  return grouped.map((g) => ({
-    reason: g._id,
-    count: g.count,
-    percent: total > 0 ? Math.round((g.count / total) * 1000) / 10 : 0,
-  }));
+  const rows = await prisma.resignation.findMany({ where, select: { reason: true } });
+  const counts = new Map();
+  rows.forEach((r) => counts.set(r.reason, (counts.get(r.reason) || 0) + 1));
+  const total = rows.length;
+  return Array.from(counts.entries())
+    .map(([reason, count]) => ({
+      reason,
+      count,
+      percent: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
 }
 
 // Age distribution of the given employees (already filtered by the dashboard).
@@ -346,14 +392,18 @@ function computeAgeDistribution(employees) {
 }
 
 async function buildLocationRows(items, locationFilter) {
-  const locations = await Location.find({ active: true }).sort({ name: 1 }).lean();
-  const grouped = groupBreakdown(items, (it) => (it.emp.office?._id ? String(it.emp.office._id) : null), (it) => it.emp.office?.name || 'Unassigned');
-  const map = new Map(grouped.map((g) => [String(g.id), g]));
+  const locations = await prisma.location.findMany({ where: { active: true }, orderBy: { name: 'asc' } });
+  const grouped = groupBreakdown(
+    items,
+    (it) => (it.emp.office?.id ? String(it.emp.office.id) : null),
+    (it) => it.emp.office?.name || 'Unassigned'
+  );
+  const map = new Map(grouped.map((g) => [g.id === null ? 'null' : String(g.id), g]));
 
   let rows = locations.map((l) => {
-    const g = map.get(String(l._id));
+    const g = map.get(String(l.id));
     return {
-      id: l._id,
+      id: l.id,
       name: l.name,
       employees: g?.employees || 0,
       present: g?.present || 0,
@@ -362,7 +412,8 @@ async function buildLocationRows(items, locationFilter) {
       onLeave: g?.onLeave || 0,
     };
   });
-  if (map.has('null')) rows.push({ id: null, name: 'Unassigned', ...map.get('null') });
+  const unassigned = map.get('null');
+  if (unassigned) rows.push({ ...unassigned, id: null, name: 'Unassigned' });
   if (locationFilter) rows = rows.filter((r) => String(r.id) === String(locationFilter));
   return rows;
 }
@@ -419,15 +470,18 @@ const getDashboard = asyncHandler(async (req, res) => {
   const location = sanitizeId(req.query.location);
   const department = sanitizeId(req.query.department);
 
-  const empFilter = { status: 'Active' };
-  if (location) empFilter.office = location;
-  if (department) empFilter.department = department;
+  const empWhere = { status: 'Active' };
+  if (location) empWhere.officeId = location;
+  if (department) empWhere.departmentId = department;
 
-  const employees = await Employee.find(empFilter)
-    .populate('department', 'name')
-    .populate('office', 'name')
-    .sort({ firstName: 1 })
-    .lean();
+  const employees = await prisma.employee.findMany({
+    where: empWhere,
+    include: {
+      department: { select: { id: true, name: true } },
+      office: { select: { id: true, name: true } },
+    },
+    orderBy: { firstName: 'asc' },
+  });
 
   // --- Current month: latest applicable (today) snapshot ---
   if (isCurrentMonth) {
@@ -435,16 +489,19 @@ const getDashboard = asyncHandler(async (req, res) => {
 
     // Fallback to the latest record when today has no check-in yet (weekend / before
     // office start) and the employee is not on approved leave today.
-    const noRecIds = rows.filter((r) => !r.record && r.status === 'Absent').map((r) => r.employee._id);
+    const noRecIds = rows.filter((r) => !r.record && r.status === 'Absent').map((r) => r.employee.id);
     if (noRecIds.length) {
-      const latest = await Attendance.aggregate([
-        { $match: { employee: { $in: noRecIds } } },
-        { $sort: { checkInTime: -1 } },
-        { $group: { _id: '$employee', rec: { $first: '$$ROOT' } } },
-      ]);
-      const latestMap = new Map(latest.map((x) => [String(x._id), x.rec]));
+      const latest = await prisma.attendance.findMany({
+        where: { employeeRefId: { in: noRecIds } },
+        orderBy: { checkInTime: { sort: 'desc', nulls: 'last' } },
+        select: { employeeRefId: true, status: true },
+      });
+      const latestMap = new Map();
+      for (const rec of latest) {
+        if (!latestMap.has(rec.employeeRefId)) latestMap.set(rec.employeeRefId, rec);
+      }
       rows.forEach((r) => {
-        const rec = latestMap.get(String(r.employee._id));
+        const rec = latestMap.get(r.employee.id);
         if (rec) r.status = rec.status;
       });
     }
@@ -513,27 +570,29 @@ const getDashboard = asyncHandler(async (req, res) => {
 
   // --- Past month: aggregate from that month's records ---
   const { start, end } = monthRange(year, monthIndex);
-  const empIds = employees.map((e) => e._id);
+  const empIds = employees.map((e) => e.id);
 
   const [records, leaves] = await Promise.all([
-    Attendance.find({ employee: { $in: empIds }, date: { $gte: start, $lt: end } })
-      .populate('employee', 'firstName lastName employeeId profilePhoto')
-      .lean(),
-    Leave.find({
-      employee: { $in: empIds },
-      status: 'Approved',
-      startDate: { $lt: end },
-      endDate: { $gte: start },
-    }).lean(),
+    prisma.attendance.findMany({
+      where: { employeeRefId: { in: empIds }, date: { gte: start, lt: end } },
+    }),
+    prisma.leave.findMany({
+      where: {
+        employeeRefId: { in: empIds },
+        status: 'Approved',
+        startDate: { lt: end },
+        endDate: { gte: start },
+      },
+    }),
   ]);
 
   const recMapKey = (eid, key) => `${eid}__${key}`;
   const recMap = new Map();
-  records.forEach((r) => recMap.set(recMapKey(String(r.employee._id), toDateKey(r.date)), r));
+  records.forEach((r) => recMap.set(recMapKey(String(r.employeeRefId), toDateKey(r.date)), r));
 
   const leaveDaysByEmp = new Map();
   leaves.forEach((l) => {
-    const eid = String(l.employee);
+    const eid = String(l.employeeRefId);
     const d = diffDays(l.startDate, l.endDate);
     for (let i = 0; i < d; i++) {
       const day = new Date(l.startDate);
@@ -545,7 +604,7 @@ const getDashboard = asyncHandler(async (req, res) => {
 
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const outcomes = employees.map((emp) => {
-    const eid = String(emp._id);
+    const eid = String(emp.id);
     const leaveSet = leaveDaysByEmp.get(eid) || new Set();
     let presentDays = 0;
     let lateDays = 0;

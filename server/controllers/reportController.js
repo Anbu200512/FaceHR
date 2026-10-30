@@ -1,6 +1,4 @@
-const Employee = require('../models/Employee');
-const Attendance = require('../models/Attendance');
-const Leave = require('../models/Leave');
+const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 const {
   startOfDay,
@@ -23,11 +21,15 @@ const getReport = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Date range is limited to 92 days. Please narrow the range.' });
   }
 
-  const empFilter = { status: 'Active' };
-  if (department) empFilter.department = department;
-  if (employee) empFilter._id = employee;
+  const where = { status: 'Active' };
+  if (department) where.departmentId = department;
+  if (employee) where.id = employee;
 
-  const employees = await Employee.find(empFilter).populate('department', 'name').sort({ firstName: 1 }).lean();
+  const employees = await prisma.employee.findMany({
+    where,
+    include: { department: { select: { id: true, name: true } } },
+    orderBy: { firstName: 'asc' },
+  });
 
   // all calendar days in range (excluding weekends from "working days")
   const days = [];
@@ -38,21 +40,24 @@ const getReport = asyncHandler(async (req, res) => {
   }
   const workingDays = days.filter((d) => !isWeekend(d)).length;
 
+  const empIds = employees.map((e) => e.id);
   const [attendance, leaves] = await Promise.all([
-    Attendance.find({ date: { $gte: fromDate, $lt: toDate }, employee: { $in: employees.map((e) => e._id) } })
-      .populate('employee', 'firstName lastName employeeId department')
-      .lean(),
-    Leave.find({
-      status: 'Approved',
-      employee: { $in: employees.map((e) => e._id) },
-      startDate: { $lt: toDate },
-      endDate: { $gte: fromDate },
-    }).lean(),
+    prisma.attendance.findMany({
+      where: { date: { gte: fromDate, lt: toDate }, employeeRefId: { in: empIds } },
+    }),
+    prisma.leave.findMany({
+      where: {
+        status: 'Approved',
+        employeeRefId: { in: empIds },
+        startDate: { lt: toDate },
+        endDate: { gte: fromDate },
+      },
+    }),
   ]);
 
   const recKey = (eid, date) => `${eid}__${toDateKey(date)}`;
   const recMap = new Map();
-  attendance.forEach((r) => recMap.set(recKey(r.employee._id, r.date), r));
+  attendance.forEach((r) => recMap.set(recKey(r.employeeRefId, r.date), r));
 
   const leaveKey = (eid) => String(eid);
   const leaveMap = new Map();
@@ -61,7 +66,7 @@ const getReport = asyncHandler(async (req, res) => {
     for (let i = 0; i < d; i++) {
       const day = new Date(l.startDate);
       day.setDate(l.startDate.getDate() + i);
-      leaveMap.set(`${leaveKey(l.employee._id)}__${toDateKey(day)}`, l);
+      leaveMap.set(`${leaveKey(l.employeeRefId)}__${toDateKey(day)}`, l);
     }
   });
 
@@ -71,7 +76,7 @@ const getReport = asyncHandler(async (req, res) => {
   if (includeDetail) {
     for (const emp of employees) {
       for (const day of days) {
-        const key = recKey(emp._id, day);
+        const key = recKey(emp.id, day);
         const rec = recMap.get(key);
         if (rec) {
           rows.push({
@@ -86,7 +91,7 @@ const getReport = asyncHandler(async (req, res) => {
           });
         } else if (isWeekend(day)) {
           // skip weekends in rows by default
-        } else if (leaveMap.has(recKey(emp._id, day))) {
+        } else if (leaveMap.has(recKey(emp.id, day))) {
           rows.push({
             employeeId: emp.employeeId,
             employeeName: `${emp.firstName} ${emp.lastName}`,
@@ -132,7 +137,7 @@ const getReport = asyncHandler(async (req, res) => {
   for (const emp of employees) {
     for (const day of days) {
       if (isWeekend(day)) continue;
-      const key = recKey(emp._id, day);
+      const key = recKey(emp.id, day);
       const rec = recMap.get(key);
       const trend = trendMap.get(toDateKey(day)) || { date: toDateKey(day), present: 0, late: 0, absent: 0, leave: 0 };
 
@@ -176,7 +181,7 @@ const getReport = asyncHandler(async (req, res) => {
   for (const key of trendMap.keys()) {
     const dayRecs = attendance.filter((r) => toDateKey(r.date) === key);
     dayRecs.forEach((r) => {
-      const emp = employees.find((e) => String(e._id) === String(r.employee._id));
+      const emp = employees.find((e) => String(e.id) === String(r.employeeRefId));
       if (emp) {
         const dept = emp.department ? emp.department.name : 'Unassigned';
         deptPresent[dept] = (deptPresent[dept] || 0) + 1;

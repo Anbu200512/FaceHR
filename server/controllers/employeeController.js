@@ -2,13 +2,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const Employee = require('../models/Employee');
-const User = require('../models/User');
-const Department = require('../models/Department');
-const Designation = require('../models/Designation');
-const FaceProfile = require('../models/FaceProfile');
-const Attendance = require('../models/Attendance');
-const Leave = require('../models/Leave');
+const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 const config = require('../config/config');
 const { saveBuffer, extFromName, uploadsDir } = require('../middleware/upload');
@@ -16,40 +10,40 @@ const { createNotification } = require('../services/notificationService');
 const { sendWelcomeMail } = require('../services/mailService');
 const { normalizeDescriptor, descriptorIsValid } = require('../services/faceService');
 
-const pickFields = (b) => ({
-  firstName: b.firstName,
-  middleName: b.middleName,
-  lastName: b.lastName,
-  phone: b.phone,
-  dateOfBirth: b.dateOfBirth || null,
-  gender: b.gender,
-  address: b.address,
-  state: b.state,
-  subDepartment: b.subDepartment,
-  subDepartment1: b.subDepartment1,
-  subDepartment2: b.subDepartment2,
-  category: b.category,
-  subCategory: b.subCategory,
-  grade: b.grade,
-  reportingManager: b.reportingManager,
-  reportingManager2: b.reportingManager2,
-  probation: b.probation,
-  probationManage: b.probationManage,
-  totalExperience: b.totalExperience,
-  exEmployee: b.exEmployee,
-  employmentType: b.employmentType,
-  status: b.status,
-  joiningDate: b.joiningDate,
-  department: b.department || null,
-  office: null,
-  designation: b.designation || null,
-});
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function sanitizeId(value) {
-  return value && /^[0-9a-fA-F]{24}$/.test(String(value)) ? value : null;
+  return value && UUID_RE.test(String(value)) ? String(value) : null;
 }
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
+
+const STRING_FIELDS = [
+  'firstName', 'middleName', 'lastName', 'phone', 'address', 'state',
+  'subDepartment', 'subDepartment1', 'subDepartment2', 'category', 'subCategory',
+  'grade', 'reportingManager', 'reportingManager2', 'probation', 'totalExperience',
+  'employmentType', 'status',
+];
+const BOOLEAN_FIELDS = ['probationManage', 'exEmployee'];
+
+const toBool = (v) => v === true || v === 'true';
+
+/** Basic scalar employee fields. Relation ids (department/office/designation) are handled separately. */
+const pickFields = (b) => {
+  const data = {};
+  for (const k of STRING_FIELDS) {
+    if (b[k] === undefined || b[k] === null) continue;
+    data[k] = String(b[k]).trim();
+  }
+  for (const k of BOOLEAN_FIELDS) {
+    if (b[k] !== undefined && b[k] !== null) data[k] = toBool(b[k]);
+  }
+  if (b.dateOfBirth !== undefined) data.dateOfBirth = b.dateOfBirth ? new Date(b.dateOfBirth) : null;
+  if (b.joiningDate !== undefined && b.joiningDate !== null && b.joiningDate !== '') {
+    data.joiningDate = new Date(b.joiningDate);
+  }
+  return data;
+};
 
 const cleanObject = (obj) => {
   if (!obj || typeof obj !== 'object') return undefined;
@@ -160,53 +154,78 @@ const cleanSections = (b) => {
   return Object.keys(out).length ? { sections: out, address } : null;
 };
 
+const LIST_INCLUDE = {
+  department: { select: { id: true, name: true } },
+  designation: { select: { id: true, name: true } },
+  office: { select: { id: true, name: true } },
+  face: { select: { id: true, faceId: true, active: true } },
+};
+
+const EMPLOYEE_INCLUDE = {
+  department: true,
+  designation: true,
+  office: true,
+  face: {
+    select: {
+      id: true,
+      faceId: true,
+      faceImage: true,
+      quality: true,
+      active: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  },
+  documents: true,
+};
+
 // @route  GET /api/employees
 const getEmployees = asyncHandler(async (req, res) => {
   const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
   const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || 10, 1), 100);
   const search = String(req.query.search || '').trim();
-  const department = req.query.department;
-  const designation = req.query.designation;
   const status = req.query.status;
   const noFace = req.query.noFace === 'true';
   const sortBy = String(req.query.sortBy || 'createdAt');
-  const order = req.query.order === 'asc' ? 1 : -1;
+  const order = req.query.order === 'asc' ? 'asc' : 'desc';
 
-  const filter = {};
-  if (department) filter.department = sanitizeId(department);
-  if (designation) filter.designation = sanitizeId(designation);
-  if (status) filter.status = status;
-  const branch = req.query.branch || req.query.office;
-  if (branch) filter.office = sanitizeId(branch);
+  const where = {};
+  const department = sanitizeId(req.query.department);
+  const designation = sanitizeId(req.query.designation);
+  const branch = sanitizeId(req.query.branch || req.query.office);
+
+  if (department) where.departmentId = department;
+  if (designation) where.designationId = designation;
+  if (status) where.status = status;
+  if (branch) where.officeId = branch;
 
   if (noFace) {
-    const faceIds = await FaceProfile.find({}).select('employee').lean();
-    filter._id = { $nin: faceIds.map((f) => f.employee) };
+    const faces = await prisma.faceProfile.findMany({ select: { employeeRefId: true } });
+    where.id = { notIn: faces.map((f) => f.employeeRefId) };
   }
 
   if (search) {
-    const re = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-    filter.$or = [
-      { firstName: re },
-      { lastName: re },
-      { email: re },
-      { employeeId: re },
-      { phone: re },
+    where.OR = [
+      { firstName: { contains: search, mode: 'insensitive' } },
+      { lastName: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+      { employeeId: { contains: search, mode: 'insensitive' } },
+      { phone: { contains: search, mode: 'insensitive' } },
     ];
   }
 
-  const sort = {};
-  sort[sortBy] = order;
+  const SORTABLE = ['createdAt', 'joiningDate', 'firstName', 'lastName', 'employeeId', 'email', 'status'];
+  const sortField = SORTABLE.includes(sortBy) ? sortBy : 'createdAt';
 
   const [total, employees] = await Promise.all([
-    Employee.countDocuments(filter),
-    Employee.find(filter)
-      .sort(sort)
-      .skip((page - 1) * pageSize)
-      .limit(pageSize)
-      .populate('department designation office')
-      .populate({ path: 'face', select: 'faceId active' })
-      .lean(),
+    prisma.employee.count({ where }),
+    prisma.employee.findMany({
+      where,
+      include: LIST_INCLUDE,
+      orderBy: { [sortField]: order },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
   ]);
 
   res.json({
@@ -222,10 +241,10 @@ const getEmployee = asyncHandler(async (req, res) => {
   if (req.user.role === 'employee' && String(req.params.id) !== String(req.user.employee)) {
     return res.status(403).json({ success: false, message: 'You do not have permission to view this employee' });
   }
-  const employee = await Employee.findById(req.params.id)
-    .populate('department designation office')
-    .populate({ path: 'face', select: '-descriptor' })
-    .lean();
+  const employee = await prisma.employee.findUnique({
+    where: { id: req.params.id },
+    include: EMPLOYEE_INCLUDE,
+  });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
   res.json({ success: true, data: employee });
 });
@@ -244,8 +263,8 @@ const createEmployee = asyncHandler(async (req, res) => {
   const email = String(b.email).trim().toLowerCase();
 
   const [idExists, emailExists] = await Promise.all([
-    Employee.findOne({ employeeId }),
-    Employee.findOne({ email }),
+    prisma.employee.findUnique({ where: { employeeId } }),
+    prisma.employee.findUnique({ where: { email } }),
   ]);
   if (idExists) return res.status(409).json({ success: false, message: `Employee ID ${employeeId} already exists` });
   if (emailExists) return res.status(409).json({ success: false, message: 'An employee with this email already exists' });
@@ -266,16 +285,16 @@ const createEmployee = asyncHandler(async (req, res) => {
   const givenPassword = b.password || crypto.randomBytes(6).toString('hex');
   const hashed = await bcrypt.hash(String(givenPassword), 10);
 
-  const employeeData = {
+  const employeeData = stripUndefined({
     ...pickFields(b),
     employeeId,
     email,
     profilePhoto,
-    department,
-    office,
-    designation,
-joiningDate: b.joiningDate || new Date(),
-  };
+    departmentId: department,
+    officeId: office,
+    designationId: designation,
+    joiningDate: b.joiningDate ? new Date(b.joiningDate) : new Date(),
+  });
 
   const extra = cleanSections(b);
   if (extra) {
@@ -283,27 +302,31 @@ joiningDate: b.joiningDate || new Date(),
     if (!employeeData.address && extra.address) employeeData.address = extra.address;
   }
 
-  const employee = await Employee.create(employeeData);
-
-  const user = await User.create({
-    employeeId,
-    name: `${b.firstName} ${b.lastName}`.trim(),
-    email,
-    password: hashed,
-    role: 'employee',
-    employee: employee._id,
-    active: employee.status !== 'Inactive',
+  const { employee } = await prisma.$transaction(async (tx) => {
+    const created = await tx.employee.create({ data: employeeData });
+    await tx.user.create({
+      data: {
+        employeeId,
+        name: `${b.firstName} ${b.lastName}`.trim(),
+        email,
+        password: hashed,
+        role: 'employee',
+        employeeRefId: created.id,
+        active: created.status !== 'Inactive',
+      },
+    });
+    return { employee: created };
   });
 
-  const admins = await User.find({ role: 'admin', active: true }).select('_id');
+  const admins = await prisma.user.findMany({ where: { role: 'admin', active: true }, select: { id: true } });
   await Promise.all(
     admins.map((a) =>
       createNotification({
-        user: a._id,
+        user: a.id,
         title: 'New employee added',
         message: `${employee.firstName} ${employee.lastName} (${employeeId}) was added to the team.`,
         type: 'employee',
-        link: `/admin/employees/${employee._id}`,
+        link: `/admin/employees/${employee.id}`,
       })
     )
   );
@@ -327,7 +350,7 @@ joiningDate: b.joiningDate || new Date(),
   res.status(201).json({
     success: true,
     message: 'Employee created successfully',
-    data: await Employee.findById(employee._id).populate('department designation office').lean(),
+    data: await prisma.employee.findUnique({ where: { id: employee.id }, include: EMPLOYEE_INCLUDE }),
     generatedPassword: b.password ? undefined : givenPassword,
     emailSent,
   });
@@ -335,20 +358,17 @@ joiningDate: b.joiningDate || new Date(),
 
 // @route  PUT /api/employees/:id
 const updateEmployee = asyncHandler(async (req, res) => {
-  const employee = await Employee.findById(req.params.id);
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
 
   const b = req.body;
-  const update = stripUndefined(pickFields(b));
-  if (b.office === undefined) delete update.office;
+  const update = pickFields(b);
 
-  for (const key of ['firstName', 'lastName', 'email']) {
-    if (b[key] !== undefined && b[key] !== null) update[key] = String(b[key]).trim();
-  }
   if (b.employeeId) update.employeeId = String(b.employeeId).trim().toUpperCase();
-  if (b.department !== undefined) update.department = sanitizeId(b.department) || null;
-  if (b.office !== undefined) update.office = sanitizeId(b.office) || null;
-  if (b.designation !== undefined) update.designation = sanitizeId(b.designation) || null;
+  if (b.email) update.email = String(b.email).trim().toLowerCase();
+  if (b.department !== undefined) update.departmentId = sanitizeId(b.department) || null;
+  if (b.office !== undefined) update.officeId = sanitizeId(b.office) || null;
+  if (b.designation !== undefined) update.designationId = sanitizeId(b.designation) || null;
 
   const extra = cleanSections(b);
   if (extra) {
@@ -365,52 +385,55 @@ const updateEmployee = asyncHandler(async (req, res) => {
   // uniqueness checks (excluding self)
   const employeeId = update.employeeId;
   if (employeeId && employeeId !== employee.employeeId) {
-    const dup = await Employee.findOne({ employeeId });
+    const dup = await prisma.employee.findUnique({ where: { employeeId } });
     if (dup) return res.status(409).json({ success: false, message: `Employee ID ${employeeId} already exists` });
   }
   if (update.email && update.email !== employee.email) {
-    const dup = await Employee.findOne({ email: update.email });
+    const dup = await prisma.employee.findUnique({ where: { email: update.email } });
     if (dup) return res.status(409).json({ success: false, message: 'An employee with this email already exists' });
   }
 
-  Object.assign(employee, update);
-  await employee.save();
+  const updated = Object.keys(update).length
+    ? await prisma.employee.update({ where: { id: employee.id }, data: update })
+    : employee;
 
-  const user = await User.findOne({ employee: employee._id });
+  const user = await prisma.user.findFirst({ where: { employeeRefId: employee.id } });
   if (user) {
     const changed = {};
     if (update.email) changed.email = update.email;
     if (update.employeeId) changed.employeeId = update.employeeId;
-    if (update.firstName || update.lastName) changed.name = `${employee.firstName} ${employee.lastName}`.trim();
+    if (update.firstName || update.lastName) changed.name = `${updated.firstName} ${updated.lastName}`.trim();
     if (update.status) changed.active = update.status !== 'Inactive';
-    if (Object.keys(changed).length) await User.updateOne({ _id: user._id }, { $set: changed });
+    if (Object.keys(changed).length) await prisma.user.update({ where: { id: user.id }, data: changed });
 
     if (b.password) {
-      user.password = await bcrypt.hash(String(b.password), 10);
-      await user.save({ validateBeforeSave: false });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { password: await bcrypt.hash(String(b.password), 10) },
+      });
     }
   }
 
   res.json({
     success: true,
     message: 'Employee updated successfully',
-    data: await Employee.findById(employee._id).populate('department designation office').populate({ path: 'face', select: '-descriptor' }).lean(),
+    data: await prisma.employee.findUnique({ where: { id: employee.id }, include: EMPLOYEE_INCLUDE }),
   });
 });
 
 // @route  DELETE /api/employees/:id   (safety: soft-deactivate, keeps history)
 const deleteEmployee = asyncHandler(async (req, res) => {
-  const employee = await Employee.findById(req.params.id);
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
 
   const wasActive = employee.status === 'Active';
-  employee.status = 'Inactive';
-  await employee.save();
 
-  if (wasActive) {
-    const user = await User.findOne({ employee: employee._id });
-    if (user) await User.updateOne({ _id: user._id }, { $set: { active: false } });
-  }
+  await prisma.$transaction([
+    prisma.employee.update({ where: { id: employee.id }, data: { status: 'Inactive' } }),
+    ...(wasActive
+      ? [prisma.user.updateMany({ where: { employeeRefId: employee.id }, data: { active: false } })]
+      : []),
+  ]);
 
   res.json({
     success: true,
@@ -424,20 +447,24 @@ const setEmployeeStatus = asyncHandler(async (req, res) => {
   if (!['Active', 'Inactive'].includes(status)) {
     return res.status(400).json({ success: false, message: 'Invalid status' });
   }
-  const employee = await Employee.findById(req.params.id);
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
 
-  employee.status = status;
-  await employee.save();
-  const user = await User.findOne({ employee: employee._id });
-  if (user) await User.updateOne({ _id: user._id }, { $set: { active: status === 'Active' } });
+  await prisma.$transaction([
+    prisma.employee.update({ where: { id: employee.id }, data: { status } }),
+    prisma.user.updateMany({ where: { employeeRefId: employee.id }, data: { active: status === 'Active' } }),
+  ]);
 
   res.json({ success: true, message: `Employee ${status === 'Active' ? 'reactivated' : 'deactivated'} successfully` });
 });
 
 // @route  GET /api/employees/:id/attendance (admin or owner)
 const getEmployeeAttendance = asyncHandler(async (req, res) => {
-  const employee = await Employee.findById(req.params.id);
+  if (req.user.role === 'employee' && String(req.params.id) !== String(req.user.employee)) {
+    return res.status(403).json({ success: false, message: 'You do not have permission to view this attendance' });
+  }
+
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
 
   const { year, month } = req.query;
@@ -447,8 +474,13 @@ const getEmployeeAttendance = asyncHandler(async (req, res) => {
   const end = new Date(y, m + 1, 1);
 
   const [records, leaves] = await Promise.all([
-    Attendance.find({ employee: employee._id, date: { $gte: start, $lt: end } }).sort({ date: 1 }),
-    Leave.find({ employee: employee._id, status: 'Approved', startDate: { $lt: end }, endDate: { $gte: start } }),
+    prisma.attendance.findMany({
+      where: { employeeRefId: employee.id, date: { gte: start, lt: end } },
+      orderBy: { date: 'asc' },
+    }),
+    prisma.leave.findMany({
+      where: { employeeRefId: employee.id, status: 'Approved', startDate: { lt: end }, endDate: { gte: start } },
+    }),
   ]);
 
   res.json({ success: true, data: { employee, records, leaves, year: y, month: m } });
@@ -461,8 +493,6 @@ const removeUploadFile = (fileName) => {
 };
 
 const SECTION_WHITELIST = ['contact', 'bank', 'admin', 'personal', 'family', 'emergency', 'experience', 'weekOff', 'qualification', 'workLocation', 'salary', 'pf', 'immigration'];
-
-const toBool = (v) => v === true || v === 'true';
 
 const ADMIN_STRING_KEYS = ['salaryOn', 'otApplicable', 'attendancePolicy', 'workshift', 'paymentMode', 'esiNo', 'pfNo', 'uan', 'gratuityNo', 'aadhaarCardNo', 'rfidCardNo', 'fingerprintId'];
 const ADMIN_BOOL_KEYS = ['ptApplicable', 'esicApplicable', 'pfAsPerGovernment', 'pfOnTotalBasic', 'employerPfAsPerGovernment', 'employerPfOnTotalBasic', 'pensionNotApplicable', 'tdsApplicable', 'compensatoryOffApplicable', 'employerEsicApplicable', 'gratuityApplicable'];
@@ -489,7 +519,7 @@ const cleanAdminSection = (raw) => {
 const cleanContactSection = (raw) => {
   if (!raw || typeof raw !== 'object') return undefined;
   const out = {};
-  ['personalEmail', 'alternateEmail', 'personalEmail', 'alternateEmail', 'mobileNumber', 'alternatePhone', 'permanentAddress'].forEach((k) => {
+  ['personalEmail', 'alternateEmail', 'mobileNumber', 'alternatePhone', 'permanentAddress'].forEach((k) => {
     if (raw[k] !== undefined && raw[k] !== null) out[k] = str(raw[k]);
   });
   if (raw.sameAsCurrent !== undefined && raw.sameAsCurrent !== null) out.sameAsCurrent = toBool(raw.sameAsCurrent);
@@ -519,15 +549,13 @@ const cleanPersonalSection = (raw) => {
 
 const cleanWeekOffSection = (raw) => {
   if (!raw || typeof raw !== 'object') return undefined;
-  const workingDays = Array.isArray(raw.workingDays) ? [...new Set(raw.workingDays.map((d) => str(d)).filter(Boolean))] : [];
-  const out = {
-    weeklyOffDay: str(raw.weeklyOffDay),
-    secondWeeklyOffDay: str(raw.secondWeeklyOffDay),
-    workingDays,
-  };
-  if (out.weeklyOffDay) workingDays.splice(workingDays.indexOf(out.weeklyOffDay), 1);
-  if (out.secondWeeklyOffDay) workingDays.splice(workingDays.indexOf(out.secondWeeklyOffDay), 1);
-  return out;
+  const weeklyOffDay = str(raw.weeklyOffDay);
+  const secondWeeklyOffDay = str(raw.secondWeeklyOffDay);
+  const offDays = new Set([weeklyOffDay, secondWeeklyOffDay].filter(Boolean));
+  const workingDays = Array.isArray(raw.workingDays)
+    ? [...new Set(raw.workingDays.map((d) => str(d)).filter(Boolean))].filter((d) => !offDays.has(d))
+    : [];
+  return { weeklyOffDay, secondWeeklyOffDay, workingDays };
 };
 
 const familyKeys = ['fullName', 'relationship', 'dateOfBirth', 'phoneNumber', 'occupation', 'address'];
@@ -563,7 +591,7 @@ const updateEmployeeSection = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid employee section' });
   }
 
-  const employee = await Employee.findById(req.params.id);
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
 
   const data = req.body.data !== undefined ? req.body.data : req.body;
@@ -572,97 +600,104 @@ const updateEmployeeSection = asyncHandler(async (req, res) => {
     case 'contact': {
       const clean = cleanContactSection(data);
       if (!clean) return res.status(400).json({ success: false, message: 'No contact data provided' });
-      employee.contact = { ...(employee.contact || {}), ...clean };
+      const contact = { ...(employee.contact || {}), ...clean };
+      const update = { contact };
       const composed = composeAddressFromContact(clean);
-      if (composed) employee.address = composed;
-      await employee.save();
-      return res.json({ success: true, message: 'Contact details saved', data: employee.contact });
+      if (composed) update.address = composed;
+      await prisma.employee.update({ where: { id: employee.id }, data: update });
+      return res.json({ success: true, message: 'Contact details saved', data: contact });
     }
     case 'bank': {
       const clean = cleanObject(data);
       if (!clean) return res.status(400).json({ success: false, message: 'No bank details provided' });
       delete clean.confirmAccountNumber;
-      employee.bankDetails = clean;
-      await employee.save();
-      return res.json({ success: true, message: 'Bank details saved', data: employee.bankDetails });
+      await prisma.employee.update({ where: { id: employee.id }, data: { bankDetails: clean } });
+      return res.json({ success: true, message: 'Bank details saved', data: clean });
     }
     case 'personal': {
       const mapped = cleanPersonalSection(data);
       if (!mapped) return res.status(400).json({ success: false, message: 'No personal data provided' });
-      if (mapped.dateOfBirth) employee.dateOfBirth = mapped.dateOfBirth;
-      if (mapped.gender) employee.gender = mapped.gender;
-      employee.personal = { ...(employee.personal || {}), ...(mapped.personal || {}) };
-      employee.contact = { ...(employee.contact || {}), ...(mapped.contact || {}) };
-      if (mapped.address) employee.address = mapped.address;
-      await employee.save();
+      const update = {};
+      if (mapped.dateOfBirth) update.dateOfBirth = mapped.dateOfBirth;
+      if (mapped.gender) update.gender = mapped.gender;
+      const personal = { ...(employee.personal || {}), ...(mapped.personal || {}) };
+      const contact = { ...(employee.contact || {}), ...(mapped.contact || {}) };
+      update.personal = personal;
+      update.contact = contact;
+      if (mapped.address) update.address = mapped.address;
+      const saved = await prisma.employee.update({ where: { id: employee.id }, data: update });
       return res.json({
         success: true,
         message: 'Personal details saved',
-        data: { ...employee.personal, dateOfBirth: employee.dateOfBirth, gender: employee.gender },
+        data: { ...personal, dateOfBirth: saved.dateOfBirth, gender: saved.gender },
       });
     }
-    case 'family':
-      employee.family = cleanEntryList(data, familyKeys) || [];
-      await employee.save();
-      return res.json({ success: true, message: 'Family members saved', data: employee.family });
-    case 'emergency':
-      employee.emergencyContacts = cleanEntryList(data, emergencyKeys) || [];
-      if (employee.emergencyContacts.length === 1) employee.emergencyContact = employee.emergencyContacts[0];
-      await employee.save();
-      return res.json({ success: true, message: 'Emergency contacts saved', data: employee.emergencyContacts });
-    case 'experience':
-      employee.experience = cleanEntryList(data, experienceKeys) || [];
-      await employee.save();
-      return res.json({ success: true, message: 'Experience records saved', data: employee.experience });
-    case 'weekOff': {
-      const clean = cleanWeekOffSection(data);
-      employee.weekOff = clean;
-      await employee.save();
-      return res.json({ success: true, message: 'Week off configuration saved', data: employee.weekOff });
+    case 'family': {
+      const family = cleanEntryList(data, familyKeys) || [];
+      await prisma.employee.update({ where: { id: employee.id }, data: { family } });
+      return res.json({ success: true, message: 'Family members saved', data: family });
     }
-    case 'qualification':
-      employee.qualifications = cleanEntryList(data, qualificationKeys) || [];
-      await employee.save();
-      return res.json({ success: true, message: 'Qualifications saved', data: employee.qualifications });
+    case 'emergency': {
+      const emergencyContacts = cleanEntryList(data, emergencyKeys) || [];
+      const update = { emergencyContacts };
+      if (emergencyContacts.length === 1) update.emergencyContact = emergencyContacts[0];
+      await prisma.employee.update({ where: { id: employee.id }, data: update });
+      return res.json({ success: true, message: 'Emergency contacts saved', data: emergencyContacts });
+    }
+    case 'experience': {
+      const experience = cleanEntryList(data, experienceKeys) || [];
+      await prisma.employee.update({ where: { id: employee.id }, data: { experience } });
+      return res.json({ success: true, message: 'Experience records saved', data: experience });
+    }
+    case 'weekOff': {
+      const weekOff = cleanWeekOffSection(data);
+      await prisma.employee.update({ where: { id: employee.id }, data: { weekOff } });
+      return res.json({ success: true, message: 'Week off configuration saved', data: weekOff });
+    }
+    case 'qualification': {
+      const qualifications = cleanEntryList(data, qualificationKeys) || [];
+      await prisma.employee.update({ where: { id: employee.id }, data: { qualifications } });
+      return res.json({ success: true, message: 'Qualifications saved', data: qualifications });
+    }
     case 'workLocation': {
       const office = sanitizeId(data?.office);
       if (data?.office && !office) {
         return res.status(400).json({ success: false, message: 'Invalid location' });
       }
       if (office) {
-        const locationExists = await Location.findById(office);
+        const locationExists = await prisma.location.findUnique({ where: { id: office } });
         if (!locationExists) return res.status(400).json({ success: false, message: 'Location not found' });
       }
-      employee.office = office || null;
-      await employee.save();
-      const saved = await Employee.findById(employee._id).populate('office').lean();
+      const saved = await prisma.employee.update({
+        where: { id: employee.id },
+        data: { officeId: office || null },
+        include: { office: true },
+      });
       return res.json({ success: true, message: 'Work location saved', data: saved.office || null });
     }
     case 'salary': {
       const clean = cleanObject(data);
       if (!clean) return res.status(400).json({ success: false, message: 'No salary details provided' });
-      employee.salary = clean;
-      await employee.save();
-      return res.json({ success: true, message: 'Salary details saved', data: employee.salary });
+      await prisma.employee.update({ where: { id: employee.id }, data: { salary: clean } });
+      return res.json({ success: true, message: 'Salary details saved', data: clean });
     }
     case 'pf': {
       const clean = cleanObject(data);
       if (!clean) return res.status(400).json({ success: false, message: 'No PF details provided' });
-      employee.pf = clean;
-      await employee.save();
-      return res.json({ success: true, message: 'PF details saved', data: employee.pf });
+      await prisma.employee.update({ where: { id: employee.id }, data: { pf: clean } });
+      return res.json({ success: true, message: 'PF details saved', data: clean });
     }
     case 'admin': {
       const clean = cleanAdminSection(data);
       if (!clean) return res.status(400).json({ success: false, message: 'No administrative details provided' });
-      employee.admin = clean;
-      await employee.save();
-      return res.json({ success: true, message: 'Administrative details saved', data: employee.admin });
+      await prisma.employee.update({ where: { id: employee.id }, data: { admin: clean } });
+      return res.json({ success: true, message: 'Administrative details saved', data: clean });
     }
-    case 'immigration':
-      employee.immigration = cleanEntryList(data, immigrationKeys) || [];
-      await employee.save();
-      return res.json({ success: true, message: 'Immigration details saved', data: employee.immigration });
+    case 'immigration': {
+      const immigration = cleanEntryList(data, immigrationKeys) || [];
+      await prisma.employee.update({ where: { id: employee.id }, data: { immigration } });
+      return res.json({ success: true, message: 'Immigration details saved', data: immigration });
+    }
     default:
       return res.status(400).json({ success: false, message: 'Invalid employee section' });
   }
@@ -670,7 +705,7 @@ const updateEmployeeSection = asyncHandler(async (req, res) => {
 
 // @route  POST /api/employees/:id/send-login
 const sendEmployeeLoginDetails = asyncHandler(async (req, res) => {
-  const employee = await Employee.findById(req.params.id);
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
 
   const email = String(employee.email || '').trim().toLowerCase();
@@ -680,31 +715,33 @@ const sendEmployeeLoginDetails = asyncHandler(async (req, res) => {
 
   const tempPassword = crypto.randomBytes(6).toString('hex');
   const hashed = await bcrypt.hash(tempPassword, 10);
+  const name = [employee.firstName, employee.middleName, employee.lastName].filter(Boolean).join(' ') || employee.firstName;
+  const active = employee.status !== 'Inactive';
 
-  let user = await User.findOne({ employee: employee._id });
+  const user = await prisma.user.findFirst({ where: { employeeRefId: employee.id } });
   if (user) {
-    user.password = hashed;
-    user.email = email;
-    user.employeeId = employee.employeeId;
-    user.name = [employee.firstName, employee.middleName, employee.lastName].filter(Boolean).join(' ') || employee.firstName;
-    user.active = employee.status !== 'Inactive';
-    await user.save({ validateBeforeSave: false });
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashed, email, employeeId: employee.employeeId, name, active },
+    });
   } else {
-    user = await User.create({
-      employeeId: employee.employeeId,
-      name: [employee.firstName, employee.middleName, employee.lastName].filter(Boolean).join(' ') || employee.firstName,
-      email,
-      password: hashed,
-      role: 'employee',
-      employee: employee._id,
-      active: employee.status !== 'Inactive',
+    await prisma.user.create({
+      data: {
+        employeeId: employee.employeeId,
+        name,
+        email,
+        password: hashed,
+        role: 'employee',
+        employeeRefId: employee.id,
+        active,
+      },
     });
   }
 
   const result = await sendWelcomeMail({
     to: email,
     companyName: config.companyName,
-    employeeName: user.name,
+    employeeName: name,
     employeeId: employee.employeeId,
     loginEmail: email,
     temporaryPassword: tempPassword,
@@ -723,15 +760,18 @@ const sendEmployeeLoginDetails = asyncHandler(async (req, res) => {
 
 // @route  POST /api/employees/:id/photo  (replace profile photo only)
 const uploadEmployeePhoto = asyncHandler(async (req, res) => {
-  const employee = await Employee.findById(req.params.id);
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
   if (!req.file || !req.file.buffer) return res.status(400).json({ success: false, message: 'No image file provided' });
 
   const ext = req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg';
-  employee.profilePhoto = saveBuffer(req.file.buffer, ext);
-  await employee.save();
+  const updated = await prisma.employee.update({
+    where: { id: employee.id },
+    data: { profilePhoto: saveBuffer(req.file.buffer, ext) },
+    select: { profilePhoto: true },
+  });
 
-  res.json({ success: true, message: 'Profile photo updated', data: { profilePhoto: employee.profilePhoto } });
+  res.json({ success: true, message: 'Profile photo updated', data: updated });
 });
 
 const docRecord = (file, kind) => ({
@@ -745,62 +785,67 @@ const docRecord = (file, kind) => ({
 
 // @route  POST /api/employees/:id/documents
 const uploadEmployeeDocument = asyncHandler(async (req, res) => {
-  const employee = await Employee.findById(req.params.id);
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
   if (!req.file || !req.file.buffer) return res.status(400).json({ success: false, message: 'No file provided' });
 
   const ext = extFromName(req.file.originalname);
   const savedPath = saveBuffer(req.file.buffer, ext);
-  const doc = {
-    ...docRecord({ ...req.file, path: savedPath, fileName: savedPath.split('/').pop() }, req.body.kind),
-  };
-
-  employee.documents.push(doc);
-  await employee.save();
-  const saved = employee.documents[employee.documents.length - 1];
+  const doc = await prisma.employeeDocument.create({
+    data: {
+      employeeRefId: employee.id,
+      ...docRecord({ ...req.file, path: savedPath, fileName: savedPath.split('/').pop() }, req.body.kind),
+    },
+  });
 
   res.status(201).json({
     success: true,
     message: 'Document uploaded successfully',
-    data: saved.toObject ? saved.toObject() : saved,
+    data: doc,
   });
 });
 
 // @route  PUT /api/employees/:id/documents/:docId  (replace file)
 const replaceEmployeeDocument = asyncHandler(async (req, res) => {
-  const employee = await Employee.findById(req.params.id);
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
   if (!req.file || !req.file.buffer) return res.status(400).json({ success: false, message: 'No file provided' });
 
-  const idx = employee.documents.findIndex((d) => String(d._id) === String(req.params.docId));
-  if (idx === -1) return res.status(404).json({ success: false, message: 'Document not found' });
+  const existing = await prisma.employeeDocument.findFirst({
+    where: { id: req.params.docId, employeeRefId: employee.id },
+  });
+  if (!existing) return res.status(404).json({ success: false, message: 'Document not found' });
 
   const ext = extFromName(req.file.originalname);
   const savedPath = saveBuffer(req.file.buffer, ext);
-  const existing = employee.documents[idx];
   removeUploadFile(existing.fileName);
 
-  existing.originalName = req.file.originalname;
-  existing.fileName = savedPath.split('/').pop();
-  existing.path = savedPath;
-  existing.mimeType = req.file.mimetype;
-  existing.size = req.file.size;
+  const updated = await prisma.employeeDocument.update({
+    where: { id: existing.id },
+    data: {
+      originalName: req.file.originalname,
+      fileName: savedPath.split('/').pop(),
+      path: savedPath,
+      mimeType: req.file.mimetype,
+      size: req.file.size || 0,
+    },
+  });
 
-  await employee.save();
-  res.json({ success: true, message: 'Document updated successfully', data: employee.documents[idx] });
+  res.json({ success: true, message: 'Document updated successfully', data: updated });
 });
 
 // @route  DELETE /api/employees/:id/documents/:docId
 const deleteEmployeeDocument = asyncHandler(async (req, res) => {
-  const employee = await Employee.findById(req.params.id);
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
 
-  const idx = employee.documents.findIndex((d) => String(d._id) === String(req.params.docId));
-  if (idx === -1) return res.status(404).json({ success: false, message: 'Document not found' });
+  const existing = await prisma.employeeDocument.findFirst({
+    where: { id: req.params.docId, employeeRefId: employee.id },
+  });
+  if (!existing) return res.status(404).json({ success: false, message: 'Document not found' });
 
-  const [removed] = employee.documents.splice(idx, 1);
-  removeUploadFile(removed?.fileName);
-  await employee.save();
+  removeUploadFile(existing.fileName);
+  await prisma.employeeDocument.delete({ where: { id: existing.id } });
 
   res.json({ success: true, message: 'Document deleted successfully' });
 });

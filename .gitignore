@@ -14,6 +14,9 @@ build/
 server/uploads/*
 !server/uploads/.gitkeep
 
+# local PostgreSQL data directory (dev only)
+.pgdata/
+
 # logs
 *.log
 npm-debug.log*

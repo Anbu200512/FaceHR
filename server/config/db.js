@@ -1,17 +1,22 @@
-const mongoose = require('mongoose');
+const prisma = require('./prisma');
 
 const connectDB = async () => {
   try {
-    mongoose.set('strictQuery', true);
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 10000,
-    });
-    console.log(`MongoDB connected: ${conn.connection.host}`);
-    return conn;
+    await prisma.$connect();
+    const url = process.env.DATABASE_URL || '';
+    const safeHost = url.replace(/\/\/[^@]*@/, '//***@');
+    console.log(`PostgreSQL connected: ${safeHost}`);
+    return prisma;
   } catch (err) {
-    console.error(`MongoDB connection error: ${err.message}`);
+    console.error(`PostgreSQL connection error: ${err.message}`);
     throw err;
   }
 };
 
+const disconnectDB = async () => {
+  await prisma.$disconnect();
+};
+
 module.exports = connectDB;
+module.exports.disconnectDB = disconnectDB;
+module.exports.prisma = prisma;

@@ -1,0 +1,280 @@
+// FaceHR - PostgreSQL schema (Prisma)
+// Replaces the former Mongoose models. Primary keys are UUID strings so the API
+// keeps the same string-identifier contract the React client already expects.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(uuid())
+  employeeId      String?
+  name            String
+  email           String   @unique
+  password        String
+  role            String   @default("employee")
+  employeeRefId   String?  @map("employee")
+  employeeRef     Employee? @relation("UserEmployee", fields: [employeeRefId], references: [id], onDelete: SetNull)
+  active          Boolean  @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  notifications          Notification[]
+  leavesReviewed         Leave[]        @relation("LeaveReviewer")
+  resignationsReviewed   Resignation[]  @relation("ResignationReviewer")
+  facesRegistered        FaceProfile[]  @relation("FaceRegistrar")
+
+  @@index([employeeId])
+  @@map("users")
+}
+
+model Employee {
+  id                 String    @id @default(uuid())
+  employeeId         String    @unique
+  firstName          String
+  middleName         String    @default("")
+  lastName           String
+  email              String    @unique
+  phone              String?
+  dateOfBirth        DateTime?
+  gender             String    @default("Male")
+  address            String?
+  state              String    @default("")
+  departmentId       String?   @map("department")
+  department         Department? @relation("EmployeeDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
+  officeId           String?   @map("office")
+  office             Location? @relation(fields: [officeId], references: [id], onDelete: SetNull)
+  designationId      String?   @map("designation")
+  designation        Designation? @relation(fields: [designationId], references: [id], onDelete: SetNull)
+  joiningDate        DateTime
+  employmentType     String    @default("Full-time")
+  subDepartment      String    @default("")
+  subDepartment1     String    @default("")
+  subDepartment2     String    @default("")
+  category           String    @default("")
+  subCategory        String    @default("")
+  grade              String    @default("")
+  reportingManager   String    @default("")
+  reportingManager2  String    @default("")
+  probation          String    @default("")
+  probationManage    Boolean   @default(false)
+  totalExperience    String    @default("")
+  exEmployee         Boolean   @default(false)
+  profilePhoto       String?
+  status             String    @default("Active")
+
+  // Embedded profile sections (kept as JSONB; list sections are JSON arrays)
+  contact            Json?
+  bankDetails        Json?
+  personal           Json?
+  family             Json?     @default("[]")
+  experience         Json?     @default("[]")
+  qualifications     Json?     @default("[]")
+  certifications     Json?     @default("[]")
+  emergencyContact   Json?
+  emergencyContacts  Json?     @default("[]")
+  weekOff            Json?
+  salary             Json?
+  pf                 Json?
+  admin              Json?
+  immigration        Json?     @default("[]")
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  face               FaceProfile?
+  documents          EmployeeDocument[]
+  users              User[]      @relation("UserEmployee")
+  attendance         Attendance[]
+  leaves             Leave[]
+  resignations       Resignation[]
+  headedDepartments  Department[] @relation("DepartmentHead")
+
+  @@index([status])
+  @@index([departmentId])
+  @@index([officeId])
+  @@map("employees")
+}
+
+model Department {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String   @default("")
+  headId      String?  @map("head")
+  head        Employee? @relation("DepartmentHead", fields: [headId], references: [id], onDelete: SetNull)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employees   Employee[] @relation("EmployeeDepartment")
+
+  @@map("departments")
+}
+
+model Designation {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String   @default("")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employees   Employee[]
+
+  @@map("designations")
+}
+
+model Location {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  address     String   @default("")
+  city        String   @default("")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employees   Employee[]
+
+  @@map("locations")
+}
+
+model Attendance {
+  id                          String    @id @default(uuid())
+  employeeRefId               String    @map("employee")
+  employee                    Employee  @relation(fields: [employeeRefId], references: [id], onDelete: Cascade)
+  employeeId                  String
+  date                        DateTime
+  dayName                     String?
+  checkInTime                 DateTime?
+  checkOutTime                DateTime?
+  status                      String    @default("Present")
+  workingHoursMinutes         Int       @default(0)
+  lateMinutes                 Int       @default(0)
+  checkInPhoto                String?
+  checkOutPhoto               String?
+  checkInLocation             Json?
+  checkOutLocation            Json?
+  checkInMatchDistance        Float?
+  checkOutMatchDistance       Float?
+  checkInDistanceFromCompany  Int?
+  checkOutDistanceFromCompany Int?
+  faceVerified                Boolean   @default(false)
+  deviceInfo                  Json?
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+
+  @@unique([employeeRefId, date])
+  @@index([date])
+  @@index([employeeId, date])
+  @@map("attendance")
+}
+
+model Leave {
+  id            String     @id @default(uuid())
+  employeeRefId String     @map("employee")
+  employee      Employee   @relation(fields: [employeeRefId], references: [id], onDelete: Cascade)
+  employeeId    String
+  leaveType     String
+  startDate     DateTime
+  endDate       DateTime
+  days          Int        @default(1)
+  reason        String     @default("")
+  status        String     @default("Pending")
+  adminNote     String     @default("")
+  reviewedById  String?    @map("reviewedBy")
+  reviewedBy    User?      @relation("LeaveReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([employeeRefId, startDate])
+  @@index([status])
+  @@map("leaves")
+}
+
+model Resignation {
+  id              String   @id @default(uuid())
+  employeeRefId   String   @map("employee")
+  employee        Employee @relation(fields: [employeeRefId], references: [id], onDelete: Cascade)
+  employeeId      String
+  reason          String
+  resignationDate DateTime
+  feedback        String   @default("")
+  comments        String   @default("")
+  status          String   @default("Pending")
+  adminNote       String   @default("")
+  reviewedById    String?  @map("reviewedBy")
+  reviewedBy      User?    @relation("ResignationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([employeeRefId, createdAt])
+  @@index([status])
+  @@index([resignationDate])
+  @@map("resignations")
+}
+
+model FaceProfile {
+  id              String   @id @default(uuid())
+  employeeRefId   String   @unique @map("employee")
+  employee        Employee @relation(fields: [employeeRefId], references: [id], onDelete: Cascade)
+  faceId          String   @unique
+  descriptor      Float[]  @default([])
+  faceImage       String?
+  quality         Float    @default(0)
+  registeredById  String?  @map("registeredBy")
+  registeredBy    User?    @relation("FaceRegistrar", fields: [registeredById], references: [id], onDelete: SetNull)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("face_profiles")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String   @default("")
+  type      String   @default("info")
+  link      String   @default("")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, read, createdAt])
+  @@map("notifications")
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model EmployeeDocument {
+  id            String   @id @default(uuid())
+  employeeRefId String   @map("employee")
+  employee      Employee @relation(fields: [employeeRefId], references: [id], onDelete: Cascade)
+  kind          String   @default("other")
+  originalName  String   @default("")
+  fileName      String   @default("")
+  path          String   @default("")
+  mimeType      String   @default("")
+  size          Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([employeeRefId])
+  @@map("employee_documents")
+}

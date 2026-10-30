@@ -1,42 +1,49 @@
-const Notification = require('../models/Notification');
+const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
+
+function notificationFilter(user, unreadOnly = false) {
+  const filter =
+    user.role === 'employee'
+      ? { userId: user.id }
+      : { OR: [{ userId: user.id }, { userId: null }] };
+  if (unreadOnly) filter.read = false;
+  return filter;
+}
 
 // @route  GET /api/notifications
 const getNotifications = asyncHandler(async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100);
-
-  let filter = {};
-  if (req.user.role === 'employee') {
-    filter = { user: req.user.id };
-  } else {
-    filter = { $or: [{ user: req.user.id }, { user: null }] };
-  }
-
-  const notifications = await Notification.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
+  const notifications = await prisma.notification.findMany({
+    where: notificationFilter(req.user),
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+  });
   res.json({ success: true, data: notifications });
 });
 
 // @route  GET /api/notifications/unread-count
 const unreadCount = asyncHandler(async (req, res) => {
-  let filter = {};
-  if (req.user.role === 'employee') filter = { user: req.user.id, read: false };
-  else filter = { $or: [{ user: req.user.id }, { user: null }], read: false };
-  const count = await Notification.countDocuments(filter);
+  const count = await prisma.notification.count({
+    where: notificationFilter(req.user, true),
+  });
   res.json({ success: true, data: { count } });
 });
 
 // @route  PUT /api/notifications/:id/read
 const markRead = asyncHandler(async (req, res) => {
-  await Notification.updateOne({ _id: req.params.id, user: req.user.id }, { $set: { read: true } });
+  await prisma.notification.updateMany({
+    where: { id: req.params.id, userId: req.user.id },
+    data: { read: true },
+  });
   res.json({ success: true });
 });
 
 // @route  PUT /api/notifications/read-all
 const markAllRead = asyncHandler(async (req, res) => {
-  let filter = {};
-  if (req.user.role === 'employee') filter = { user: req.user.id, read: false };
-  else filter = { $or: [{ user: req.user.id }, { user: null }], read: false };
-  await Notification.updateMany(filter, { $set: { read: true } });
+  await prisma.notification.updateMany({
+    where: notificationFilter(req.user, true),
+    data: { read: true },
+  });
   res.json({ success: true });
 });
 

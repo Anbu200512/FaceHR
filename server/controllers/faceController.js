@@ -1,7 +1,5 @@
 const crypto = require('crypto');
-const Employee = require('../models/Employee');
-const FaceProfile = require('../models/FaceProfile');
-const User = require('../models/User');
+const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 const { saveBuffer } = require('../middleware/upload');
 const faceService = require('../services/faceService');
@@ -9,18 +7,20 @@ const { verifyAgainstProfile, parseDescriptor } = require('../services/faceVerif
 const { normalizeFaceDescriptor } = require('../controllers/employeeController');
 const { createNotification } = require('../services/notificationService');
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // @route  POST /api/face/register  (admin + profile photo upload)
 const registerFace = asyncHandler(async (req, res) => {
   const { employeeId, force } = req.body;
   const descriptor = parseDescriptor(req.body.descriptor);
-  const employee = await Employee.findById(employeeId);
+  const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
 
   if (!req.file || !req.file.buffer) {
     return res.status(400).json({ success: false, message: 'A face photo is required' });
   }
 
-  const existing = await FaceProfile.findOne({ employee: employee._id });
+  const existing = await prisma.faceProfile.findFirst({ where: { employeeRefId: employee.id } });
   if (existing && existing.active && force !== 'true' && force !== true) {
     return res.status(409).json({
       success: false,
@@ -54,28 +54,26 @@ const registerFace = asyncHandler(async (req, res) => {
   const faceImage = saveBuffer(req.file.buffer, ext);
 
   const payload = {
-    employee: employee._id,
+    employeeRefId: employee.id,
     faceId: crypto.randomUUID(),
     descriptor: finalDescriptor,
     faceImage,
     quality: serverResult ? serverResult.score : 0,
-    registeredBy: req.user.id,
+    registeredById: req.user.id,
     active: true,
   };
 
   let profile;
   if (existing) {
-    Object.assign(existing, payload);
-    await existing.save();
-    profile = existing;
+    profile = await prisma.faceProfile.update({ where: { id: existing.id }, data: payload });
   } else {
-    profile = await FaceProfile.create(payload);
+    profile = await prisma.faceProfile.create({ data: payload });
   }
 
-  const user = await User.findOne({ employee: employee._id });
+  const user = await prisma.user.findFirst({ where: { employeeRefId: employee.id } });
   if (user) {
     await createNotification({
-      user: user._id,
+      user: user.id,
       title: 'Face registered',
       message: 'Your face has been registered. You can now check in with face attendance.',
       type: 'success',
@@ -103,7 +101,7 @@ const verifyFace = asyncHandler(async (req, res) => {
 
   let employeeId = req.user.employee;
   if (req.user.role === 'admin' && req.body.employeeId) {
-    if (!/^[0-9a-fA-F]{24}$/.test(req.body.employeeId)) {
+    if (!UUID_RE.test(String(req.body.employeeId))) {
       return res.status(400).json({ success: false, message: 'Invalid employee reference' });
     }
     employeeId = req.body.employeeId;
@@ -123,9 +121,19 @@ const verifyFace = asyncHandler(async (req, res) => {
 
 // @route  GET /api/face/:employeeId  (admin)
 const getFaceStatus = asyncHandler(async (req, res) => {
-  const employee = await Employee.findById(req.params.employeeId);
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.employeeId } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
-  const profile = await FaceProfile.findOne({ employee: employee._id }).select('-descriptor');
+  const profile = await prisma.faceProfile.findFirst({
+    where: { employeeRefId: employee.id },
+    select: {
+      id: true,
+      faceId: true,
+      faceImage: true,
+      quality: true,
+      active: true,
+      updatedAt: true,
+    },
+  });
   res.json({
     success: true,
     data: {
@@ -140,16 +148,17 @@ const getFaceStatus = asyncHandler(async (req, res) => {
 
 // @route  DELETE /api/face/:employeeId  (admin)
 const deleteFace = asyncHandler(async (req, res) => {
-  const employee = await Employee.findById(req.params.employeeId);
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.employeeId } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
 
-  const profile = await FaceProfile.findOneAndDelete({ employee: employee._id });
+  const profile = await prisma.faceProfile.findFirst({ where: { employeeRefId: employee.id } });
   if (!profile) return res.status(404).json({ success: false, message: 'No face profile found for this employee' });
+  await prisma.faceProfile.delete({ where: { id: profile.id } });
 
-  const user = await User.findOne({ employee: employee._id });
+  const user = await prisma.user.findFirst({ where: { employeeRefId: employee.id } });
   if (user) {
     await createNotification({
-      user: user._id,
+      user: user.id,
       title: 'Face profile removed',
       message: 'Your registered face profile was removed by HR. Re-register to use face attendance.',
       type: 'warning',

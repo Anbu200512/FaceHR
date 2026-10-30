@@ -2,7 +2,7 @@
   "name": "facehr",
   "version": "1.0.0",
   "private": true,
-  "description": "FaceHR - Smart HR Management with Face-Based Attendance (MERN)",
+  "description": "FaceHR - Smart HR Management with Face-Based Attendance (PERN)",
   "workspaces": [
     "client",
     "server"

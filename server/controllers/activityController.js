@@ -1,14 +1,13 @@
-const Attendance = require('../models/Attendance');
-const Leave = require('../models/Leave');
-const Employee = require('../models/Employee');
-const FaceProfile = require('../models/FaceProfile');
+const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 const { monthRange } = require('../utils/date');
 
-const EMPLOYEE_FIELDS = 'firstName lastName employeeId profilePhoto';
+const EMPLOYEE_SELECT = { id: true, firstName: true, lastName: true, employeeId: true, profilePhoto: true };
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function sanitizeId(value) {
-  return value && /^[0-9a-fA-F]{24}$/.test(String(value)) ? value : null;
+  return value && UUID_RE.test(String(value)) ? String(value) : null;
 }
 
 // @route  GET /api/activity?limit=&year=&month=&location=&department=
@@ -22,11 +21,15 @@ const getActivity = asyncHandler(async (req, res) => {
   // Narrow the feed to employees matching the location/department filters.
   let scopeIds = null;
   if (location || department) {
-    const filter = { status: 'Active' };
-    if (location) filter.office = location;
-    if (department) filter.department = department;
-    const emps = await Employee.find(filter).select('_id').lean();
-    scopeIds = new Set(emps.map((e) => String(e._id)));
+    const emps = await prisma.employee.findMany({
+      where: {
+        status: 'Active',
+        ...(location ? { officeId: location } : {}),
+        ...(department ? { departmentId: department } : {}),
+      },
+      select: { id: true },
+    });
+    scopeIds = new Set(emps.map((e) => e.id));
   }
   const inScope = scopeIds ? (id) => scopeIds.has(String(id)) : () => true;
 
@@ -43,34 +46,39 @@ const getActivity = asyncHandler(async (req, res) => {
   }
 
   const [attendance, leaves, employees, faces] = await Promise.all([
-    Attendance.find({ date: { $gte: since, $lt: until } })
-      .sort({ createdAt: -1 })
-      .limit(40)
-      .populate('employee', EMPLOYEE_FIELDS)
-      .lean(),
-    Leave.find({ createdAt: { $gte: since, $lt: until } })
-      .sort({ updatedAt: -1 })
-      .limit(40)
-      .populate('employee', EMPLOYEE_FIELDS)
-      .lean(),
-    Employee.find({ createdAt: { $gte: since, $lt: until } })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .lean(),
-    FaceProfile.find({ createdAt: { $gte: since, $lt: until } })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .populate('employee', EMPLOYEE_FIELDS)
-      .lean(),
+    prisma.attendance.findMany({
+      where: { date: { gte: since, lt: until } },
+      orderBy: { createdAt: 'desc' },
+      take: 40,
+      include: { employee: { select: EMPLOYEE_SELECT } },
+    }),
+    prisma.leave.findMany({
+      where: { createdAt: { gte: since, lt: until } },
+      orderBy: { updatedAt: 'desc' },
+      take: 40,
+      include: { employee: { select: EMPLOYEE_SELECT } },
+    }),
+    prisma.employee.findMany({
+      where: { createdAt: { gte: since, lt: until } },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: EMPLOYEE_SELECT,
+    }),
+    prisma.faceProfile.findMany({
+      where: { createdAt: { gte: since, lt: until } },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      include: { employee: { select: EMPLOYEE_SELECT } },
+    }),
   ]);
 
   const events = [];
 
   attendance.forEach((r) => {
-    if (!r.employee || !inScope(r.employee._id)) return;
+    if (!r.employee || !inScope(r.employee.id)) return;
     if (r.checkInTime) {
       events.push({
-        id: `check-in_${r._id}`,
+        id: `check-in_${r.id}`,
         type: 'check-in',
         employee: r.employee,
         description: 'checked in',
@@ -80,7 +88,7 @@ const getActivity = asyncHandler(async (req, res) => {
     }
     if (r.checkOutTime) {
       events.push({
-        id: `check-out_${r._id}`,
+        id: `check-out_${r.id}`,
         type: 'check-out',
         employee: r.employee,
         description: 'checked out',
@@ -91,10 +99,10 @@ const getActivity = asyncHandler(async (req, res) => {
   });
 
   leaves.forEach((l) => {
-    if (!l.employee || !inScope(l.employee._id)) return;
+    if (!l.employee || !inScope(l.employee.id)) return;
     if (l.status === 'Pending') {
       events.push({
-        id: `leave-submitted_${l._id}`,
+        id: `leave-submitted_${l.id}`,
         type: 'leave-submitted',
         employee: l.employee,
         description: `submitted a ${l.leaveType} request (${l.days} day${l.days === 1 ? '' : 's'})`,
@@ -103,7 +111,7 @@ const getActivity = asyncHandler(async (req, res) => {
       });
     } else if (l.status === 'Approved' || l.status === 'Rejected') {
       events.push({
-        id: `leave-${l.status.toLowerCase()}_${l._id}`,
+        id: `leave-${l.status.toLowerCase()}_${l.id}`,
         type: l.status === 'Approved' ? 'leave-approved' : 'leave-rejected',
         employee: l.employee,
         description: `${l.leaveType} leave was ${l.status === 'Approved' ? 'approved' : 'rejected'}`,
@@ -114,9 +122,9 @@ const getActivity = asyncHandler(async (req, res) => {
   });
 
   employees.forEach((e) => {
-    if (!inScope(e._id)) return;
+    if (!inScope(e.id)) return;
     events.push({
-      id: `employee_${e._id}`,
+      id: `employee_${e.id}`,
       type: 'employee-added',
       employee: e,
       description: 'was added to the team',
@@ -126,9 +134,9 @@ const getActivity = asyncHandler(async (req, res) => {
   });
 
   faces.forEach((f) => {
-    if (!f.employee || !inScope(f.employee._id)) return;
+    if (!f.employee || !inScope(f.employee.id)) return;
     events.push({
-      id: `face_${f._id}`,
+      id: `face_${f.id}`,
       type: 'face-registered',
       employee: f.employee,
       description: 'completed face registration',
