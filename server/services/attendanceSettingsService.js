@@ -102,4 +102,34 @@ async function updateAttendanceSettings(payload = {}) {
   return { faceEnabled, geoEnabled, location: merged };
 }
 
-module.exports = { getAttendanceSettings, updateAttendanceSettings, DEFAULTS };
+/**
+ * Global attendance settings overlaid with an employee's per-employee
+ * overrides (Employee.attendanceSettings JSON). Only keys present on the
+ * override object are applied; anything else inherits the global value.
+ *
+ * @param {object|null} employee - full employee row (or anything carrying
+ *                                 an `attendanceSettings` property)
+ */
+async function getEffectiveAttendanceSettings(employee) {
+  const global = await getAttendanceSettings();
+  const ov = employee && employee.attendanceSettings && typeof employee.attendanceSettings === 'object'
+    && !Array.isArray(employee.attendanceSettings)
+    ? employee.attendanceSettings
+    : null;
+  if (!ov) return global;
+
+  const faceEnabled = typeof ov.faceEnabled === 'boolean' ? ov.faceEnabled : global.faceEnabled;
+  const geoEnabled = typeof ov.geoEnabled === 'boolean' ? ov.geoEnabled : global.geoEnabled;
+  const radius = Number(ov.allowedRadius);
+  const allowedRadius = Number.isFinite(radius) && radius >= 1 && radius <= 10000
+    ? Math.round(radius)
+    : global.location.allowedRadius;
+
+  return {
+    faceEnabled,
+    geoEnabled,
+    location: { ...global.location, allowedRadius },
+  };
+}
+
+module.exports = { getAttendanceSettings, updateAttendanceSettings, getEffectiveAttendanceSettings, DEFAULTS };

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Search, RefreshCw, Download, Eye } from 'lucide-react';
+import { Search, RefreshCw, Download, Eye, PencilLine } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import {
@@ -88,6 +89,9 @@ export default function Attendance() {
   return (
     <div>
       <PageHeader title="Attendance Records" description="Review all check-ins, check-outs and daily status across your team.">
+        <Link to="/admin/attendance/manual" className="btn-ghost text-sm">
+          <PencilLine className="h-4 w-4" /> Mark manually
+        </Link>
         <Button variant="secondary" onClick={() => refetch()}><RefreshCw className="h-4 w-4" /> Refresh</Button>
         <Button onClick={handleExport} disabled={!rows.length}><Download className="h-4 w-4" /> Export CSV</Button>
       </PageHeader>

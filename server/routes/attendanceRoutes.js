@@ -10,6 +10,7 @@ const {
   getMonthly,
   adminCheckIn,
   adminCheckOut,
+  markAttendanceManual,
 } = require('../controllers/attendanceController');
 const { getReport } = require('../controllers/reportController');
 
@@ -19,6 +20,7 @@ router.post('/check-in', authorize('employee'), faceLimiter, uploadImage, checkI
 router.post('/check-out', authorize('employee'), faceLimiter, uploadImage, checkOut);
 router.post('/admin/:employeeId/check-in', authorize('admin'), faceLimiter, uploadImage, adminCheckIn);
 router.post('/admin/:employeeId/check-out', authorize('admin'), faceLimiter, uploadImage, adminCheckOut);
+router.put('/admin/:employeeId/mark', authorize('admin'), apiLimiter, markAttendanceManual);
 router.get('/report', authorize('admin'), apiLimiter, getReport);
 router.get('/today', authorize('admin', 'employee'), apiLimiter, getToday);
 router.get('/:employeeId', authorize('admin', 'employee'), apiLimiter, getMonthly);

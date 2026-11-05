@@ -84,6 +84,7 @@ model Employee {
   pf                 Json?
   admin              Json?
   immigration        Json?     @default("[]")
+  attendanceSettings Json?
 
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
@@ -166,6 +167,7 @@ model Attendance {
   checkOutDistanceFromCompany Int?
   faceVerified                Boolean   @default(false)
   deviceInfo                  Json?
+  note                        String?
   createdAt                   DateTime  @default(now())
   updatedAt                   DateTime  @updatedAt
 

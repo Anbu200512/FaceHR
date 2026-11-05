@@ -34,6 +34,12 @@ export async function fetchAttendanceSettings() {
   return normalizeAttendanceSettings(data?.data?.attendance);
 }
 
+export async function fetchMyAttendanceSettings(employeeId) {
+  const params = employeeId ? `?employeeId=${encodeURIComponent(employeeId)}` : '';
+  const { data } = await api.get(`/settings/attendance/me${params}`);
+  return normalizeAttendanceSettings(data?.data?.attendance);
+}
+
 export async function saveAttendanceSettings(payload) {
   const { data } = await api.put('/settings/attendance', payload);
   return { message: data?.message, attendance: normalizeAttendanceSettings(data?.data?.attendance) };

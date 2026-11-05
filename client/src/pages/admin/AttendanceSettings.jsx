@@ -157,7 +157,7 @@ export default function AttendanceSettings() {
 
   return (
     <div className="min-w-0">
-      <PageHeader title="Attendance Settings" description="Company-wide face attendance and geolocation rules. Changes apply to every employee immediately." />
+      <PageHeader title="Attendance Settings" description="Company-wide face attendance and geolocation defaults. Employee-specific overrides take precedence." />
 
       <div className="grid min-w-0 gap-6 xl:grid-cols-2">
         <div className="min-w-0">
@@ -296,7 +296,7 @@ export default function AttendanceSettings() {
 
             <div className="flex flex-col-reverse items-stretch gap-3 border-t px-5 py-4 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-slate-400">
-                <MapPin className="mr-1 inline h-3.5 w-3.5" /> Only one company location is used and only an admin can change it.
+                <MapPin className="mr-1 inline h-3.5 w-3.5" /> This company location is the geofence center; employee-specific radius and face rules can be set on each employee profile.
                 {hasUnsavedChanges && (
                   <span className="ml-2 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
                     Unsaved changes

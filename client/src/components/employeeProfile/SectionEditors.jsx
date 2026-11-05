@@ -22,6 +22,7 @@ import {
   Eye,
   RefreshCw,
   ScanFace,
+  MapPinned,
 } from 'lucide-react';
 import { fetchAttendanceSettings } from '../../services/attendanceSettings';
 import api, { extractError } from '../../services/api';
@@ -106,8 +107,87 @@ export default function EmployeeSectionEditor({ section, emp, onSaved }) {
     case 'pf': return <PfEditor emp={emp} ctx={context} onSaved={onSaved} />;
     case 'documents': return <DocumentsEditor emp={emp} ctx={context} onSaved={onSaved} />;
     case 'immigration': return <ImmigrationEditor emp={emp} ctx={context} onSaved={onSaved} />;
+    case 'attendance': return <AttendanceEditor emp={emp} ctx={context} onSaved={onSaved} />;
     default: return <EmptyState title="Unknown section" />;
   }
+}
+
+function AttendanceEditor({ emp, ctx, onSaved }) {
+  const toast = useToast();
+  const [save, saving] = useSave(ctx);
+  const [global, setGlobal] = useState(null);
+  const overrides = emp.attendanceSettings || null;
+  const [useDefaults, setUseDefaults] = useState(!overrides);
+  const [faceEnabled, setFaceEnabled] = useState(overrides?.faceEnabled ?? true);
+  const [geoEnabled, setGeoEnabled] = useState(overrides?.geoEnabled ?? true);
+  const [allowedRadius, setAllowedRadius] = useState(overrides?.allowedRadius ?? 100);
+
+  useEffect(() => {
+    fetchAttendanceSettings().then((settings) => {
+      setGlobal(settings);
+      if (!emp.attendanceSettings) {
+        setFaceEnabled(settings.faceEnabled);
+        setGeoEnabled(settings.geoEnabled);
+        setAllowedRadius(settings.location.allowedRadius);
+      }
+    }).catch(() => toast.error('Could not load company attendance defaults'));
+  }, []);
+
+  useEffect(() => {
+    const current = emp.attendanceSettings || null;
+    setUseDefaults(!current);
+    if (current) {
+      setFaceEnabled(current.faceEnabled ?? global?.faceEnabled ?? true);
+      setGeoEnabled(current.geoEnabled ?? global?.geoEnabled ?? true);
+      setAllowedRadius(current.allowedRadius ?? global?.location?.allowedRadius ?? 100);
+    } else if (global) {
+      setFaceEnabled(global.faceEnabled);
+      setGeoEnabled(global.geoEnabled);
+      setAllowedRadius(global.location.allowedRadius);
+    }
+  }, [JSON.stringify(emp.attendanceSettings), global]);
+
+  const onSave = () => save({
+    section: 'attendance',
+    payload: useDefaults ? { useDefaults: true } : { faceEnabled, geoEnabled, allowedRadius: Number(allowedRadius) },
+    onSaved,
+    message: useDefaults ? 'Employee now uses company attendance defaults' : 'Employee attendance settings saved',
+  });
+
+  return (
+    <SectionCard title="Attendance Settings" subtitle="Choose whether this employee follows company rules or has individual attendance rules." icon={MapPinned}>
+      <div className="space-y-4">
+        <CheckboxField
+          label="Use company defaults"
+          checked={useDefaults}
+          onChange={setUseDefaults}
+          hint="When enabled, this employee inherits the global face and location rules."
+        />
+        {useDefaults ? (
+          <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+            {global ? (
+              <ul className="space-y-1">
+                <li>Face punch: {global.faceEnabled ? 'Mandatory' : 'Not required'}</li>
+                <li>Location verification: {global.geoEnabled ? 'Enabled' : 'Disabled'}</li>
+                <li>Allowed radius: {global.location.allowedRadius} m</li>
+              </ul>
+            ) : 'Loading company defaults…'}
+          </div>
+        ) : (
+          <div className="space-y-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+            <CheckboxField label="Face punch is mandatory" checked={faceEnabled} onChange={setFaceEnabled} hint="When off, the employee can punch using a simple button without a camera." />
+            <CheckboxField label="Require location verification" checked={geoEnabled} onChange={setGeoEnabled} hint="When on, the employee must be within the allowed radius of the company location." />
+            <div>
+              <label className="label">Allowed radius (meters)</label>
+              <input type="number" min="1" max="10000" value={allowedRadius} onChange={(e) => setAllowedRadius(e.target.value)} className="input max-w-xs" />
+              <p className="mt-1 text-xs text-slate-400">Company location is used as the geofence center. Set a radius from 1 to 10,000 meters.</p>
+            </div>
+          </div>
+        )}
+        <SaveBar onSave={onSave} saving={saving} dirty />
+      </div>
+    </SectionCard>
+  );
 }
 
 function ContactEditor({ emp, ctx, onSaved }) {

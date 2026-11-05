@@ -492,7 +492,7 @@ const removeUploadFile = (fileName) => {
   fs.promises.unlink(full).catch(() => {});
 };
 
-const SECTION_WHITELIST = ['contact', 'bank', 'admin', 'personal', 'family', 'emergency', 'experience', 'weekOff', 'qualification', 'workLocation', 'salary', 'pf', 'immigration'];
+const SECTION_WHITELIST = ['contact', 'bank', 'admin', 'personal', 'family', 'emergency', 'experience', 'weekOff', 'qualification', 'workLocation', 'salary', 'pf', 'immigration', 'attendance'];
 
 const ADMIN_STRING_KEYS = ['salaryOn', 'otApplicable', 'attendancePolicy', 'workshift', 'paymentMode', 'esiNo', 'pfNo', 'uan', 'gratuityNo', 'aadhaarCardNo', 'rfidCardNo', 'fingerprintId'];
 const ADMIN_BOOL_KEYS = ['ptApplicable', 'esicApplicable', 'pfAsPerGovernment', 'pfOnTotalBasic', 'employerPfAsPerGovernment', 'employerPfOnTotalBasic', 'pensionNotApplicable', 'tdsApplicable', 'compensatoryOffApplicable', 'employerEsicApplicable', 'gratuityApplicable'];
@@ -653,6 +653,36 @@ const updateEmployeeSection = asyncHandler(async (req, res) => {
       const weekOff = cleanWeekOffSection(data);
       await prisma.employee.update({ where: { id: employee.id }, data: { weekOff } });
       return res.json({ success: true, message: 'Week off configuration saved', data: weekOff });
+    }
+    case 'attendance': {
+      if (data?.useDefaults === true) {
+        await prisma.employee.update({ where: { id: employee.id }, data: { attendanceSettings: null } });
+        return res.json({ success: true, message: 'Attendance settings now use company defaults', data: null });
+      }
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        return res.status(400).json({ success: false, message: 'Attendance settings must be an object' });
+      }
+      const attendanceSettings = {};
+      for (const key of ['faceEnabled', 'geoEnabled']) {
+        if (data[key] !== undefined) {
+          if (typeof data[key] !== 'boolean') {
+            return res.status(400).json({ success: false, message: `${key} must be true or false` });
+          }
+          attendanceSettings[key] = data[key];
+        }
+      }
+      if (data.allowedRadius !== undefined && data.allowedRadius !== null && data.allowedRadius !== '') {
+        const radius = Number(data.allowedRadius);
+        if (!Number.isFinite(radius) || radius < 1 || radius > 10000) {
+          return res.status(400).json({ success: false, message: 'Allowed radius must be between 1 and 10,000 meters' });
+        }
+        attendanceSettings.allowedRadius = Math.round(radius);
+      }
+      if (!Object.keys(attendanceSettings).length) {
+        return res.status(400).json({ success: false, message: 'Select at least one attendance override or use company defaults' });
+      }
+      await prisma.employee.update({ where: { id: employee.id }, data: { attendanceSettings } });
+      return res.json({ success: true, message: 'Employee attendance settings saved', data: attendanceSettings });
     }
     case 'qualification': {
       const qualifications = cleanEntryList(data, qualificationKeys) || [];

@@ -32,7 +32,7 @@ import Avatar from '../../components/Avatar';
 import FaceCapture from '../../components/FaceCapture';
 import EmployeeSectionEditor from '../../components/employeeProfile/SectionEditors';
 import { ADMIN_PROFILE_TABS } from '../../components/employeeForm/constants';
-import { fetchAttendanceSettings, resolveGeoGate } from '../../services/attendanceSettings';
+import { fetchMyAttendanceSettings, resolveGeoGate } from '../../services/attendanceSettings';
 import clsx from 'clsx';
 
 function captureLocation() {
@@ -111,14 +111,17 @@ export default function EmployeeProfile({ faceMode }) {
   const requestAction = async (mode) => {
     setActionBusy(true);
     try {
-      const s = await fetchAttendanceSettings();
-      if (s.faceEnabled === false) {
-        toast.error('Face attendance is currently disabled by your administrator.');
-        return;
-      }
+      const s = await fetchMyAttendanceSettings(id);
       const geo = await resolveGeoGate(s);
       if (!geo.ok) {
         toast.error(geo.message);
+        return;
+      }
+      if (s.faceEnabled === false) {
+        const endpoint = mode === 'checkin' ? 'check-in' : 'check-out';
+        const { data } = await api.post(`/attendance/admin/${id}/${endpoint}`, { location: geo.location });
+        toast.success(data.message || 'Attendance marked');
+        setTodayTick((n) => n + 1);
         return;
       }
       setCapturedLocation(geo.location);

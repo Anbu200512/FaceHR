@@ -2,7 +2,7 @@ const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 const { saveBuffer } = require('../middleware/upload');
 const { haversineDistanceMeters } = require('../utils/geo');
-const { getAttendanceSettings } = require('../services/attendanceSettingsService');
+const { getEffectiveAttendanceSettings } = require('../services/attendanceSettingsService');
 const {
   verifyAgainstProfile,
   parseDescriptor,
@@ -20,6 +20,9 @@ const {
   toDateKey,
   isWeekend,
   diffDays,
+  parseDateKey,
+  parseTimeToMinutes,
+  combineDateWithMinutes,
 } = require('../utils/date');
 
 const sanitizeString = (v, max = 200) => String(v || '').slice(0, max);
@@ -127,16 +130,10 @@ const checkIn = asyncHandler(async (req, res) => {
     return res.status(403).json({ success: false, message: 'Your account is inactive. Please contact HR.' });
   }
 
-  const settings = await getAttendanceSettings();
-  if (settings.faceEnabled === false) {
-    return res.status(403).json({
-      success: false,
-      message: 'Face attendance is currently disabled by your administrator.',
-      code: 'FACE_DISABLED',
-    });
-  }
+  const settings = await getEffectiveAttendanceSettings(empDoc);
+  const requireFace = settings.faceEnabled !== false;
 
-  if (!req.file || !req.file.buffer) {
+  if (requireFace && (!req.file || !req.file.buffer)) {
     return res.status(400).json({ success: false, message: 'A face photo is required to check in' });
   }
 
@@ -173,19 +170,21 @@ const checkIn = asyncHandler(async (req, res) => {
     });
   }
 
-  const verification = await verifyAgainstProfile({
-    employeeId: employee,
-    buffer: req.file.buffer,
-    clientDescriptor: parseDescriptor(req.body.descriptor),
-  });
-
-  if (!verification.ok) {
-    return res.status(400).json({ success: false, message: verification.message, code: verification.code, data: verification });
+  let verification = null;
+  if (requireFace) {
+    verification = await verifyAgainstProfile({
+      employeeId: employee,
+      buffer: req.file.buffer,
+      clientDescriptor: parseDescriptor(req.body.descriptor),
+    });
+    if (!verification.ok) {
+      return res.status(400).json({ success: false, message: verification.message, code: verification.code, data: verification });
+    }
   }
 
   const now = new Date();
-  const ext = req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg';
-  const checkInPhoto = saveBuffer(req.file.buffer, ext);
+  const ext = req.file ? (req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg') : null;
+  const checkInPhoto = req.file ? saveBuffer(req.file.buffer, ext) : null;
   const checkInDistanceFromCompany = geofence.distance;
 
   const { status, lateMinutes } = await evaluateCheckInStatus(today, now);
@@ -200,11 +199,11 @@ const checkIn = asyncHandler(async (req, res) => {
         checkInTime: now,
         status,
         lateMinutes,
-        checkInPhoto,
+        ...(checkInPhoto ? { checkInPhoto } : {}),
         ...(checkInLocation ? { checkInLocation } : {}),
         ...(checkInDistanceFromCompany !== null ? { checkInDistanceFromCompany } : {}),
-        checkInMatchDistance: verification.distance,
-        faceVerified: true,
+        ...(verification ? { checkInMatchDistance: verification.distance } : {}),
+        faceVerified: requireFace,
         deviceInfo: summarizeDevice(req),
       },
     });
@@ -231,16 +230,13 @@ const checkOut = asyncHandler(async (req, res) => {
   const employee = req.user.employee;
   if (!employee) return res.status(403).json({ success: false, message: 'Only employees can check out' });
 
-  const settings = await getAttendanceSettings();
-  if (settings.faceEnabled === false) {
-    return res.status(403).json({
-      success: false,
-      message: 'Face attendance is currently disabled by your administrator.',
-      code: 'FACE_DISABLED',
-    });
-  }
+  const empDoc = await prisma.employee.findUnique({ where: { id: employee } });
+  if (!empDoc) return res.status(404).json({ success: false, message: 'Employee profile not found' });
 
-  if (!req.file || !req.file.buffer) {
+  const settings = await getEffectiveAttendanceSettings(empDoc);
+  const requireFace = settings.faceEnabled !== false;
+
+  if (requireFace && (!req.file || !req.file.buffer)) {
     return res.status(400).json({ success: false, message: 'A face photo is required to check out' });
   }
 
@@ -272,19 +268,21 @@ const checkOut = asyncHandler(async (req, res) => {
     });
   }
 
-  const verification = await verifyAgainstProfile({
-    employeeId: employee,
-    buffer: req.file.buffer,
-    clientDescriptor: parseDescriptor(req.body.descriptor),
-  });
-
-  if (!verification.ok) {
-    return res.status(400).json({ success: false, message: verification.message, code: verification.code, data: verification });
+  let verification = null;
+  if (requireFace) {
+    verification = await verifyAgainstProfile({
+      employeeId: employee,
+      buffer: req.file.buffer,
+      clientDescriptor: parseDescriptor(req.body.descriptor),
+    });
+    if (!verification.ok) {
+      return res.status(400).json({ success: false, message: verification.message, code: verification.code, data: verification });
+    }
   }
 
   const now = new Date();
-  const ext = req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg';
-  const checkOutPhoto = saveBuffer(req.file.buffer, ext);
+  const ext = req.file ? (req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg') : null;
+  const checkOutPhoto = req.file ? saveBuffer(req.file.buffer, ext) : null;
 
   const workingHoursMinutes = Math.max(0, Math.round((now - record.checkInTime) / 60000));
   const status = await computeFinalStatus(record.checkInTime, now, record.status);
@@ -293,10 +291,10 @@ const checkOut = asyncHandler(async (req, res) => {
     where: { id: record.id },
     data: {
       checkOutTime: now,
-      checkOutPhoto,
+      ...(checkOutPhoto ? { checkOutPhoto } : {}),
       ...(checkOutLocation ? { checkOutLocation } : {}),
       checkOutDistanceFromCompany: geofence.distance,
-      checkOutMatchDistance: verification.distance,
+      ...(verification ? { checkOutMatchDistance: verification.distance } : {}),
       workingHoursMinutes,
       status,
     },
@@ -515,8 +513,9 @@ const getMonthly = asyncHandler(async (req, res) => {
 
 /**
  * Shared attendance marking used by both the employee self-service flow and
- * the admin-mediated flow. `mode` is 'check-in' or 'check-out'. The employee's
- * registered face profile is always verified before a record is created.
+ * the admin-mediated flow. `mode` is 'check-in' or 'check-out'. When face
+ * attendance is required for the employee the registered face profile is
+ * verified before a record is created; otherwise a simple punch is accepted.
  */
 async function performMarkAttendance(employeeId, mode, req) {
   if (!employeeId) return { status: 400, message: 'Employee is required' };
@@ -527,14 +526,8 @@ async function performMarkAttendance(employeeId, mode, req) {
     return { status: 403, message: 'This employee account is inactive. Please contact HR.' };
   }
 
-  const settings = await getAttendanceSettings();
-  if (settings.faceEnabled === false) {
-    return {
-      status: 403,
-      code: 'FACE_DISABLED',
-      message: 'Face attendance is currently disabled by your administrator.',
-    };
-  }
+  const settings = await getEffectiveAttendanceSettings(empDoc);
+  const requireFace = settings.faceEnabled !== false;
 
   const location = parseLocation(req.body.location);
 
@@ -544,7 +537,7 @@ async function performMarkAttendance(employeeId, mode, req) {
   }
   const distanceFromCompany = geofence.distance;
 
-  if (!req.file || !req.file.buffer) {
+  if (requireFace && (!req.file || !req.file.buffer)) {
     return { status: 400, message: 'A face photo is required to mark attendance' };
   }
 
@@ -572,20 +565,23 @@ async function performMarkAttendance(employeeId, mode, req) {
     }
   }
 
-  const verification = await verifyAgainstProfile({
-    employeeId,
-    buffer: req.file.buffer,
-    clientDescriptor: parseDescriptor(req.body.descriptor),
-  });
-
-  if (!verification.ok) {
-    return { status: 400, message: verification.message, code: verification.code, data: verification };
+  let verification = null;
+  if (requireFace) {
+    verification = await verifyAgainstProfile({
+      employeeId,
+      buffer: req.file.buffer,
+      clientDescriptor: parseDescriptor(req.body.descriptor),
+    });
+    if (!verification.ok) {
+      return { status: 400, message: verification.message, code: verification.code, data: verification };
+    }
   }
 
-  const faceVerified = true;
-  const matchDistance = verification.distance;
-  const ext = req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg';
-  const photo = saveBuffer(req.file.buffer, ext);
+  const faceVerified = requireFace;
+  const matchDistance = verification ? verification.distance : null;
+  const photo = req.file
+    ? saveBuffer(req.file.buffer, req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg')
+    : null;
 
   const now = new Date();
   const deviceInfo = summarizeDevice(req);
@@ -602,10 +598,10 @@ async function performMarkAttendance(employeeId, mode, req) {
           checkInTime: now,
           status,
           lateMinutes,
-          checkInPhoto: photo,
+          ...(photo ? { checkInPhoto: photo } : {}),
           ...(location ? { checkInLocation: location } : {}),
           ...(distanceFromCompany !== null ? { checkInDistanceFromCompany: distanceFromCompany } : {}),
-          checkInMatchDistance: matchDistance,
+          ...(matchDistance !== null ? { checkInMatchDistance: matchDistance } : {}),
           faceVerified,
           deviceInfo,
         },
@@ -630,10 +626,10 @@ async function performMarkAttendance(employeeId, mode, req) {
     where: { id: existing.id },
     data: {
       checkOutTime: now,
-      checkOutPhoto: photo,
+      ...(photo ? { checkOutPhoto: photo } : {}),
       ...(location ? { checkOutLocation: location } : {}),
       checkOutDistanceFromCompany: distanceFromCompany,
-      checkOutMatchDistance: matchDistance,
+      ...(matchDistance !== null ? { checkOutMatchDistance: matchDistance } : {}),
       faceVerified: existing.faceVerified || faceVerified,
       workingHoursMinutes,
       status,
@@ -668,4 +664,109 @@ const adminCheckOut = asyncHandler(async (req, res) => {
   return respondAttendance(res, result);
 });
 
-module.exports = { checkIn, checkOut, getRecords, getToday, getMonthly, computeDayStatus, adminCheckIn, adminCheckOut };
+const MANUAL_STATUSES = ['Present', 'Late', 'Half Day', 'Absent', 'On Leave'];
+
+/**
+ * @route  PUT /api/attendance/admin/:employeeId/mark  (admin only)
+ * Manually create or edit an attendance record for any date (no face photo
+ * or geofence required). Marks are stored with faceVerified: false so the UI
+ * shows them as "Manual".
+ */
+const markAttendanceManual = asyncHandler(async (req, res) => {
+  const employeeId = String(req.params.employeeId || '');
+  const { date, checkIn, checkOut, status, note } = req.body || {};
+
+  if (!employeeId) return respondAttendance(res, { status: 400, message: 'Employee is required' });
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
+    return respondAttendance(res, { status: 400, message: 'A valid date (YYYY-MM-DD) is required' });
+  }
+  if (!MANUAL_STATUSES.includes(status)) {
+    return respondAttendance(res, { status: 400, message: `Status must be one of: ${MANUAL_STATUSES.join(', ')}` });
+  }
+
+  const dayDate = parseDateKey(String(date));
+  if (Number.isNaN(dayDate.getTime())) {
+    return respondAttendance(res, { status: 400, message: 'Invalid date' });
+  }
+  if (dayDate > startOfDay(new Date())) {
+    return respondAttendance(res, { status: 400, message: 'Attendance cannot be marked for a future date' });
+  }
+
+  const emp = await prisma.employee.findUnique({ where: { id: employeeId } });
+  if (!emp) return respondAttendance(res, { status: 404, message: 'Employee profile not found' });
+
+  const hasTimes = status !== 'Absent' && status !== 'On Leave';
+  let checkInDate = null;
+  let checkOutDate = null;
+
+  if (hasTimes) {
+    const inMin = parseTimeToMinutes(checkIn);
+    if (inMin === null) {
+      return respondAttendance(res, { status: 400, message: 'Check-in time is required for this status' });
+    }
+    checkInDate = combineDateWithMinutes(dayDate, inMin);
+
+    if (checkOut) {
+      const outMin = parseTimeToMinutes(checkOut);
+      if (outMin === null) {
+        return respondAttendance(res, { status: 400, message: 'Check-out time must be a valid time (HH:MM)' });
+      }
+      if (outMin <= inMin) {
+        return respondAttendance(res, { status: 400, message: 'Check-out time must be after check-in time' });
+      }
+      checkOutDate = combineDateWithMinutes(dayDate, outMin);
+    }
+  }
+
+  const workingHoursMinutes = checkInDate && checkOutDate
+    ? Math.max(0, Math.round((checkOutDate - checkInDate) / 60000))
+    : 0;
+
+  let lateMinutes = 0;
+  if (checkInDate && status === 'Late') {
+    const evalResult = await evaluateCheckInStatus(dayDate, checkInDate);
+    lateMinutes = evalResult.lateMinutes || 1;
+  }
+
+  const data = {
+    status,
+    dayName: getDayName(dayDate),
+    note: note ? sanitizeString(note, 500) : null,
+    faceVerified: false,
+    checkInTime: checkInDate,
+    checkOutTime: checkOutDate,
+    workingHoursMinutes,
+    lateMinutes,
+    ...(checkInDate ? {} : {
+      checkInPhoto: null,
+      checkInLocation: null,
+      checkInMatchDistance: null,
+      checkInDistanceFromCompany: null,
+    }),
+    ...(checkOutDate ? {} : {
+      checkOutPhoto: null,
+      checkOutLocation: null,
+      checkOutMatchDistance: null,
+      checkOutDistanceFromCompany: null,
+    }),
+  };
+
+  const record = await prisma.attendance.upsert({
+    where: { employeeRefId_date: { employeeRefId: emp.id, date: dayDate } },
+    update: data,
+    create: {
+      employeeRefId: emp.id,
+      employeeId: emp.employeeId,
+      date: dayDate,
+      ...data,
+    },
+  });
+
+  return respondAttendance(res, {
+    status: 200,
+    message: `Attendance for ${toDateKey(dayDate)} saved manually`,
+    data: record,
+  });
+});
+
+module.exports = { checkIn, checkOut, getRecords, getToday, getMonthly, computeDayStatus, adminCheckIn, adminCheckOut, markAttendanceManual };

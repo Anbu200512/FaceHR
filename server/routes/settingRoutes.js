@@ -5,6 +5,7 @@ const {
   getAppSettings,
   updateAppSettings,
   getGlobalAttendanceSettings,
+  getMyAttendanceSettings,
   updateGlobalAttendanceSettings,
 } = require('../controllers/settingController');
 
@@ -13,6 +14,7 @@ router.use(protect, apiLimiter);
 router.get('/', authorize('admin'), getAppSettings);
 router.put('/', authorize('admin'), updateAppSettings);
 router.get('/attendance', authorize('admin', 'employee'), getGlobalAttendanceSettings);
+router.get('/attendance/me', authorize('admin', 'employee'), getMyAttendanceSettings);
 router.put('/attendance', authorize('admin'), updateGlobalAttendanceSettings);
 
 module.exports = router;

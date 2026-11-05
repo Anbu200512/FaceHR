@@ -15,6 +15,7 @@ import EmployeeForm from './pages/admin/EmployeeForm';
 import EmployeeProfile from './pages/admin/EmployeeProfile';
 import FaceRegistrationList from './pages/admin/FaceRegistrationList';
 import Attendance from './pages/admin/Attendance';
+import ManualAttendance from './pages/admin/ManualAttendance';
 import TodayAttendance from './pages/admin/TodayAttendance';
 import MonthlyAttendance from './pages/admin/MonthlyAttendance';
 import AttendanceGallery from './pages/admin/AttendanceGallery';
@@ -64,6 +65,7 @@ export default function App() {
         <Route path="employees/:id/edit" element={<EmployeeForm />} />
         <Route path="employees/:id/face" element={<EmployeeProfile faceMode />} />
         <Route path="attendance" element={<Attendance />} />
+        <Route path="attendance/manual" element={<ManualAttendance />} />
         <Route path="attendance/today" element={<TodayAttendance />} />
         <Route path="attendance/monthly" element={<MonthlyAttendance />} />
         <Route path="attendance/gallery" element={<AttendanceGallery />} />

@@ -12,6 +12,7 @@ import {
   CalendarDays,
   Settings2,
   Plane,
+  MapPinned,
 } from 'lucide-react';
 
 export const STEPS = [
@@ -45,6 +46,7 @@ export const EMPLOYEE_PROFILE_TABS = [
 // Admin-only profile tabs on the Employee Details page: the employee
 // self-service mirror excludes Admin, Document and Immigration.
 export const ADMIN_PROFILE_TABS = [
+  { id: 'attendance', label: 'Attendance', icon: MapPinned },
   { id: 'contact', label: 'Contact', icon: UserRound },
   { id: 'bank', label: 'Bank Details', icon: Landmark },
   { id: 'admin', label: 'Admin', icon: Settings2 },

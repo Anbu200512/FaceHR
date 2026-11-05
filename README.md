@@ -4,7 +4,7 @@
 
 **Smart HR Management with Face-Based Attendance**
 
-A full-stack **PERN** (PostgreSQL · Express · React · Node) Human Resources management system featuring **real face recognition check-in / check-out** in the browser, role-based dashboards, leave management, departments, reports and exports, dark mode, and a fully responsive UI.
+A full-stack **PERN** (PostgreSQL · Express · React · Node) Human Resources management system featuring **real face recognition check-in / check-out** in the browser, geofenced attendance, role-based dashboards, leave & resignation management, departments/locations, reports and exports, dark mode, and a fully responsive UI.
 
 </div>
 
@@ -13,27 +13,37 @@ A full-stack **PERN** (PostgreSQL · Express · React · Node) Human Resources m
 ## ✨ Features
 
 ### Authentication & Roles
-- **Admin** — full control: employees, attendance, departments/designations, leaves, reports, settings.
-- **Employee** — self check-in/out, attendance history, leave requests, own profile.
-- JWT-based login with "remember me", protected routes (401 auto-logout), change-password flow, forgot-password that alerts admins.
+- **Admin** — full control: employees, attendance, departments/designations/locations, leaves, resignations, reports, settings, activity log.
+- **Employee** — self check-in/out, attendance history, leave & resignation requests, own profile.
+- JWT-based login with "remember me", protected routes (401 auto-logout), change-password flow, forgot-password that notifies admins **in-app**.
+- Admin-only `POST /auth/register` for creating extra admin accounts.
 
 ### 👤 Face Recognition Attendance
 - **Registration:** Admin captures a photo of each employee via the browser camera. Only a single photo and a one-time 128‑dimension **biometric descriptor** are stored — **no raw video or full face-vector history is retained**.
 - **Check-in / Check-out:** The employee looks at the camera; the app auto-captures 3 stable good frames, computes the descriptor **entirely in the browser** (private by design), and the server matches it against the stored profile using **Euclidean distance** vs. a configurable threshold.
 - Status is decided automatically: **Present / Late** (vs. office start time), **Half Day** (at check-out vs. half-day threshold), **Absent / On Leave** (computed at read time).
 - Every verification stores the check-in/check-out photo, match distance, and device info for audit — viewable in the photo gallery.
+- Admins can also mark **manual check-in/out** for an employee (`POST /attendance/admin/:employeeId/check-in|check-out`).
+
+### 📍 Geofenced Attendance
+- Optional **geo fence**: attendance requires the device to be within the configured radius of the office (haversine distance server-side); violations return `LOCATION_REQUIRED` / outside-radius errors.
+- The **company location, name and allowed radius** are edited in *Admin → Attendance Settings* using a map-based **location picker / geofence map**; toggling is a single switch.
+- Office **Locations** (lat/lng) are also selectable on employee records and shown on the admin dashboard.
 
 ### 🏢 HR Management
-- Employees (CRUD + soft-deactivate, auto-created login account, generated password shown once).
-- Departments (with department head) and Designations.
-- Leave requests (apply / approve / reject with admin note + notifications) and annual leave balance.
+- Employees: multi-step create/edit form, profile sections, **documents upload** (upload/replace/delete), soft-deactivate, auto-created login account (generated password shown once), "send login details" email.
+- Departments (with department head), Designations, and office Locations assigned to employees.
+- Leave requests (apply / approve / reject with admin note + notifications), annual leave balance, leave summary.
+- **Resignations**: employee applies, admin approves/rejects, with notifications.
 - Smart notifications bell (unread counts live).
+- Admin **activity log** feed (`GET /api/activity`).
 
 ### 📊 Reports & Exports
-- Interactive dashboard with today's live board.
+- Interactive dashboard with today's live board and HR widgets (growth, new joiners, resignations, monthly leave, department/location breakdowns).
 - Attendance trend line chart, status breakdown pie, per-department bars (Recharts).
 - CSV & PDF export (jspdf + autotable) for report and record views.
-- Monthly attendance matrix + per-employee calendar view (History).
+- Monthly attendance matrix + per-employee calendar view (History), today's attendance board, and an attendance **photo gallery**.
+- Configurable **attendance settings** (office start time, half-day threshold, geofence) from the admin UI.
 
 ### 🎨 UX
 - Fully responsive, mobile-friendly (drawer nav, card fallbacks).
@@ -51,6 +61,7 @@ A full-stack **PERN** (PostgreSQL · Express · React · Node) Human Resources m
 | Backend   | Node.js, Express |
 | Database  | PostgreSQL 14+ via Prisma ORM |
 | Auth      | JWT + bcrypt (rate-limited login/register endpoints) |
+| Mail      | nodemailer (optional SMTP — employee welcome / login-details emails) |
 | Build     | npm workspaces (`client/` + `server/`) |
 
 ---
@@ -59,19 +70,23 @@ A full-stack **PERN** (PostgreSQL · Express · React · Node) Human Resources m
 
 ```
 facehr/
-├── package.json              # npm workspaces root
+├── package.json              # npm workspaces root (dev/build/start scripts)
 ├── render.yaml               # Render blueprint (API service config)
 ├── server/
 │   ├── .env                  # local backend config (dev only)
-│   ├── server.js             # express entry (mounts /api routes, seeds)
-│   ├── prisma/               # schema.prisma + seed script
+│   ├── server.js             # express entry (mounts /api routes, seeds, serves dist/)
+│   ├── prisma/               # schema.prisma, migrations/, seed script
 │   ├── config/               # config, prisma client, db (connect), seed (default admin)
 │   ├── middleware/           # auth, upload, rateLimiter, validate, error, mongoCompat
 │   ├── services/             # faceService, faceVerification, attendanceService,
-│   │                         # notificationService, attendanceSettingsService
+│   │                         # notificationService, attendanceSettingsService, mailService
 │   ├── controllers/          # auth, employee, face, attendance, report, leave,
-│   │                         # department, designation, notification, setting, dashboard
-│   ├── routes/
+│   │                         # department, designation, location, resignation,
+│   │                         # notification, setting, activity, dashboard
+│   ├── routes/               # one router per resource (mounted under /api/*)
+│   ├── utils/                # asyncHandler, date, geo (haversine)
+│   ├── scripts/              # download-face-models.js, pg-dev.ps1 (local Postgres)
+│   ├── uploads/              # runtime uploads (gitignored)
 │   └── face-models/          # downloaded face-api weights (server side, optional)
 └── client/
     ├── .env                  # VITE_API_BASE_URL / VITE_UPLOAD_BASE_URL
@@ -81,12 +96,19 @@ facehr/
         ├── App.jsx           # route tree
         ├── main.jsx          # providers + BrowserRouter
         ├── layouts/          # Admin / Employee / Auth layouts
-        ├── pages/admin/ …    # Dashboard, Employees, Attendance, etc.
-        ├── pages/employee/ … # Dashboard, FaceAttendance, History, MyLeaves, Profile
-        ├── components/       # FaceCapture, PageHeader, ui/*, etc.
+        ├── pages/admin/ …    # Dashboard, Employees, EmployeeForm, EmployeeProfile,
+        │                     # FaceRegistrationList, Attendance, AttendanceGallery,
+        │                     # AttendanceSettings, TodayAttendance, MonthlyAttendance,
+        │                     # Departments, Leaves, Reports, Settings
+        ├── pages/employee/ … # Dashboard, FaceAttendance, History, MyLeaves,
+        │                     # MyProfile, Resignation
+        ├── pages/auth/ …     # Login, ForgotPassword
+        ├── components/       # FaceCapture, NotificationBell, GeofenceMap,
+        │                     # LocationPickerModal, employeeForm/*, dashboard/*, ui/*
         ├── context/          # Auth, Theme, Toast
-        ├── hooks/            # useApi, usePolling, useDebounce
-        └── services/         # api, format, export, faceRecognition, static
+        ├── hooks/            # useApi, useDebounce
+        ├── services/         # api, format, export, faceRecognition, geo, static, attendanceSettings
+        └── utils/            # navigation helpers
 ```
 
 ---
@@ -115,7 +137,15 @@ npm run db:migrate --workspace server
 # Option B: quick sync for local prototyping
 npm run db:push --workspace server
 ```
+
 Default departments, locations, designations, settings and the admin account are seeded automatically on first server start (or run `npm run db:seed --workspace server`).
+
+> **No local Postgres yet?** A dev helper is included:
+> ```bash
+> npm run db:start --workspace server   # start the bundled .pgdata cluster
+> npm run db:status --workspace server
+> npm run db:stop  --workspace server
+> ```
 
 ```bash
 # Frontend
@@ -126,9 +156,10 @@ Default departments, locations, designations, settings and the admin account are
 ### 3. Download the face models
 The browser needs three models under `client/public/models/`. The repo already ships them, but to re-download / verify:
 ```bash
-npm run dev:server   # models are verified on boot
+npm run dev:server          # models are verified on boot
 # or run the server-side downloader:
-node server/scripts/download-face-models.js
+npm run models:download --workspace server
+# (equivalent to: node server/scripts/download-face-models.js)
 ```
 
 ### 4. Run
@@ -158,11 +189,16 @@ This starts **both** the API (`http://localhost:5000`) and the Vite client (`htt
 | `JWT_EXPIRES_IN` | Token lifetime | `7d` |
 | `CLIENT_URL` | Allowed CORS origin(s) | `http://localhost:5173` |
 | `UPLOAD_BASE_URL` | Public base for uploaded photos | `http://localhost:5000` |
+| `UPLOAD_DIR` | Where uploads are written (use a disk on Render) | `server/uploads` |
 | `FACE_MATCH_THRESHOLD` | Euclidean distance threshold (lower = stricter) | `0.6` |
 | `FACE_MODELS_PATH` | (Optional) server-side model dir | `face-models` |
 | `OFFICE_START_TIME` | Late cutoff (24h) | `09:30` |
 | `HALF_DAY_THRESHOLD_HOURS` | Hours below which = Half Day | `4` |
+| `COMPANY_NAME` | Company display name | `FaceHR` |
 | `ADMIN_EMAIL` / `ADMIN_NAME` / `ADMIN_PASSWORD` | Seeded default admin | — |
+| `ATTENDANCE_LOCATION_NAME` | Seed office location name | `Nuvox Technologies` |
+| `ATTENDANCE_LOCATION_LATITUDE` / `ATTENDANCE_LOCATION_LONGITUDE` | Seed office coordinates | — |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Optional mail ("send login details" to employees) — skipped when unset | — |
 
 **Client (`client/.env`)**
 | Variable | Purpose | Default |
@@ -174,28 +210,31 @@ This starts **both** the API (`http://localhost:5000`) and the Vite client (`htt
 
 ## 📄 API Overview
 
-Base path: `/api` — responses follow `{ success, message, data?, meta? }`; errors return friendly `message` (status codes 400/401/403/404/409).
+Base path: `/api` — responses follow `{ success, message, data?, meta? }`; errors return friendly `message` (status codes 400/401/403/404/409). `GET /api/health` returns `{ success: true }`.
 
 ### Auth
 | Method | Endpoint | Access |
 |--------|----------|--------|
 | POST | `/auth/login` | Public |
-| POST | `/auth/register` | Public (rate-limited) |
+| POST | `/auth/register` | Admin (creates an admin account) |
 | GET | `/auth/me` | Any authenticated |
 | POST | `/auth/change-password` | Any authenticated |
-| POST | `/auth/forgot-password` | Public |
+| POST | `/auth/forgot-password` | Public (rate-limited) |
 
 ### Employees
-`GET /employees` (search, department, status, noFace, pagination) · `GET/PUT/DELETE /employees/:id` · `POST /employees` (creates linked login) · `GET /employees/:id/attendance`
+`GET /employees` (search, department, status, noFace, pagination) · `GET/PUT/DELETE /employees/:id` · `POST /employees` (creates linked login) · `PATCH /employees/:id/status` · `POST /employees/:id/send-login` · `PATCH /employees/:id/sections/:section` · `GET /employees/:id/attendance` · documents: `POST /employees/:id/documents`, `PUT/DELETE /employees/:id/documents/:docId`
 
 ### Face
 `POST /face/register` (admin, multipart `image` + `descriptor`) · `POST /face/verify` · `GET/DELETE /face/:employeeId`
 
 ### Attendance
-`POST /attendance/check-in` · `POST /attendance/check-out` (multipart `image` + `descriptor`) · `GET /attendance/today` · `GET /attendance` (admin, filters) · `GET /attendance/:employeeId?month=&year=` · `GET /attendance/report?from=&to=&department=&employee=&detail=`
+`POST /attendance/check-in` · `POST /attendance/check-out` (multipart `image` + `descriptor` + optional `location`) · `POST /attendance/admin/:employeeId/check-in|check-out` (admin, manual) · `GET /attendance/today` · `GET /attendance` (admin, filters) · `GET /attendance/:employeeId?month=&year=` · `GET /attendance/report?from=&to=&department=&employee=&detail=`
 
-### Leaves / Departments / Designations / Notifications / Settings
-Leaf CRUD (+ `approve`/`reject`), Department & Designation CRUD, `GET /leaves/mine`, `GET /leaves/balance`, notification read/unread, and `GET/PUT /settings`.
+### Leaves / Resignations / Departments / Locations / Designations
+Leaf CRUD (+ `approve`/`reject`), `GET /leaves/mine`, `GET /leaves/balance`, `GET /leaves/summary` · Resignation CRUD (+ `approve`/`reject`, `GET /resignations/mine`) · Department, Designation and Location CRUD.
+
+### Notifications / Settings / Activity / Dashboard
+`GET /notifications`, `GET /notifications/unread-count`, `PUT /notifications/:id/read`, `PUT /notifications/read-all` · `GET/PUT /settings`, `GET/PUT /settings/attendance` (office time, half-day, geofence) · `GET /activity` (admin) · `GET /dashboard` (admin).
 
 > **Face recognition detail:** `verifyAgainstProfile` prefers a server-computed descriptor when the optional native TensorFlow backend (`@tensorflow/tfjs-node`) is installed. By default that native backend is **not** installed (it requires native compilation), so matching uses the **browser-computed descriptor** sent as a JSON-string form field — the server still validates shape/presence and enforces the threshold. This is fully functional; enabling the native backend is purely an optimization, never a requirement.
 
@@ -245,6 +284,7 @@ The repo ships a **`render.yaml`** blueprint at the root — Render picks it up 
 - `NODE_ENV=production` is set by the blueprint; the server refuses to boot without `JWT_SECRET`/`DATABASE_URL`.
 - Keep uploads behind the API origin (same origin recommended).
 - After first login, change the seeded admin password.
+- Configure SMTP env vars if you want the "send login details" email to employees; everything else works without mail.
 
 ---
 
@@ -253,6 +293,7 @@ The repo ships a **`render.yaml`** blueprint at the root — Render picks it up 
 - **Biometric privacy:** face descriptors are computed **client-side** and only the embedding (plus a single audit photo) is transmitted/stored. No continuous video or raw capture is recorded or retained.
 - Rate limiting on auth and face endpoints; server-side duplicate check-in protection (unique index).
 - JWT auth with per-route `authorize('admin'/'employee')` guards; passwords hashed with bcrypt.
+- **Geofence enforcement is server-side** (haversine check against office coordinates + radius) — the client location is treated as untrusted input.
 - Soft-delete employees instead of hard removal to preserve audit history.
 
 ---
@@ -264,6 +305,7 @@ There is no bundled automated test suite. Verify a local setup end-to-end:
 1. `GET /api/health` returns `{ success: true }`.
 2. Log in with the seeded admin account.
 3. Create an employee, then check in/out and review the dashboard/report views.
+4. Optional: enable the geofence in **Settings → Attendance** and confirm a check-in outside the radius is rejected.
 
 Use a real webcam (`localhost` or HTTPS) for face flows — browsers block `getUserMedia` on insecure origins except `localhost`.
 
@@ -280,6 +322,3 @@ Use a real webcam (`localhost` or HTTPS) for face flows — browsers block `getU
 ## 📄 License
 
 MIT © FaceHR
-#   F a c e H R  
- #   F a c e H R  
- 
