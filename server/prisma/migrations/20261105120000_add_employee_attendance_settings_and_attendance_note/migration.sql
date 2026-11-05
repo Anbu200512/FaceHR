@@ -1,5 +1,5 @@
 ALTER TABLE "employees"
-ADD COLUMN "attendanceSettings" JSONB;
+ADD COLUMN IF NOT EXISTS "attendanceSettings" JSONB;
 
 ALTER TABLE "attendance"
-ADD COLUMN "note" TEXT;
+ADD COLUMN IF NOT EXISTS "note" TEXT;
