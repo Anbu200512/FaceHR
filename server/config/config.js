@@ -47,8 +47,8 @@ const config = {
   faceMatchThreshold: parseFloat(process.env.FACE_MATCH_THRESHOLD) || 0.6,
   faceModelsPath: process.env.FACE_MODELS_PATH || 'face-models',
   // Read-through cache TTLs (milliseconds) for hot, read-only endpoints.
-  dashboardCacheTtlMs: parseInt(process.env.DASHBOARD_CACHE_TTL_MS, 10) || 15000,
-  activityCacheTtlMs: parseInt(process.env.ACTIVITY_CACHE_TTL_MS, 10) || 15000,
+  dashboardCacheTtlMs: parseInt(process.env.DASHBOARD_CACHE_TTL_MS, 10) || 60000,
+  activityCacheTtlMs: parseInt(process.env.ACTIVITY_CACHE_TTL_MS, 10) || 30000,
   listCacheTtlMs: parseInt(process.env.LIST_CACHE_TTL_MS, 10) || 60000,
   // Number of reverse-proxy hops in front of the app (Render = 1, Cloudflare -> Render = 2).
   trustProxy: parseInt(process.env.TRUST_PROXY, 10),

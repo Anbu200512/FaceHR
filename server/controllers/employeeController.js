@@ -222,6 +222,7 @@ const getEmployees = asyncHandler(async (req, res) => {
     prisma.employee.findMany({
       where,
       include: LIST_INCLUDE,
+      relationLoadStrategy: 'join',
       orderBy: { [sortField]: order },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -244,6 +245,7 @@ const getEmployee = asyncHandler(async (req, res) => {
   const employee = await prisma.employee.findUnique({
     where: { id: req.params.id },
     include: EMPLOYEE_INCLUDE,
+    relationLoadStrategy: 'join',
   });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
   res.json({ success: true, data: employee });

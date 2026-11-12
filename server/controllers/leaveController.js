@@ -1,7 +1,8 @@
 const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 const { createNotification } = require('../services/notificationService');
-const { startOfDay, diffDays, toDateKey } = require('../utils/date');
+const { startOfDay, toDateKey } = require('../utils/date');
+const { countWorkingDays, computeLeaveBalance, getPolicy } = require('../services/leavePolicyService');
 
 const LEAVE_TYPES = ['Casual Leave', 'Sick Leave', 'Earned Leave', 'Maternity Leave', 'Paternity Leave', 'Unpaid Leave', 'Other'];
 
@@ -37,7 +38,23 @@ const applyLeave = asyncHandler(async (req, res) => {
   const e = startOfDay(new Date(endDate));
   if (e < s) return res.status(400).json({ success: false, message: 'End date must be on or after the start date' });
 
-  const days = diffDays(s, e);
+  // Count only working days: weekends and holidays are excluded automatically.
+  const days = await countWorkingDays(s, e);
+  if (days <= 0) {
+    return res.status(400).json({ success: false, message: 'Selected range has no working days (weekends/holidays only)' });
+  }
+
+  const policy = await getPolicy(leaveType);
+  if (policy && policy.annualAllowance > 0) {
+    const balance = await computeLeaveBalance(employeeId, s.getFullYear());
+    const typeBalance = (balance.policies || []).find((p) => p.leaveType === leaveType);
+    if (typeBalance && typeBalance.remaining !== null && days > typeBalance.remaining) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient ${leaveType} balance. ${typeBalance.remaining} day(s) remaining, ${days} requested.`,
+      });
+    }
+  }
 
   // duplicate check: overlapping leave for same employee
   const overlapping = await prisma.leave.findFirst({
@@ -118,6 +135,7 @@ const getLeaves = asyncHandler(async (req, res) => {
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
+      relationLoadStrategy: 'join',
       include: {
         employee: EMPLOYEE_INCLUDE,
         reviewedBy: { select: { id: true, name: true } },
@@ -137,33 +155,10 @@ const getMyLeaves = asyncHandler(async (req, res) => {
   res.json({ success: true, data: leaves });
 });
 
-// @route  GET /api/leaves/balance  (employee - simple summary)
+// @route  GET /api/leaves/balance?year=  (employee - policy-driven summary)
 const getLeaveBalance = asyncHandler(async (req, res) => {
-  const year = new Date().getFullYear();
-  const start = new Date(year, 0, 1);
-  const end = new Date(year + 1, 0, 1);
-
-  const leaves = await prisma.leave.findMany({
-    where: { employeeRefId: req.user.employee, startDate: { lt: end }, endDate: { gte: start } },
-  });
-
-  const used = leaves.filter((l) => l.status === 'Approved').reduce((s, l) => s + l.days, 0);
-  const pending = leaves.filter((l) => l.status === 'Pending').reduce((s, l) => s + l.days, 0);
-
-  res.json({
-    success: true,
-    data: {
-      year,
-      used,
-      pending,
-      remaining: Math.max(0, 12 - used),
-      allowance: 12,
-      breakdown: leaves.filter((l) => l.status === 'Approved').reduce((acc, l) => {
-        acc[l.leaveType] = (acc[l.leaveType] || 0) + l.days;
-        return acc;
-      }, {}),
-    },
-  });
+  const year = parseInt(req.query.year, 10) || new Date().getFullYear();
+  res.json({ success: true, data: await computeLeaveBalance(req.user.employee, year) });
 });
 
 async function reviewLeave(req, res, status) {
@@ -235,7 +230,8 @@ const getLeaveSummary = asyncHandler(async (req, res) => {
     }),
   ]);
 
-  const allowance = 12; // matches the per-employee allowance used by the leave balance endpoint
+  const policies = await prisma.leavePolicy.findMany({ where: { active: true } });
+  const allowance = policies.reduce((sum, p) => sum + p.annualAllowance, 0) || 12;
   const total = activeEmployees * allowance;
   const used = approved._sum.days || 0;
 

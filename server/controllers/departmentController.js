@@ -8,6 +8,7 @@ const HEAD_SELECT = { id: true, firstName: true, lastName: true, employeeId: tru
 const getDepartments = asyncHandler(async (req, res) => {
   const departments = await prisma.department.findMany({
     include: { head: { select: HEAD_SELECT } },
+    relationLoadStrategy: 'join',
   });
   const counts = await prisma.employee.groupBy({
     by: ['departmentId'],

@@ -54,6 +54,7 @@ const login = asyncHandler(async (req, res) => {
     employeeData = await prisma.employee.findUnique({
       where: { id: user.employeeRefId },
       include: { department: true, designation: true },
+      relationLoadStrategy: 'join',
     });
   }
 
@@ -103,6 +104,7 @@ const me = asyncHandler(async (req, res) => {
         designation: true,
         face: { select: { faceId: true, active: true } },
       },
+      relationLoadStrategy: 'join',
     });
   }
 

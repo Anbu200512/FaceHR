@@ -21,7 +21,7 @@ export default function EmployeeHome() {
   const now = new Date();
 
   const today = usePolling(async () => {
-    const { data } = await api.get('/attendance/today');
+    const { data } = await api.get('/attendance/today', { noCache: true });
     return data.data.rows?.[0]?.record || null;
   }, { interval: 45000 });
 

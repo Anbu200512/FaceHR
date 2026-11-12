@@ -15,6 +15,7 @@ const {
   seedAdmin,
   seedSettings,
 } = require('./config/seed');
+const { seedDefaultPolicies } = require('./services/leavePolicyService');
 
 const app = express();
 
@@ -41,6 +42,18 @@ app.use(
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(mongoCompat);
+
+// Read-through caches are invalidated whenever data changes, so a write from any
+// screen is reflected immediately everywhere.
+const responseCacheStore = require('./utils/cache');
+const MUTATION_CACHE_PREFIXES = ['/api/dashboard', '/api/activity', '/api/departments', '/api/locations'];
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    for (const prefix of MUTATION_CACHE_PREFIXES) responseCacheStore.delByPrefix(prefix);
+  }
+  next();
+});
+
 // Uploaded files have unique names, so they can be cached aggressively by the browser.
 app.use('/uploads', express.static(config.uploadsDir, { maxAge: '7d', immutable: true }));
 
@@ -76,6 +89,11 @@ app.use('/api/employees', require('./routes/employeeRoutes'));
 app.use('/api/face', require('./routes/faceRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/leaves', require('./routes/leaveRoutes'));
+app.use('/api/leave-policies', require('./routes/leavePolicyRoutes'));
+app.use('/api/holidays', require('./routes/holidayRoutes'));
+app.use('/api/regularizations', require('./routes/regularizationRoutes'));
+app.use('/api/announcements', require('./routes/announcementRoutes'));
+app.use('/api/payroll', require('./routes/payrollRoutes'));
 app.use('/api/resignations', require('./routes/resignationRoutes'));
 app.use('/api/departments', require('./routes/departmentRoutes'));
 app.use('/api/locations', require('./routes/locationRoutes'));
@@ -100,6 +118,7 @@ const start = async () => {
       seedDefaultDesignations(),
       seedAdmin(),
       seedSettings(),
+      seedDefaultPolicies(),
     ]);
 
     // Initialize face service in the background (non-blocking, graceful).

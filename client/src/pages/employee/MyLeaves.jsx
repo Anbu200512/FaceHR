@@ -66,6 +66,20 @@ export default function MyLeaves() {
                   <div className="flex justify-between text-slate-600 dark:text-slate-300"><span>Used</span><span className="font-semibold">{balance.data.used}</span></div>
                   <div className="flex justify-between text-slate-600 dark:text-slate-300"><span>Pending</span><span className="font-semibold">{balance.data.pending}</span></div>
                 </div>
+                {balance.data.policies?.length > 0 && (
+                  <div className="mt-4 space-y-1.5 border-t pt-3 dark:border-slate-700">
+                    {balance.data.policies.map((p) => (
+                      <div key={p.leaveType} className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                        <span>{p.leaveType}</span>
+                        <span className="font-semibold">
+                          {p.unlimited ? `${p.used} used` : `${p.remaining} / ${p.allowance}`}
+                          {p.carryForward ? ` (+${p.carryForward} carried)` : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="mt-3 text-[11px] text-slate-400">Weekends and public holidays are not counted as leave days.</p>
               </div>
             ) : (
               <div className="p-5 text-sm text-slate-400">Loading…</div>

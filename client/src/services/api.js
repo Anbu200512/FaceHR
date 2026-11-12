@@ -6,6 +6,60 @@ const api = axios.create({
   timeout: 60000,
 });
 
+// Keep recently-fetched GET responses in memory. Page navigations then paint
+// instantly instead of waiting for the remote database again.
+const GET_CACHE_TTL = 30000;
+const GET_CACHE_MAX = 250;
+const getCache = new Map();
+const inflight = new Map();
+let cacheEpoch = 0;
+
+function cacheToken() {
+  return localStorage.getItem('facehr_token') || '';
+}
+
+function cacheKey(url, config) {
+  const params = config?.params ? JSON.stringify(config.params) : '';
+  return `${cacheToken()}|${url}|${params}`;
+}
+
+export function clearApiCache() {
+  // Bump the epoch so responses already in flight don't repopulate stale data.
+  cacheEpoch += 1;
+  getCache.clear();
+}
+
+const rawGet = api.get.bind(api);
+
+api.get = (url, config = {}) => {
+  if (config?.noCache) return rawGet(url, config);
+
+  const epoch = cacheEpoch;
+  const key = cacheKey(url, config);
+  const hit = getCache.get(key);
+  if (hit && Date.now() - hit.at < GET_CACHE_TTL) {
+    return Promise.resolve({ ...hit.response, fromCache: true });
+  }
+
+  // De-duplicate identical GETs (React StrictMode mounts effects twice in dev).
+  // The epoch keeps requests from before an invalidation out of the cache.
+  const requestKey = `${epoch}|${key}`;
+  if (inflight.has(requestKey)) return inflight.get(requestKey);
+
+  const promise = rawGet(url, config)
+    .then((res) => {
+      if (epoch === cacheEpoch) {
+        getCache.set(key, { at: Date.now(), response: res });
+        if (getCache.size > GET_CACHE_MAX) getCache.delete(getCache.keys().next().value);
+      }
+      return res;
+    })
+    .finally(() => inflight.delete(requestKey));
+
+  inflight.set(requestKey, promise);
+  return promise;
+};
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('facehr_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -14,7 +68,11 @@ api.interceptors.request.use((config) => {
 
 // Centralized error handling: backend always returns { success, message }
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // Any successful write invalidates cached reads so lists refresh immediately.
+    if ((res.config?.method || 'get').toLowerCase() !== 'get') clearApiCache();
+    return res;
+  },
   async (err) => {
     const cfg = err.config || {};
     const method = (cfg.method || 'get').toLowerCase();
@@ -37,6 +95,7 @@ api.interceptors.response.use(
       if (!isAuthCall) {
         localStorage.removeItem('facehr_token');
         localStorage.removeItem('facehr_user');
+        clearApiCache();
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
         }

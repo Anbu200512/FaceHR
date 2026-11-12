@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -15,11 +15,16 @@ import {
   KeyRound,
   FileSignature,
   ChevronLeft,
+  Clock,
+  Wallet,
+  Megaphone,
+  CalendarCheck,
 } from 'lucide-react';
 import Logo from '../components/Logo';
 import Avatar from '../components/Avatar';
 import NotificationBell from '../components/NotificationBell';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import { FullScreenLoader } from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
@@ -29,7 +34,11 @@ const NAV = [
   { to: '/employee', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/employee/attendance', label: 'Face Attendance', icon: ScanFace },
   { to: '/employee/history', label: 'My Attendance', icon: History },
+  { to: '/employee/regularization', label: 'Regularization', icon: Clock },
   { to: '/employee/leave', label: 'Leave', icon: Plane },
+  { to: '/employee/payslips', label: 'Payslips', icon: Wallet },
+  { to: '/employee/announcements', label: 'Announcements', icon: Megaphone },
+  { to: '/employee/holidays', label: 'Holidays', icon: CalendarCheck },
   { to: '/employee/resignation', label: 'Resignation', icon: FileSignature },
   { to: '/employee/profile', label: 'Profile', icon: UserCircle },
 ];
@@ -153,7 +162,9 @@ export default function EmployeeLayout() {
         </header>
 
         <main className="mx-auto w-full min-w-0 max-w-7xl px-3 py-5 sm:px-6 sm:py-6 lg:px-8">
-          <Outlet />
+          <Suspense fallback={<FullScreenLoader label="Loading page…" />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
 

@@ -14,6 +14,12 @@ export const STATUS_STYLES = {
   Registered: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400',
   'Not Registered': 'bg-slate-100 text-slate-600 ring-slate-500/20 dark:bg-slate-700/40 dark:text-slate-300',
   FullTime: 'bg-brand-50 text-brand-700 ring-brand-600/20 dark:bg-brand-500/10 dark:text-brand-400',
+  Draft: 'bg-slate-100 text-slate-600 ring-slate-500/20 dark:bg-slate-700/40 dark:text-slate-300',
+  Processed: 'bg-sky-50 text-sky-700 ring-sky-600/20 dark:bg-sky-500/10 dark:text-sky-400',
+  Paid: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400',
+  Public: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400',
+  Optional: 'bg-sky-50 text-sky-700 ring-sky-600/20 dark:bg-sky-500/10 dark:text-sky-400',
+  Restricted: 'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400',
 };
 
 export const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract', 'Intern'];
@@ -22,3 +28,21 @@ export const LEAVE_STATUSES = ['Pending', 'Approved', 'Rejected'];
 export const ATTENDANCE_STATUSES = ['Present', 'Late', 'Absent', 'Half Day', 'On Leave'];
 export const RESIGNATION_REASONS = ['Salary', 'Better Opportunity', 'Personal Reason', 'Relocation', 'Other'];
 export const RESIGNATION_STATUSES = ['Pending', 'Approved', 'Rejected'];
+export const HOLIDAY_TYPES = ['Public', 'Optional', 'Restricted'];
+export const LEAVE_ACCRUALS = [
+  { value: 'yearly', label: 'Yearly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'none', label: 'None' },
+];
+export const ANNOUNCEMENT_PRIORITIES = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'high', label: 'High' },
+];
+export const ANNOUNCEMENT_AUDIENCES = [
+  { value: 'all', label: 'Everyone' },
+  { value: 'department', label: 'Department' },
+];
+export const MONTH_OPTIONS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];

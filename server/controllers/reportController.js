@@ -28,6 +28,7 @@ const getReport = asyncHandler(async (req, res) => {
   const employees = await prisma.employee.findMany({
     where,
     include: { department: { select: { id: true, name: true } } },
+    relationLoadStrategy: 'join',
     orderBy: { firstName: 'asc' },
   });
 

@@ -38,6 +38,24 @@ A full-stack **PERN** (PostgreSQL · Express · React · Node) Human Resources m
 - Smart notifications bell (unread counts live).
 - Admin **activity log** feed (`GET /api/activity`).
 
+### 📅 Holidays & Leave Policy Engine
+- **Holiday calendar** (public / optional / restricted) managed per year; weekends and holidays are automatically excluded from leave day counts and payroll working days.
+- **Leave policies** per leave type with annual allowance, accrual mode, carry-forward and max carry-forward; `0` allowance means unlimited.
+- Policy-driven **leave balance** (per-type allowance, used, pending, carry-forward) and balance validation when applying for leave.
+
+### 🕒 Attendance Regularization
+- Employees request correction of a missed check-in/check-out with a reason.
+- Admin approves/rejects; approval **updates the attendance record** (times, working hours, late/half-day status) and notifies the employee.
+
+### 📢 Announcements
+- Admin publishes company-wide or department-specific notices with priority and optional expiry.
+- Employees see published, non-expired announcements and receive in-app notifications.
+
+### 💰 Payroll & Payslips
+- Generate a monthly payroll run from employee salary, attendance, approved leaves and holidays.
+- Payslips include gross, deductions, loss-of-pay, present/working days and net pay; admins can review, regenerate (until paid) and mark as paid.
+- Employees view their own payslips and salary breakdown.
+
 ### 📊 Reports & Exports
 - Interactive dashboard with today's live board and HR widgets (growth, new joiners, resignations, monthly leave, department/location breakdowns).
 - Attendance trend line chart, status breakdown pie, per-department bars (Recharts).
@@ -232,6 +250,9 @@ Base path: `/api` — responses follow `{ success, message, data?, meta? }`; err
 
 ### Leaves / Resignations / Departments / Locations / Designations
 Leaf CRUD (+ `approve`/`reject`), `GET /leaves/mine`, `GET /leaves/balance`, `GET /leaves/summary` · Resignation CRUD (+ `approve`/`reject`, `GET /resignations/mine`) · Department, Designation and Location CRUD.
+
+### Holidays / Leave Policies / Regularization / Announcements / Payroll
+`GET /holidays?year=` (CRUD admin) · `GET /leave-policies` (CRUD admin) · `POST /regularizations` + `GET /regularizations/mine` (employee), `GET /regularizations` + `approve`/`reject` (admin) · `GET /announcements` (CRUD admin) · `GET /payroll` + `POST /payroll/generate` + `PUT /payroll/:id/pay` + `DELETE /payroll/:id` (admin), `GET /payroll/mine` + `GET /payroll/payslips/:id` (employee).
 
 ### Notifications / Settings / Activity / Dashboard
 `GET /notifications`, `GET /notifications/unread-count`, `PUT /notifications/:id/read`, `PUT /notifications/read-all` · `GET/PUT /settings`, `GET/PUT /settings/attendance` (office time, half-day, geofence) · `GET /activity` (admin) · `GET /dashboard` (admin).

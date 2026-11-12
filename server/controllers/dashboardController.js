@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const { Prisma } = require('@prisma/client');
 const asyncHandler = require('../utils/asyncHandler');
 const { computeDayStatus } = require('./attendanceController');
 const { startOfDay, monthRange, toDateKey, isWeekend, diffDays } = require('../utils/date');
@@ -286,10 +287,6 @@ async function computeHrSummary(employees, year, monthIndex, location, departmen
   const { start, end } = monthRange(year, monthIndex);
   const now = new Date();
 
-  const resignWhere = { status: 'Inactive', updatedAt: { gte: start, lt: end } };
-  if (location) resignWhere.officeId = location;
-  if (department) resignWhere.departmentId = department;
-
   let male = 0;
   let female = 0;
   let other = 0;
@@ -316,15 +313,27 @@ async function computeHrSummary(employees, year, monthIndex, location, departmen
   const totalEmployees = employees.length;
   const averageAge = ageCount > 0 ? Math.round((ageSum / ageCount / (365.25 * 24 * 3600 * 1000)) * 10) / 10 : null;
 
-  const [resignations, pendingLeaves, pendingResignations, upcomingApprovedLeaves, onLeaveToday] = await Promise.all([
-    prisma.employee.count({ where: resignWhere }),
-    prisma.leave.count({ where: { status: 'Pending' } }),
-    prisma.resignation.count({ where: { status: 'Pending' } }),
-    prisma.leave.count({ where: { status: 'Approved', startDate: { gte: startOfDay(now) } } }),
-    prisma.leave.count({
-      where: { status: 'Approved', startDate: { lte: startOfDay(now) }, endDate: { gte: startOfDay(now) } },
-    }),
-  ]);
+  // One round-trip instead of five separate counts (each costs a full DB hop).
+  const resignParts = [
+    Prisma.sql`status = 'Inactive'`,
+    Prisma.sql`"updatedAt" >= ${start}`,
+    Prisma.sql`"updatedAt" < ${end}`,
+  ];
+  if (location) resignParts.push(Prisma.sql`"office" = ${location}`);
+  if (department) resignParts.push(Prisma.sql`"department" = ${department}`);
+  const resignWhereSql = Prisma.join(resignParts, ' AND ');
+  const dayStart = startOfDay(now);
+
+  const [counts] = await prisma.$queryRaw`
+    SELECT
+      (SELECT COUNT(*)::int FROM employees WHERE ${resignWhereSql}) AS resignations,
+      (SELECT COUNT(*)::int FROM leaves WHERE status = 'Pending') AS "pendingLeaves",
+      (SELECT COUNT(*)::int FROM resignations WHERE status = 'Pending') AS "pendingResignations",
+      (SELECT COUNT(*)::int FROM leaves WHERE status = 'Approved' AND "startDate" >= ${dayStart}) AS "upcomingApprovedLeaves",
+      (SELECT COUNT(*)::int FROM leaves WHERE status = 'Approved' AND "startDate" <= ${dayStart} AND "endDate" >= ${dayStart}) AS "onLeaveToday"
+  `;
+
+  const { resignations, pendingLeaves, pendingResignations, upcomingApprovedLeaves, onLeaveToday } = counts;
 
   return {
     totalEmployees,
@@ -477,6 +486,7 @@ const getDashboard = asyncHandler(async (req, res) => {
       department: { select: { id: true, name: true } },
       office: { select: { id: true, name: true } },
     },
+    relationLoadStrategy: 'join',
     orderBy: { firstName: 'asc' },
   });
 

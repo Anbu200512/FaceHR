@@ -3,7 +3,8 @@
 // keeps the same string-identifier contract the React client already expects.
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -30,6 +31,9 @@ model User {
   leavesReviewed         Leave[]        @relation("LeaveReviewer")
   resignationsReviewed   Resignation[]  @relation("ResignationReviewer")
   facesRegistered        FaceProfile[]  @relation("FaceRegistrar")
+  regularizationReviews  AttendanceRegularization[] @relation("RegularizationReviewer")
+  announcements          Announcement[] @relation("AnnouncementAuthor")
+  payrollRunsProcessed   PayrollRun[]   @relation("PayrollProcessor")
 
   @@index([employeeId])
   @@map("users")
@@ -96,6 +100,8 @@ model Employee {
   attendance         Attendance[]
   leaves             Leave[]
   resignations       Resignation[]
+  regularizations    AttendanceRegularization[]
+  payslips           Payslip[]
   headedDepartments  Department[] @relation("DepartmentHead")
 
   @@index([status])
@@ -116,7 +122,8 @@ model Department {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  employees   Employee[] @relation("EmployeeDepartment")
+  employees     Employee[]     @relation("EmployeeDepartment")
+  announcements Announcement[]
 
   @@map("departments")
 }
@@ -173,6 +180,8 @@ model Attendance {
   note                        String?
   createdAt                   DateTime  @default(now())
   updatedAt                   DateTime  @updatedAt
+
+  regularizations AttendanceRegularization[]
 
   @@unique([employeeRefId, date])
   @@index([date])
@@ -286,4 +295,127 @@ model EmployeeDocument {
 
   @@index([employeeRefId])
   @@map("employee_documents")
+}
+
+model Holiday {
+  id          String   @id @default(uuid())
+  name        String
+  date        DateTime @unique @db.Date
+  type        String   @default("Public")
+  description String   @default("")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+  @@map("holidays")
+}
+
+model LeavePolicy {
+  id              String   @id @default(uuid())
+  leaveType       String   @unique
+  annualAllowance Int      @default(12)
+  accrual         String   @default("yearly")
+  carryForward    Boolean  @default(false)
+  maxCarryForward Int      @default(0)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("leave_policies")
+}
+
+model AttendanceRegularization {
+  id                String     @id @default(uuid())
+  employeeRefId     String     @map("employee")
+  employee          Employee   @relation(fields: [employeeRefId], references: [id], onDelete: Cascade)
+  employeeId        String
+  attendanceId      String?    @map("attendance")
+  attendance        Attendance? @relation(fields: [attendanceId], references: [id], onDelete: SetNull)
+  date              DateTime
+  requestedCheckIn  DateTime?
+  requestedCheckOut DateTime?
+  reason            String     @default("")
+  status            String     @default("Pending")
+  adminNote         String     @default("")
+  reviewedById      String?    @map("reviewedBy")
+  reviewedBy        User?      @relation("RegularizationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@index([employeeRefId, date])
+  @@index([status])
+  @@map("attendance_regularizations")
+}
+
+model Announcement {
+  id           String     @id @default(uuid())
+  title        String
+  message      String
+  priority     String     @default("normal")
+  audience     String     @default("all")
+  departmentId String?    @map("department")
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  published    Boolean    @default(true)
+  authorId     String?    @map("author")
+  author       User?      @relation("AnnouncementAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  expiresAt    DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([published, createdAt])
+  @@map("announcements")
+}
+
+model PayrollRun {
+  id              String   @id @default(uuid())
+  month           Int
+  year            Int
+  status          String   @default("Draft")
+  notes           String   @default("")
+  totalGross      Float    @default(0)
+  totalDeductions Float    @default(0)
+  totalNet        Float    @default(0)
+  processedById   String?  @map("processedBy")
+  processedBy     User?    @relation("PayrollProcessor", fields: [processedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  payslips Payslip[]
+
+  @@unique([month, year])
+  @@map("payroll_runs")
+}
+
+model Payslip {
+  id               String     @id @default(uuid())
+  payrollRunId     String     @map("payrollRun")
+  payrollRun       PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employeeRefId    String     @map("employee")
+  employee         Employee   @relation(fields: [employeeRefId], references: [id], onDelete: Cascade)
+  employeeId       String
+  month            Int
+  year             Int
+  currency         String     @default("INR")
+  basic            Float      @default(0)
+  hra              Float      @default(0)
+  specialAllowance Float      @default(0)
+  otherAllowance   Float      @default(0)
+  gross            Float      @default(0)
+  deductions       Float      @default(0)
+  pf               Float      @default(0)
+  tax              Float      @default(0)
+  lopDays          Int        @default(0)
+  lopAmount        Float      @default(0)
+  netPay           Float      @default(0)
+  presentDays      Int        @default(0)
+  workingDays      Int        @default(0)
+  status           String     @default("Processed")
+  breakdown        Json?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@unique([employeeRefId, month, year])
+  @@index([payrollRunId])
+  @@map("payslips")
 }

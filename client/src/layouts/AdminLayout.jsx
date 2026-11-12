@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -22,6 +22,11 @@ import {
   KeyRound,
   ChevronLeft,
   ChevronRight,
+  CalendarCheck,
+  SlidersHorizontal,
+  Megaphone,
+  Wallet,
+  Clock,
 } from 'lucide-react';
 import Logo from '../components/Logo';
 import Avatar from '../components/Avatar';
@@ -32,6 +37,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
 import { useNavigateSearch } from '../utils/navigation';
 import api from '../services/api';
+import { FullScreenLoader } from '../components/ui/Button';
 import { usePolling } from '../hooks/useDebounce';
 import clsx from 'clsx';
 
@@ -48,8 +54,13 @@ const NAV = [
     ],
   },
   { to: '/admin/face-registration', label: 'Face Registration', icon: ScanFace },
+  { to: '/admin/regularizations', label: 'Regularization', icon: Clock },
   { to: '/admin/departments', label: 'Departments', icon: Building2 },
   { to: '/admin/leaves', label: 'Leave Management', icon: Plane },
+  { to: '/admin/leave-policies', label: 'Leave Policies', icon: SlidersHorizontal },
+  { to: '/admin/holidays', label: 'Holiday Calendar', icon: CalendarCheck },
+  { to: '/admin/payroll', label: 'Payroll', icon: Wallet },
+  { to: '/admin/announcements', label: 'Announcements', icon: Megaphone },
   { to: '/admin/resignations', label: 'Resignation Requests', icon: ClipboardList },
   { to: '/admin/reports', label: 'Reports', icon: BarChart3 },
   { to: '/admin/settings', label: 'Settings', icon: SettingsIcon },
@@ -298,7 +309,9 @@ export default function AdminLayout() {
         </header>
 
         <main className="mx-auto w-full min-w-0 max-w-7xl px-3 py-5 sm:px-6 sm:py-6 lg:px-8">
-          <Outlet />
+          <Suspense fallback={<FullScreenLoader label="Loading page…" />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
 

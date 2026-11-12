@@ -86,6 +86,7 @@ const getResignations = asyncHandler(async (req, res) => {
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
+      relationLoadStrategy: 'join',
       include: {
         employee: EMPLOYEE_INCLUDE,
         reviewedBy: { select: { id: true, name: true } },

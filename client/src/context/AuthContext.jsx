@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import api, { extractError } from '../services/api';
+import api, { clearApiCache, extractError } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -16,6 +16,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const login = useCallback(async (identifier, password, role) => {
+    clearApiCache();
     const { data } = await api.post('/auth/login', { identifier, password, role });
     localStorage.setItem('facehr_token', data.token);
     localStorage.setItem('facehr_user', JSON.stringify(data.user));
@@ -26,6 +27,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     localStorage.removeItem('facehr_token');
     localStorage.removeItem('facehr_user');
+    clearApiCache();
     setUser(null);
   }, []);
 

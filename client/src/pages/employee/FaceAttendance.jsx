@@ -37,7 +37,7 @@ export default function FaceAttendance() {
   }, [loadSettings]);
 
   const today = usePolling(async () => {
-    const { data } = await api.get('/attendance/today');
+    const { data } = await api.get('/attendance/today', { noCache: true });
     return data.data.rows?.[0]?.record || null;
   }, { interval: 30000 });
 

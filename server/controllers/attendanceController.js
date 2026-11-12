@@ -345,6 +345,7 @@ const getRecords = asyncHandler(async (req, res) => {
       orderBy: [{ [sortField]: order }, { createdAt: 'desc' }],
       skip: (page - 1) * pageSize,
       take: pageSize,
+      relationLoadStrategy: 'join',
       include: {
         employee: {
           select: {
@@ -390,6 +391,7 @@ const getToday = asyncHandler(async (req, res) => {
   const employees = await prisma.employee.findMany({
     where,
     include: { department: { select: { id: true, name: true } } },
+    relationLoadStrategy: 'join',
     orderBy: { firstName: 'asc' },
   });
 
