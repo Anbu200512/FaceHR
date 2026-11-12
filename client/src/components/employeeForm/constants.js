@@ -13,6 +13,8 @@ import {
   Settings2,
   Plane,
   MapPinned,
+  Banknote,
+  PiggyBank,
 } from 'lucide-react';
 
 export const STEPS = [
@@ -49,6 +51,8 @@ export const ADMIN_PROFILE_TABS = [
   { id: 'attendance', label: 'Attendance', icon: MapPinned },
   { id: 'contact', label: 'Contact', icon: UserRound },
   { id: 'bank', label: 'Bank Details', icon: Landmark },
+  { id: 'salary', label: 'Salary', icon: Banknote },
+  { id: 'pf', label: 'PF', icon: PiggyBank },
   { id: 'admin', label: 'Admin', icon: Settings2 },
   { id: 'personal', label: 'Personal', icon: User },
   { id: 'family', label: 'Family', icon: UsersRound },

@@ -496,6 +496,58 @@ const removeUploadFile = (fileName) => {
 
 const SECTION_WHITELIST = ['contact', 'bank', 'admin', 'personal', 'family', 'emergency', 'experience', 'weekOff', 'qualification', 'workLocation', 'salary', 'pf', 'immigration', 'attendance'];
 
+const SALARY_AMOUNT_LABELS = {
+  ctc: 'Annual CTC',
+  basicSalary: 'Basic salary',
+  hra: 'HRA',
+  specialAllowance: 'Special allowance',
+  otherAllowance: 'Other allowance',
+  monthlyGross: 'Monthly gross',
+  monthlyDeductions: 'Monthly deductions',
+  netPay: 'Net pay',
+};
+
+/** Validate and normalise the salary section so payroll always has basic pay + gross. */
+const cleanSalarySection = (raw) => {
+  const clean = cleanObject(raw);
+  if (!clean) return { error: 'No salary details provided' };
+
+  for (const [key, label] of Object.entries(SALARY_AMOUNT_LABELS)) {
+    if (clean[key] === undefined) continue;
+    const value = Number(clean[key]);
+    if (!Number.isFinite(value) || value < 0) {
+      return { error: `${label} must be a valid non-negative number` };
+    }
+    clean[key] = value;
+  }
+
+  const dateLabels = { effectiveDate: 'Effective from', revisionDate: 'Last revision date' };
+  for (const [key, label] of Object.entries(dateLabels)) {
+    if (clean[key] === undefined) continue;
+    if (Number.isNaN(new Date(clean[key]).getTime())) {
+      return { error: `${label} is not a valid date` };
+    }
+  }
+
+  const basic = Number(clean.basicSalary) || 0;
+  const hra = Number(clean.hra) || 0;
+  const specialAllowance = Number(clean.specialAllowance) || 0;
+  const otherAllowance = Number(clean.otherAllowance) || 0;
+  let monthlyGross = Number(clean.monthlyGross) || 0;
+
+  if (basic <= 0) return { error: 'Basic salary is required and must be greater than 0' };
+  if (!monthlyGross) monthlyGross = basic + hra + specialAllowance + otherAllowance;
+  if (monthlyGross < basic) return { error: 'Monthly gross cannot be less than basic salary' };
+
+  clean.basicSalary = basic;
+  clean.monthlyGross = monthlyGross;
+  if (clean.netPay === undefined) {
+    clean.netPay = Math.max(0, monthlyGross - (Number(clean.monthlyDeductions) || 0));
+  }
+
+  return { data: clean };
+};
+
 const ADMIN_STRING_KEYS = ['salaryOn', 'otApplicable', 'attendancePolicy', 'workshift', 'paymentMode', 'esiNo', 'pfNo', 'uan', 'gratuityNo', 'aadhaarCardNo', 'rfidCardNo', 'fingerprintId'];
 const ADMIN_BOOL_KEYS = ['ptApplicable', 'esicApplicable', 'pfAsPerGovernment', 'pfOnTotalBasic', 'employerPfAsPerGovernment', 'employerPfOnTotalBasic', 'pensionNotApplicable', 'tdsApplicable', 'compensatoryOffApplicable', 'employerEsicApplicable', 'gratuityApplicable'];
 
@@ -708,8 +760,8 @@ const updateEmployeeSection = asyncHandler(async (req, res) => {
       return res.json({ success: true, message: 'Work location saved', data: saved.office || null });
     }
     case 'salary': {
-      const clean = cleanObject(data);
-      if (!clean) return res.status(400).json({ success: false, message: 'No salary details provided' });
+      const { data: clean, error } = cleanSalarySection(data);
+      if (error) return res.status(400).json({ success: false, message: error });
       await prisma.employee.update({ where: { id: employee.id }, data: { salary: clean } });
       return res.json({ success: true, message: 'Salary details saved', data: clean });
     }

@@ -883,7 +883,7 @@ function SalaryEditor({ emp, ctx, onSaved }) {
   return (
     <SectionCard title="Salary Details" subtitle="Compensation and pay breakdown. Visible to admins only." icon={Banknote}>
       <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
-        Enter amounts in whole numbers. Leave a field empty to clear it. These fields are informational and do not compute payroll.
+        Payroll uses these amounts every month. Gross is taken from Monthly Gross, or calculated as Basic + HRA + Special + Other allowance. Basic salary is required before payroll can be generated.
       </div>
       <FieldGrid>
         <Input label="Annual CTC" name="ctc" type="number" value={form.ctc} onChange={(e) => set('ctc', e.target.value)} placeholder="1200000" />

@@ -34,8 +34,14 @@ const applyLeave = asyncHandler(async (req, res) => {
   const emp = await prisma.employee.findUnique({ where: { id: employeeId } });
   if (!emp) return res.status(404).json({ success: false, message: 'Employee not found' });
 
-  const s = startOfDay(new Date(startDate));
-  const e = startOfDay(new Date(endDate));
+  const startRaw = new Date(startDate);
+  const endRaw = new Date(endDate);
+  if (Number.isNaN(startRaw.getTime()) || Number.isNaN(endRaw.getTime())) {
+    return res.status(400).json({ success: false, message: 'Start date and end date must be valid dates' });
+  }
+
+  const s = startOfDay(startRaw);
+  const e = startOfDay(endRaw);
   if (e < s) return res.status(400).json({ success: false, message: 'End date must be on or after the start date' });
 
   // Count only working days: weekends and holidays are excluded automatically.
@@ -109,8 +115,13 @@ const getLeaves = asyncHandler(async (req, res) => {
   const where = {};
   if (status && ['Pending', 'Approved', 'Rejected'].includes(status)) where.status = status;
   if (from || to) {
-    const s = from ? startOfDay(new Date(from)) : new Date(0);
-    const e = to ? startOfDay(new Date(to)) : new Date(8640000000000000);
+    const fromDate = from ? new Date(from) : null;
+    const toDate = to ? new Date(to) : null;
+    if ((fromDate && Number.isNaN(fromDate.getTime())) || (toDate && Number.isNaN(toDate.getTime()))) {
+      return res.status(400).json({ success: false, message: 'From and to must be valid dates' });
+    }
+    const s = fromDate ? startOfDay(fromDate) : new Date(0);
+    const e = toDate ? startOfDay(toDate) : new Date(8640000000000000);
     where.startDate = { lte: e };
     where.endDate = { gte: s };
   }

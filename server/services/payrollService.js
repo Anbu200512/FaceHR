@@ -2,6 +2,8 @@ const prisma = require('../config/prisma');
 const { startOfDay, toDateKey } = require('../utils/date');
 const { getHolidayKeySet, listWorkingDates } = require('./leavePolicyService');
 
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
 const num = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
@@ -20,9 +22,9 @@ function dateKeyRange(start, end) {
   return keys;
 }
 
-async function buildPayslip(employee, month, year, workingDates) {
+function summarizeSalary(employee) {
   const salary = employee.salary || {};
-  const basic = num(salary.basicSalary);
+  const basic = num(salary.basicSalary ?? salary.basic);
   const hra = num(salary.hra);
   const specialAllowance = num(salary.specialAllowance);
   const otherAllowance = num(salary.otherAllowance);
@@ -30,6 +32,12 @@ async function buildPayslip(employee, month, year, workingDates) {
   let gross = num(salary.monthlyGross);
   if (!gross) gross = basic + hra + specialAllowance + otherAllowance;
   if (!gross) gross = num(salary.netPay) + num(salary.monthlyDeductions);
+
+  return { salary, basic, hra, specialAllowance, otherAllowance, gross };
+}
+
+async function buildPayslip(employee, month, year, workingDates) {
+  const { salary, basic, hra, specialAllowance, otherAllowance, gross } = summarizeSalary(employee);
 
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
@@ -127,6 +135,13 @@ async function generatePayroll({ month, year, adminId, notes }) {
     throw err;
   }
 
+  const monthStart = new Date(y, m - 1, 1);
+  if (monthStart > startOfDay(new Date())) {
+    const err = new Error('Payroll cannot be generated for a future month');
+    err.statusCode = 400;
+    throw err;
+  }
+
   const existing = await prisma.payrollRun.findUnique({ where: { month_year: { month: m, year: y } } });
   if (existing && existing.status === 'Paid') {
     const err = new Error('This payroll has already been paid and cannot be regenerated');
@@ -134,7 +149,6 @@ async function generatePayroll({ month, year, adminId, notes }) {
     throw err;
   }
 
-  const monthStart = new Date(y, m - 1, 1);
   const monthEnd = new Date(y, m, 0);
   const holidaySet = await getHolidayKeySet(monthStart, monthEnd);
   const workingDates = await listWorkingDates(monthStart, monthEnd, holidaySet);
@@ -144,7 +158,33 @@ async function generatePayroll({ month, year, adminId, notes }) {
     orderBy: { employeeId: 'asc' },
   });
 
-  const payslips = await Promise.all(employees.map((emp) => buildPayslip(emp, m, y, workingDates)));
+  // Employees who joined after this month must not get a zero-value payslip.
+  const employed = employees.filter((emp) => !emp.joiningDate || startOfDay(emp.joiningDate) <= monthEnd);
+  if (!employed.length) {
+    const err = new Error(`No active employees were employed during ${MONTHS[m - 1]} ${y}`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Never create zero-value payslips: payroll needs a basic salary and gross.
+  const missingSalary = employed.filter((emp) => {
+    const { basic, gross } = summarizeSalary(emp);
+    return basic <= 0 || gross <= 0;
+  });
+  if (missingSalary.length) {
+    const names = missingSalary
+      .slice(0, 5)
+      .map((e) => `${e.firstName} ${e.lastName} (${e.employeeId})`)
+      .join(', ');
+    const extra = missingSalary.length > 5 ? ` and ${missingSalary.length - 5} more` : '';
+    const err = new Error(
+      `Set basic salary for ${missingSalary.length} active employee(s) before generating payroll: ${names}${extra}. Open Employees, select the employee, then use the Salary tab.`
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const payslips = await Promise.all(employed.map((emp) => buildPayslip(emp, m, y, workingDates)));
 
   const totals = payslips.reduce(
     (acc, p) => {
