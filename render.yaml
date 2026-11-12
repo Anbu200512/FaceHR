@@ -19,7 +19,9 @@ services:
         value: production
       # --- set these in the Render dashboard (sync: false = you type the value) ---
       - key: DATABASE_URL
-        sync: false
+        sync: false # Neon connection string (sslmode=require&channel_binding=require)
+      - key: DIRECT_URL
+        sync: false # Neon direct connection string used for migrations (no -pooler)
       - key: JWT_SECRET
         generateValue: true
       - key: CLIENT_URL

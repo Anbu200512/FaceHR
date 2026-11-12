@@ -11,6 +11,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "node scripts/deploy-migrations.js",
+    "db:deploy:neon": "node scripts/apply-schema-neon.js",
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js",
     "db:studio": "prisma studio",
@@ -20,6 +21,8 @@
     "models:download": "node scripts/download-face-models.js"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
+    "@prisma/adapter-neon": "^6.19.3",
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^2.4.3",
     "compression": "^1.8.2",
@@ -31,7 +34,8 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^10.0.10",
-    "prisma": "^6.19.3"
+    "prisma": "^6.19.3",
+    "ws": "^8.22.2"
   },
   "optionalDependencies": {
     "@tensorflow/tfjs-node": "^4.22.0",
