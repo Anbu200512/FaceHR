@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -7,6 +7,7 @@ import {
   ScanFace,
   Building2,
   Plane,
+  ClipboardList,
   BarChart3,
   Settings as SettingsIcon,
   MapPinned,
@@ -19,6 +20,8 @@ import {
   LogOut,
   ChevronDown,
   KeyRound,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import Logo from '../components/Logo';
 import Avatar from '../components/Avatar';
@@ -28,17 +31,26 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
 import { useNavigateSearch } from '../utils/navigation';
+import api from '../services/api';
+import { usePolling } from '../hooks/useDebounce';
 import clsx from 'clsx';
 
 const NAV = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/employees', label: 'Employees', icon: Users },
-  { to: '/admin/attendance', label: 'Attendance', icon: CalendarDays },
-  { to: '/admin/attendance/manual', label: 'Manual Attendance', icon: PencilLine },
-  { to: '/admin/attendance-settings', label: 'Attendance Settings', icon: MapPinned },
+  {
+    label: 'Attendance',
+    icon: CalendarDays,
+    children: [
+      { to: '/admin/attendance', label: 'Attendance', icon: CalendarDays, end: true },
+      { to: '/admin/attendance/manual', label: 'Manual Attendance', icon: PencilLine },
+      { to: '/admin/attendance-settings', label: 'Attendance Settings', icon: MapPinned },
+    ],
+  },
   { to: '/admin/face-registration', label: 'Face Registration', icon: ScanFace },
   { to: '/admin/departments', label: 'Departments', icon: Building2 },
   { to: '/admin/leaves', label: 'Leave Management', icon: Plane },
+  { to: '/admin/resignations', label: 'Resignation Requests', icon: ClipboardList },
   { to: '/admin/reports', label: 'Reports', icon: BarChart3 },
   { to: '/admin/settings', label: 'Settings', icon: SettingsIcon },
 ];
@@ -48,11 +60,27 @@ export default function AdminLayout() {
   const { theme, toggle } = useTheme();
   const toast = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const navigateSearch = useNavigateSearch();
   const [drawer, setDrawer] = useState(false);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [attendanceMenuOpen, setAttendanceMenuOpen] = useState(
+    location.pathname.startsWith('/admin/attendance') || location.pathname === '/admin/attendance-settings'
+  );
+  const pendingResignations = usePolling(async () => {
+    const { data } = await api.get('/resignations?page=1&pageSize=1&status=Pending');
+    return data.meta?.total || 0;
+  }, { interval: 120000 });
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/admin/attendance') || location.pathname === '/admin/attendance-settings') {
+      setAttendanceMenuOpen(true);
+    }
+  }, [location.pathname]);
 
   const onSearch = (e) => {
     e.preventDefault();
@@ -66,14 +94,75 @@ export default function AdminLayout() {
   };
 
   const sidebar = (
-    <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center px-5">
-        <Link to="/admin" onClick={() => setDrawer(false)}>
-          <Logo />
-        </Link>
+      <div className={clsx('flex h-full flex-col', desktopSidebarCollapsed && !drawer && 'items-center')}>
+        <div className="flex h-16 items-center justify-between px-5">
+        {(!desktopSidebarCollapsed || drawer) && <Link to="/admin" onClick={() => setDrawer(false)}><Logo /></Link>}
+        <button
+          onClick={() => desktopSidebarCollapsed ? setDesktopSidebarCollapsed(false) : setDesktopSidebarCollapsed(true)}
+          className="hidden rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 lg:inline-flex"
+          aria-label={desktopSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={desktopSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {desktopSidebarCollapsed ? <Menu className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+        </button>
       </div>
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {NAV.map((item) => (
+      <nav className={clsx('flex-1 space-y-1 overflow-y-auto py-4', desktopSidebarCollapsed && !drawer ? 'px-2' : 'px-3')}>
+        {NAV.map((item) => item.children ? (
+          <div key={item.label}>
+            {desktopSidebarCollapsed && !drawer ? (
+              <NavLink
+                to="/admin/attendance"
+                title={item.label}
+                onClick={() => setDrawer(false)}
+                className={({ isActive }) => clsx(
+                  'group flex justify-center rounded-xl px-2 py-2.5 text-sm font-medium transition',
+                  isActive || location.pathname.startsWith('/admin/attendance') || location.pathname === '/admin/attendance-settings'
+                    ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400'
+                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+              </NavLink>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAttendanceMenuOpen((open) => !open)}
+                aria-expanded={attendanceMenuOpen}
+                className={clsx(
+                  'group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition',
+                  location.pathname.startsWith('/admin/attendance') || location.pathname === '/admin/attendance-settings'
+                    ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400'
+                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                )}
+              >
+                <item.icon className="h-5 w-5 shrink-0" />
+                <span className="min-w-0 flex-1">Attendance</span>
+                <ChevronRight className={clsx('h-4 w-4 transition-transform', attendanceMenuOpen && 'rotate-90')} />
+              </button>
+            )}
+            {attendanceMenuOpen && (!desktopSidebarCollapsed || drawer) && (
+              <div className="ml-4 mt-1 space-y-1 border-l pl-3 dark:border-slate-700">
+                {item.children.map((child) => (
+                  <NavLink
+                    key={child.to}
+                    to={child.to}
+                    end={child.end}
+                    onClick={() => setDrawer(false)}
+                    className={({ isActive }) => clsx(
+                      'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition',
+                      isActive
+                        ? 'bg-brand-50 font-medium text-brand-700 dark:bg-brand-500/10 dark:text-brand-400'
+                        : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                    )}
+                  >
+                    <child.icon className="h-4 w-4 shrink-0" />
+                    {child.label}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
           <NavLink
             key={item.to}
             to={item.to}
@@ -81,33 +170,49 @@ export default function AdminLayout() {
             onClick={() => setDrawer(false)}
             className={({ isActive }) =>
               clsx(
-                'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition',
+                clsx('group flex items-center rounded-xl py-2.5 text-sm font-medium transition', desktopSidebarCollapsed && !drawer ? 'justify-center px-2' : 'gap-3 px-3'),
                 isActive
                   ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400'
                   : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
               )
             }
           >
-            <item.icon className="h-5 w-5 shrink-0" />
-            {item.label}
+            <span className="relative flex shrink-0">
+              <item.icon className="h-5 w-5" />
+              {item.to === '/admin/resignations' && pendingResignations.data > 0 && desktopSidebarCollapsed && !drawer && (
+                <span className="absolute -right-2 -top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-rose-500 dark:border-slate-900" />
+              )}
+            </span>
+            {(!desktopSidebarCollapsed || drawer) && (
+              <>
+                <span className="min-w-0 flex-1">{item.label}</span>
+                {item.to === '/admin/resignations' && pendingResignations.data > 0 && (
+                  <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold leading-none text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                    {pendingResignations.data > 99 ? '99+' : pendingResignations.data}
+                  </span>
+                )}
+              </>
+            )}
           </NavLink>
         ))}
       </nav>
-      <div className="border-t p-4 dark:border-slate-700">
+      {(!desktopSidebarCollapsed || drawer) && <div className="border-t p-4 dark:border-slate-700">
         <p className="text-xs font-semibold text-slate-400">FaceHR Admin</p>
         <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">
           Smart HR Management with Face-Based Attendance
         </p>
-      </div>
+      </div>}
     </div>
   );
 
   return (
     <div className="min-h-screen bg-surface-light dark:bg-surface-dark">
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r bg-white dark:border-slate-700 dark:bg-slate-900 lg:block">
-        {sidebar}
-      </aside>
+      {desktopSidebarOpen && (
+        <aside className={clsx('fixed inset-y-0 left-0 z-30 hidden border-r bg-white dark:border-slate-700 dark:bg-slate-900 lg:block', desktopSidebarCollapsed ? 'w-16' : 'w-64')}>
+          {sidebar}
+        </aside>
+      )}
 
       {/* Mobile drawer */}
       {drawer && (
@@ -127,7 +232,7 @@ export default function AdminLayout() {
       )}
 
       {/* Main column */}
-      <div className="lg:pl-64">
+      <div className={desktopSidebarOpen ? (desktopSidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64') : ''}>
         <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-white/90 px-4 backdrop-blur dark:border-slate-700 dark:bg-slate-900/90 sm:px-6">
           <button
             onClick={() => setDrawer(true)}
@@ -136,6 +241,16 @@ export default function AdminLayout() {
           >
             <Menu className="h-5 w-5" />
           </button>
+          {!desktopSidebarOpen && (
+            <button
+              onClick={() => setDesktopSidebarOpen(true)}
+              className="hidden rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 lg:inline-flex"
+              aria-label="Open sidebar"
+              title="Open sidebar"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          )}
 
           <form onSubmit={onSearch} className="relative hidden flex-1 md:block md:max-w-md">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -182,7 +297,7 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <main className="mx-auto w-full min-w-0 max-w-7xl px-3 py-5 sm:px-6 sm:py-6 lg:px-8">
           <Outlet />
         </main>
       </div>

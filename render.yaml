@@ -7,7 +7,9 @@ services:
     runtime: node
     rootDir: server
     plan: free
-    buildCommand: npm install
+    # Skip optional native deps (TensorFlow) on the free tier: much faster builds,
+    # lower memory, faster cold starts. Face attendance uses client descriptors.
+    buildCommand: npm install --omit=optional
     startCommand: npm start
     # Applies committed Prisma migrations on every deploy (before new code goes live).
     releaseCommand: npm run db:deploy
@@ -33,6 +35,23 @@ services:
         value: 7d
       - key: FACE_MATCH_THRESHOLD
         value: "0.6"
+      # Free-tier tuning: keep server-side TF off, per-user rate limits, short caches.
+      - key: FACE_SERVER_ENABLED
+        value: "false"
+      - key: TRUST_PROXY
+        value: "1" # use 2 if the API is behind Cloudflare
+      - key: RATE_LIMIT_API_MAX
+        value: "1200"
+      - key: RATE_LIMIT_AUTH_MAX
+        value: "100"
+      - key: RATE_LIMIT_FACE_MAX
+        value: "60"
+      - key: DASHBOARD_CACHE_TTL_MS
+        value: "15000"
+      - key: ACTIVITY_CACHE_TTL_MS
+        value: "15000"
+      - key: LIST_CACHE_TTL_MS
+        value: "60000"
       - key: OFFICE_START_TIME
         value: "09:30"
       - key: HALF_DAY_THRESHOLD_HOURS

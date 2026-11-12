@@ -29,6 +29,21 @@ const unreadCount = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { count } });
 });
 
+// @route  GET /api/notifications/summary
+// Returns the list and unread count in one request (the client polls this).
+const getSummary = asyncHandler(async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+  const [items, unread] = await Promise.all([
+    prisma.notification.findMany({
+      where: notificationFilter(req.user),
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    }),
+    prisma.notification.count({ where: notificationFilter(req.user, true) }),
+  ]);
+  res.json({ success: true, data: { items, unread } });
+});
+
 // @route  PUT /api/notifications/:id/read
 const markRead = asyncHandler(async (req, res) => {
   await prisma.notification.updateMany({
@@ -47,4 +62,4 @@ const markAllRead = asyncHandler(async (req, res) => {
   res.json({ success: true });
 });
 
-module.exports = { getNotifications, unreadCount, markRead, markAllRead };
+module.exports = { getNotifications, unreadCount, getSummary, markRead, markAllRead };

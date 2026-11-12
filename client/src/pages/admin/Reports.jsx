@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Legend, BarChart, Bar,
 } from 'recharts';
-import { Download, FileText } from 'lucide-react';
+import { Download, FileText, Users, CalendarDays, CircleCheck, Clock3, UserX, Timer } from 'lucide-react';
 import api, { extractError } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import { useToast } from '../../context/ToastContext';
@@ -72,8 +72,8 @@ export default function Reports() {
         <Button onClick={() => handleExport('pdf')} disabled={!data?.rows?.length}><FileText className="h-4 w-4" /> PDF</Button>
       </PageHeader>
 
-      <Card className="mb-5 p-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <Card className="mb-5 p-3 sm:p-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <div><label className="label">From</label><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="input" /></div>
           <div><label className="label">To</label><input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="input" /></div>
           <div>
@@ -90,7 +90,7 @@ export default function Reports() {
               {(emps.data || []).map((e) => <option key={e._id} value={e._id}>{e.firstName} {e.lastName}</option>)}
             </select>
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end sm:col-span-2 xl:col-span-1">
             <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
               <input type="checkbox" checked={detail} onChange={(e) => setDetail(e.target.checked)} className="h-4 w-4 accent-brand-600" />
               Include detail rows
@@ -104,19 +104,19 @@ export default function Reports() {
         <SkeletonGrid count={6} />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
-            <StatCard label="Employees" value={s?.employeesIncluded} />
-            <StatCard label="Working days" value={s?.totalWorkingDays} />
-            <StatCard label="Present days" value={s?.presentDays} tone="emerald" />
-            <StatCard label="Late days" value={s?.lateDays} tone="amber" />
-            <StatCard label="Absent days" value={s?.absentDays} tone="rose" />
-            <StatCard label="Avg hours" value={s?.averageWorkingHours} />
+          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 2xl:grid-cols-6 gap-3 sm:gap-4">
+            <StatCard label="Employees" value={s?.employeesIncluded} icon={Users} />
+            <StatCard label="Working days" value={s?.totalWorkingDays} icon={CalendarDays} />
+            <StatCard label="Present days" value={s?.presentDays} icon={CircleCheck} tone="emerald" />
+            <StatCard label="Late days" value={s?.lateDays} icon={Clock3} tone="amber" />
+            <StatCard label="Absent days" value={s?.absentDays} icon={UserX} tone="rose" />
+            <StatCard label="Avg hours" value={s?.averageWorkingHours} icon={Timer} />
           </div>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-5">
-            <Card className="lg:col-span-3">
+          <div className="mt-6 grid min-w-0 gap-4 sm:gap-6 lg:grid-cols-5">
+            <Card className="min-w-0 overflow-hidden lg:col-span-3">
               <div className="border-b px-5 py-4 dark:border-slate-700"><h2 className="font-bold text-slate-900 dark:text-slate-100">Attendance Trend</h2></div>
-              <div className="h-72 p-4">
+              <div className="h-64 p-2 sm:h-72 sm:p-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data?.trend || []}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -133,9 +133,9 @@ export default function Reports() {
               </div>
             </Card>
 
-            <Card className="lg:col-span-2">
+            <Card className="min-w-0 overflow-hidden lg:col-span-2">
               <div className="border-b px-5 py-4 dark:border-slate-700"><h2 className="font-bold text-slate-900 dark:text-slate-100">Status Breakdown</h2></div>
-              <div className="h-72 p-4">
+              <div className="h-64 p-2 sm:h-72 sm:p-4">
                 {pieData.length === 0 ? (
                   <EmptyState title="No data" message="Narrow the range or add attendance to see a breakdown." />
                 ) : (
@@ -153,9 +153,9 @@ export default function Reports() {
             </Card>
           </div>
 
-          <Card className="mt-6">
+          <Card className="mt-6 min-w-0 overflow-hidden">
             <div className="border-b px-5 py-4 dark:border-slate-700"><h2 className="font-bold text-slate-900 dark:text-slate-100">Attendance by Department</h2></div>
-            <div className="h-72 p-4">
+            <div className="h-64 p-2 sm:h-72 sm:p-4">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data?.byDepartment || []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -173,7 +173,7 @@ export default function Reports() {
           {/* Detail table */}
           {detail && (
             <Card className="mt-6 overflow-hidden">
-              <div className="flex items-center justify-between border-b px-5 py-4 dark:border-slate-700">
+              <div className="flex flex-col gap-2 border-b px-4 py-4 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                 <h2 className="font-bold text-slate-900 dark:text-slate-100">Detail Rows ({data?.rows?.length || 0})</h2>
                 <Badge tone="indigo">Showing up to 1000</Badge>
               </div>

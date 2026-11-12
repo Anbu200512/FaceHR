@@ -21,6 +21,7 @@ import MonthlyAttendance from './pages/admin/MonthlyAttendance';
 import AttendanceGallery from './pages/admin/AttendanceGallery';
 import Departments from './pages/admin/Departments';
 import Leaves from './pages/admin/Leaves';
+import Resignations from './pages/admin/Resignations';
 import Reports from './pages/admin/Reports';
 import Settings from './pages/admin/Settings';
 import AttendanceSettings from './pages/admin/AttendanceSettings';
@@ -73,6 +74,7 @@ export default function App() {
         <Route path="face-registration" element={<FaceRegistrationList />} />
         <Route path="departments" element={<Departments />} />
         <Route path="leaves" element={<Leaves />} />
+        <Route path="resignations" element={<Resignations />} />
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />
       </Route>

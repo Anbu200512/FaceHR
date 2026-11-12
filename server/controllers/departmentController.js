@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
+const cache = require('../utils/cache');
 
 const HEAD_SELECT = { id: true, firstName: true, lastName: true, employeeId: true, profilePhoto: true };
 
@@ -40,6 +41,7 @@ const createDepartment = asyncHandler(async (req, res) => {
     },
     include: { head: { select: HEAD_SELECT } },
   });
+  cache.del('departments');
   res.status(201).json({ success: true, message: 'Department created', data: department });
 });
 
@@ -67,6 +69,7 @@ const updateDepartment = asyncHandler(async (req, res) => {
     data,
     include: { head: { select: HEAD_SELECT } },
   });
+  cache.del('departments');
   res.json({ success: true, message: 'Department updated', data: updated });
 });
 
@@ -84,6 +87,7 @@ const deleteDepartment = asyncHandler(async (req, res) => {
   }
 
   await prisma.department.delete({ where: { id: department.id } });
+  cache.del('departments');
   res.json({ success: true, message: 'Department deleted' });
 });
 

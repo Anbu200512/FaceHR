@@ -12,6 +12,7 @@
   body {
     @apply bg-surface-light text-slate-800 antialiased dark:bg-surface-dark dark:text-slate-200;
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    min-width: 320px;
   }
   * {
     @apply border-slate-200 dark:border-slate-700;

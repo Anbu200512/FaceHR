@@ -29,7 +29,7 @@ export default function Modal({ open, onClose, title, subtitle, children, footer
       <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       <div
         className={clsx(
-          'relative z-10 w-full rounded-t-2xl bg-white shadow-lift animate-slide-up dark:bg-slate-900 sm:rounded-2xl',
+          'relative z-10 flex max-h-[92dvh] w-full flex-col rounded-t-2xl bg-white shadow-lift animate-slide-up dark:bg-slate-900 sm:max-h-[90vh] sm:w-[calc(100%-2rem)] sm:rounded-2xl',
           SIZES[size] || SIZES.md
         )}
       >
@@ -46,7 +46,7 @@ export default function Modal({ open, onClose, title, subtitle, children, footer
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="max-h-[70vh] overflow-y-auto px-5 py-4">{children}</div>
+        <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-5">{children}</div>
         {footer && <div className="border-t px-5 py-4 dark:border-slate-700">{footer}</div>}
       </div>
     </div>,

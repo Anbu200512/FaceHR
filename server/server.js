@@ -3,6 +3,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const connectDB = require('./config/db');
 const config = require('./config/config');
 const mongoCompat = require('./middleware/mongoCompat');
@@ -18,9 +19,12 @@ const {
 const app = express();
 
 // ---- middlewares ----
-// Behind a reverse proxy (Render), trust the first proxy hop so the real client
-// IP is used for rate limiting. Required by express-rate-limit v7 + X-Forwarded-For.
-if (!config.isDev) app.set('trust proxy', 1);
+// Behind a reverse proxy (Render), trust the proxy hop(s) so the real client IP
+// is used for rate limiting. TRUST_PROXY=1 for Render, 2 for Cloudflare -> Render.
+if (!config.isDev) app.set('trust proxy', Number.isFinite(config.trustProxy) ? config.trustProxy : 1);
+
+// gzip JSON/HTML responses — big win for the dashboard payload on slow links.
+app.use(compression());
 
 app.use(
   cors({
@@ -37,7 +41,8 @@ app.use(
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(mongoCompat);
-app.use('/uploads', express.static(config.uploadsDir));
+// Uploaded files have unique names, so they can be cached aggressively by the browser.
+app.use('/uploads', express.static(config.uploadsDir, { maxAge: '7d', immutable: true }));
 
 // ---- optional: serve built client in production ----
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
@@ -88,14 +93,21 @@ app.use(errorHandler);
 const start = async () => {
   try {
     await connectDB();
-    await seedDefaultDepartments();
-    await seedDefaultLocations();
-    await seedDefaultDesignations();
-    await seedAdmin();
-    await seedSettings();
+    // Seeds touch independent tables, so run them together to cut cold-start time.
+    await Promise.all([
+      seedDefaultDepartments(),
+      seedDefaultLocations(),
+      seedDefaultDesignations(),
+      seedAdmin(),
+      seedSettings(),
+    ]);
 
-    // Initialize face service in the background (non-blocking, graceful)
-    faceService.init().catch((err) => console.warn('[FaceService] init error:', err.message));
+    // Initialize face service in the background (non-blocking, graceful).
+    if (config.faceServerEnabled) {
+      faceService.init().catch((err) => console.warn('[FaceService] init error:', err.message));
+    } else {
+      console.log('[FaceService] Server-side face recognition disabled (client-side descriptors are used).');
+    }
 
     const server = app.listen(config.port, () => {
       console.log(`[FaceHR] API running on http://localhost:${config.port}`);

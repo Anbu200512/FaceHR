@@ -19,9 +19,9 @@ const ICON_BG = {
 
 export function StatCard({ label, value, icon: Icon, tone = 'indigo', sub, loading }) {
   return (
-    <Card className="flex items-center gap-4 p-5">
-      <div className={clsx('flex h-12 w-12 shrink-0 items-center justify-center rounded-xl', ICON_BG[tone] || ICON_BG.indigo)}>
-        {Icon && <Icon className="h-6 w-6" />}
+    <Card className="flex min-w-0 items-center gap-3 p-3 sm:gap-4 sm:p-5">
+      <div className={clsx('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12', ICON_BG[tone] || ICON_BG.indigo)}>
+        {Icon && <Icon className="h-5 w-5 sm:h-6 sm:w-6" />}
       </div>
       <div className="min-w-0">
         {loading ? (

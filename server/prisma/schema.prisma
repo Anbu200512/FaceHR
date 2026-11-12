@@ -100,6 +100,8 @@ model Employee {
   @@index([status])
   @@index([departmentId])
   @@index([officeId])
+  @@index([status, departmentId])
+  @@index([status, officeId])
   @@map("employees")
 }
 
@@ -174,6 +176,7 @@ model Attendance {
   @@unique([employeeRefId, date])
   @@index([date])
   @@index([employeeId, date])
+  @@index([employeeRefId, checkInTime])
   @@map("attendance")
 }
 
@@ -196,6 +199,8 @@ model Leave {
 
   @@index([employeeRefId, startDate])
   @@index([status])
+  @@index([employeeRefId, status])
+  @@index([status, startDate, endDate])
   @@map("leaves")
 }
 
@@ -218,6 +223,7 @@ model Resignation {
   @@index([employeeRefId, createdAt])
   @@index([status])
   @@index([resignationDate])
+  @@index([status, resignationDate])
   @@map("resignations")
 }
 

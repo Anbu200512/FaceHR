@@ -40,8 +40,18 @@ const config = {
   uploadsDir: process.env.UPLOAD_DIR
     ? path.resolve(process.env.UPLOAD_DIR)
     : path.join(__dirname, '..', 'uploads'),
+  // Server-side face recognition is heavy (TensorFlow + model load) and is
+  // disabled by default so free-tier instances start fast and stay light. The
+  // client still computes descriptors, so face attendance keeps working.
+  faceServerEnabled: process.env.FACE_SERVER_ENABLED === 'true',
   faceMatchThreshold: parseFloat(process.env.FACE_MATCH_THRESHOLD) || 0.6,
   faceModelsPath: process.env.FACE_MODELS_PATH || 'face-models',
+  // Read-through cache TTLs (milliseconds) for hot, read-only endpoints.
+  dashboardCacheTtlMs: parseInt(process.env.DASHBOARD_CACHE_TTL_MS, 10) || 15000,
+  activityCacheTtlMs: parseInt(process.env.ACTIVITY_CACHE_TTL_MS, 10) || 15000,
+  listCacheTtlMs: parseInt(process.env.LIST_CACHE_TTL_MS, 10) || 60000,
+  // Number of reverse-proxy hops in front of the app (Render = 1, Cloudflare -> Render = 2).
+  trustProxy: parseInt(process.env.TRUST_PROXY, 10),
   officeStartTime: process.env.OFFICE_START_TIME || '09:30',
   halfDayThresholdHours: parseFloat(process.env.HALF_DAY_THRESHOLD_HOURS) || 4,
   adminEmail: process.env.ADMIN_EMAIL || 'admin@facehr.com',

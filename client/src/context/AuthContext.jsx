@@ -50,6 +50,18 @@ export function AuthProvider({ children }) {
     refreshMe().finally(() => setLoading(false));
   }, [refreshMe]);
 
+  // Keep the free-tier API warm while a tab is open. Render sleeps after ~15
+  // minutes of inactivity; a light health ping avoids most cold starts.
+  useEffect(() => {
+    if (!user) return undefined;
+    const ping = () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      api.get('/health').catch(() => {});
+    };
+    const id = setInterval(ping, 8 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [user]);
+
   const value = useMemo(
     () => ({
       user,

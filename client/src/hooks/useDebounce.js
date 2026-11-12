@@ -23,6 +23,8 @@ export function usePolling(fn, { interval = 30000, active = true } = {}) {
     let timer = null;
 
     const run = async () => {
+      // Don't poll while the tab is in the background — saves server requests.
+      if (typeof document !== 'undefined' && document.hidden) return;
       try {
         const result = await fnRef.current();
         if (!cancelled) {
@@ -41,11 +43,17 @@ export function usePolling(fn, { interval = 30000, active = true } = {}) {
       return () => { cancelled = true; if (timer) clearInterval(timer); };
     }
 
+    const onVisible = () => {
+      if (!document.hidden) run();
+    };
+
     run();
     timer = setInterval(run, interval);
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       cancelled = true;
       if (timer) clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [active, interval]);
 

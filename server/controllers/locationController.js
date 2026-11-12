@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
+const cache = require('../utils/cache');
 
 // @route  GET /api/locations
 const getLocations = asyncHandler(async (req, res) => {
@@ -36,6 +37,7 @@ const createLocation = asyncHandler(async (req, res) => {
       active: active === undefined ? true : Boolean(active),
     },
   });
+  cache.del('locations');
   res.status(201).json({ success: true, message: 'Location created', data: location });
 });
 
@@ -60,6 +62,7 @@ const updateLocation = asyncHandler(async (req, res) => {
   if (req.body.active !== undefined) data.active = Boolean(req.body.active);
 
   const updated = await prisma.location.update({ where: { id: location.id }, data });
+  cache.del('locations');
   res.json({ success: true, message: 'Location updated', data: updated });
 });
 
@@ -77,6 +80,7 @@ const deleteLocation = asyncHandler(async (req, res) => {
   }
 
   await prisma.location.delete({ where: { id: location.id } });
+  cache.del('locations');
   res.json({ success: true, message: 'Location deleted' });
 });
 

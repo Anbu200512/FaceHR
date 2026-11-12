@@ -1,4 +1,4 @@
-import { UserPlus, LogOut, CalendarRange, CalendarCheck2, Plane } from 'lucide-react';
+import { UserPlus, LogOut, CalendarRange, CalendarCheck2, CalendarDays } from 'lucide-react';
 import clsx from 'clsx';
 import { Card } from '../ui/Card';
 import { Skeleton } from '../ui/Skeleton';
@@ -7,8 +7,8 @@ const ITEMS = [
   { key: 'newJoiners', label: 'New Joiners', caption: 'Joined this month', icon: UserPlus, tone: 'emerald' },
   { key: 'resignations', label: 'Resignations', caption: 'Departed this month', icon: LogOut, tone: 'rose' },
   { key: 'pendingLeaves', label: 'Leave Requests', caption: 'Pending approval', icon: CalendarRange, tone: 'amber' },
-  { key: 'onLeaveToday', label: 'Attendance', caption: 'On leave today', icon: Plane, tone: 'sky' },
   { key: 'upcomingApprovedLeaves', label: 'Upcoming Leaves', caption: 'Approved, starting soon', icon: CalendarCheck2, tone: 'violet' },
+  { key: 'averageAge', label: 'Average Age', caption: 'Across current employees', icon: CalendarDays, tone: 'indigo', format: (value) => `${value} yrs` },
 ];
 
 const TONES = {
@@ -44,7 +44,7 @@ export default function HRActivitySummary({ hr, loading }) {
           </div>
         ) : (
           <ul className="space-y-4">
-            {ITEMS.map(({ key, label, caption, icon: Icon, tone }) => (
+            {ITEMS.map(({ key, label, caption, icon: Icon, tone, format }) => (
               <li key={key} className="flex items-center gap-3">
                 <div className={clsx('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', TONES[tone] || TONES.indigo)}>
                   <Icon className="h-5 w-5" />
@@ -53,7 +53,7 @@ export default function HRActivitySummary({ hr, loading }) {
                   <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{label}</p>
                   <p className="truncate text-xs text-slate-400">{caption}</p>
                 </div>
-                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{hr?.[key] ?? 0}</p>
+                <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{format ? format(hr?.[key] ?? 0) : hr?.[key] ?? 0}</p>
               </li>
             ))}
           </ul>

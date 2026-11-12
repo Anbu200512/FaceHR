@@ -12,10 +12,8 @@ import { SkeletonGrid } from '../../components/ui/Skeleton';
 import FilterBar from '../../components/dashboard/FilterBar';
 import LocationAttendance from '../../components/dashboard/LocationAttendance';
 import AgeDistribution from '../../components/dashboard/AgeDistribution';
-import EmployeeSummary from '../../components/dashboard/EmployeeSummary';
 import ResignationOverview from '../../components/dashboard/ResignationOverview';
 import HRActivitySummary from '../../components/dashboard/HRActivitySummary';
-import ResignationsSection from '../../components/dashboard/ResignationsSection';
 import RecentActivity from '../../components/dashboard/RecentActivity';
 
 export default function Dashboard() {
@@ -99,17 +97,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="mt-6">
-        <EmployeeSummary hr={d?.hr} loading={loading} />
-      </div>
-
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <ResignationOverview data={d?.resignationBreakdown} loading={loading} />
         <HRActivitySummary hr={d?.hr} loading={loading} />
-      </div>
-
-      <div className="mt-6">
-        <ResignationsSection rows={d?.resignations} loading={loading} refetch={dashboard.refetch} />
       </div>
 
       <div>

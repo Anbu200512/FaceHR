@@ -280,35 +280,30 @@ async function getRecentResignations(limit = 6) {
 
 // Organization-wide HR metrics. Employee-derived values respect the selected
 // location/department filters; leave-derived counts stay organization-wide.
-async function computeHrSummary(year, monthIndex, location, department) {
+// `employees` is the already-filtered active employee list, reused here to avoid
+// a second full-table employee query on every dashboard load.
+async function computeHrSummary(employees, year, monthIndex, location, department) {
   const { start, end } = monthRange(year, monthIndex);
   const now = new Date();
 
-  const activeWhere = { status: 'Active' };
   const resignWhere = { status: 'Inactive', updatedAt: { gte: start, lt: end } };
-  if (location) {
-    activeWhere.officeId = location;
-    resignWhere.officeId = location;
-  }
-  if (department) {
-    activeWhere.departmentId = department;
-    resignWhere.departmentId = department;
-  }
+  if (location) resignWhere.officeId = location;
+  if (department) resignWhere.departmentId = department;
 
-  const active = await prisma.employee.findMany({
-    where: activeWhere,
-    select: { gender: true, joiningDate: true, dateOfBirth: true },
-  });
-
-  const totalEmployees = active.length;
-  const male = active.filter((e) => e.gender === 'Male').length;
-  const female = active.filter((e) => e.gender === 'Female').length;
-  const other = active.filter((e) => e.gender === 'Other').length;
-  const newJoiners = active.filter((e) => e.joiningDate && e.joiningDate >= start && e.joiningDate < end).length;
-
+  let male = 0;
+  let female = 0;
+  let other = 0;
+  let newJoiners = 0;
   let ageSum = 0;
   let ageCount = 0;
-  for (const e of active) {
+
+  for (const e of employees) {
+    if (e.gender === 'Male') male += 1;
+    else if (e.gender === 'Female') female += 1;
+    else other += 1;
+
+    if (e.joiningDate && e.joiningDate >= start && e.joiningDate < end) newJoiners += 1;
+
     if (e.dateOfBirth) {
       const dob = new Date(e.dateOfBirth);
       if (!Number.isNaN(dob.getTime())) {
@@ -317,6 +312,8 @@ async function computeHrSummary(year, monthIndex, location, department) {
       }
     }
   }
+
+  const totalEmployees = employees.length;
   const averageAge = ageCount > 0 ? Math.round((ageSum / ageCount / (365.25 * 24 * 3600 * 1000)) * 10) / 10 : null;
 
   const [resignations, pendingLeaves, pendingResignations, upcomingApprovedLeaves, onLeaveToday] = await Promise.all([
@@ -491,8 +488,9 @@ const getDashboard = asyncHandler(async (req, res) => {
     // office start) and the employee is not on approved leave today.
     const noRecIds = rows.filter((r) => !r.record && r.status === 'Absent').map((r) => r.employee.id);
     if (noRecIds.length) {
+      const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
       const latest = await prisma.attendance.findMany({
-        where: { employeeRefId: { in: noRecIds } },
+        where: { employeeRefId: { in: noRecIds }, checkInTime: { gte: since } },
         orderBy: { checkInTime: { sort: 'desc', nulls: 'last' } },
         select: { employeeRefId: true, status: true },
       });
@@ -518,54 +516,75 @@ const getDashboard = asyncHandler(async (req, res) => {
 
     const { start: mStart, end: mEnd } = monthRange(year, monthIndex);
     const ageDistribution = computeAgeDistribution(employees);
-    const [departments, locations, leave, upcoming, org, resignations, hr, resignationBreakdown, newJoinersList, resignationsMonth, growthTrend] = await Promise.all([
-      buildDepartmentRows(items, department),
+
+    // Only the widgets the dashboard actually renders are computed by default.
+    // This removes ~10 queries (including full-table GROUP BY scans) per load.
+    const [locations, hr, resignationBreakdown] = await Promise.all([
       buildLocationRows(items, location),
-      computeLeaveSummary(employees, year, monthIndex),
-      computeUpcoming(employees),
-      computeOrgSummary(employees, year, monthIndex, location, department),
-      getRecentResignations(),
-      computeHrSummary(year, monthIndex, location, department),
+      computeHrSummary(employees, year, monthIndex, location, department),
       getResignationBreakdown(mStart, mEnd, location, department),
-      getNewJoinersList(mStart, mEnd),
-      getResignationsMonth(mStart, mEnd),
-      computeGrowthTrend(year, monthIndex),
     ]);
 
     const [present, late, absent, onLeave] = [summary.present, summary.late, summary.absent, summary.onLeave];
-    return res.json({
-      success: true,
-      data: {
-        year,
-        month,
-        isCurrentMonth,
-        filters: { location, department },
-        summary: {
-          totalEmployees: summary.totalEmployees,
-          present,
-          late,
-          absent,
-          onLeave,
-          departmentsCount: departments.filter((d) => d.id !== null).length,
-          ...org,
-        },
-        departments,
-        locations,
-        resignations,
-        resignationBreakdown,
-        hr,
-        attendance: rows,
-        attendanceMode: 'day',
-        leave,
-        upcoming: upcoming.upcoming,
-        pendingList: upcoming.pendingList,
-        birthdays: upcoming.birthdays,
-        newJoinersList,
-        resignationsMonth,
-        growthTrend,
-        ageDistribution,
+
+    const data = {
+      year,
+      month,
+      isCurrentMonth,
+      filters: { location, department },
+      summary: {
+        totalEmployees: summary.totalEmployees,
+        present,
+        late,
+        absent,
+        onLeave,
+        departmentsCount: 0,
+        male: hr.male,
+        female: hr.female,
+        other: hr.other,
+        newJoiners: hr.newJoiners,
+        resignations: hr.resignations,
       },
-    });
+      departments: [],
+      locations,
+      resignations: [],
+      resignationBreakdown,
+      hr,
+      attendanceMode: 'day',
+      leave: { allowance: ALLOWANCE, total: 0, used: 0, remaining: 0, pending: 0 },
+      upcoming: [],
+      pendingList: [],
+      birthdays: [],
+      newJoinersList: [],
+      resignationsMonth: [],
+      growthTrend: [],
+      ageDistribution,
+    };
+
+    // Heavy optional widgets are built only when explicitly requested.
+    if (req.query.full === '1') {
+      const [departments, leave, upcoming, resignations, newJoinersList, resignationsMonth, growthTrend] = await Promise.all([
+        buildDepartmentRows(items, department),
+        computeLeaveSummary(employees, year, monthIndex),
+        computeUpcoming(employees),
+        getRecentResignations(),
+        getNewJoinersList(mStart, mEnd),
+        getResignationsMonth(mStart, mEnd),
+        computeGrowthTrend(year, monthIndex),
+      ]);
+      data.departments = departments;
+      data.leave = leave;
+      data.upcoming = upcoming.upcoming;
+      data.pendingList = upcoming.pendingList;
+      data.birthdays = upcoming.birthdays;
+      data.resignations = resignations;
+      data.newJoinersList = newJoinersList;
+      data.resignationsMonth = resignationsMonth;
+      data.growthTrend = growthTrend;
+      data.attendance = rows;
+    }
+
+    return res.json({ success: true, data });
   }
 
   // --- Past month: aggregate from that month's records ---
@@ -640,70 +659,87 @@ const getDashboard = asyncHandler(async (req, res) => {
   };
 
   const ageDistribution = computeAgeDistribution(employees);
-  const [departments, locations, leave, upcoming, org, resignations, hr, resignationBreakdown, newJoinersList, resignationsMonth, growthTrend] = await Promise.all([
-    buildDepartmentRows(items, department),
+  const [locations, hr, resignationBreakdown] = await Promise.all([
     buildLocationRows(items, location),
-    computeLeaveSummary(employees, year, monthIndex),
-    computeUpcoming(employees),
-    computeOrgSummary(employees, year, monthIndex, location, department),
-    getRecentResignations(),
-    computeHrSummary(year, monthIndex, location, department),
+    computeHrSummary(employees, year, monthIndex, location, department),
     getResignationBreakdown(start, end, location, department),
-    getNewJoinersList(start, end),
-    getResignationsMonth(start, end),
-    computeGrowthTrend(year, monthIndex),
   ]);
 
-  const attendance = outcomes.map((o) => {
-    let status = 'Absent';
-    if (o.leaveDays > 0 && o.presentDays + o.lateDays === 0) status = 'On Leave';
-    else if (o.presentDays + o.lateDays > 0) status = o.lateDays > 0 ? 'Late' : 'Present';
-    return {
-      employee: o.emp,
-      status,
-      month: {
-        presentDays: o.presentDays,
-        lateDays: o.lateDays,
-        absentDays: o.absentDays,
-        leaveDays: o.leaveDays,
-        workingMinutes: o.workingMinutes,
-      },
-    };
-  });
-
-  res.json({
-    success: true,
-    data: {
-      year,
-      month,
-      isCurrentMonth,
-      filters: { location, department },
-      summary: {
-        totalEmployees: summary.totalEmployees,
-        present: summary.present,
-        late: summary.late,
-        absent: summary.absent,
-        onLeave: summary.onLeave,
-        departmentsCount: departments.filter((d) => d.id !== null).length,
-        ...org,
-      },
-      departments,
-      locations,
-      resignations,
-      resignationBreakdown,
-      hr,
-      attendance,
-      attendanceMode: 'month',
-      leave,
-      upcoming: upcoming.upcoming,
-      pendingList: upcoming.pendingList,
-      birthdays: upcoming.birthdays,
-      newJoinersList,
-      resignationsMonth,
-      growthTrend,
-      ageDistribution,
+  const data = {
+    year,
+    month,
+    isCurrentMonth,
+    filters: { location, department },
+    summary: {
+      totalEmployees: summary.totalEmployees,
+      present: summary.present,
+      late: summary.late,
+      absent: summary.absent,
+      onLeave: summary.onLeave,
+      departmentsCount: 0,
+      male: hr.male,
+      female: hr.female,
+      other: hr.other,
+      newJoiners: hr.newJoiners,
+      resignations: hr.resignations,
     },
-  });
+    departments: [],
+    locations,
+    resignations: [],
+    resignationBreakdown,
+    hr,
+    attendanceMode: 'month',
+    leave: { allowance: ALLOWANCE, total: 0, used: 0, remaining: 0, pending: 0 },
+    upcoming: [],
+    pendingList: [],
+    birthdays: [],
+    newJoinersList: [],
+    resignationsMonth: [],
+    growthTrend: [],
+    ageDistribution,
+  };
+
+  if (req.query.full === '1') {
+    const attendance = outcomes.map((o) => {
+      let status = 'Absent';
+      if (o.leaveDays > 0 && o.presentDays + o.lateDays === 0) status = 'On Leave';
+      else if (o.presentDays + o.lateDays > 0) status = o.lateDays > 0 ? 'Late' : 'Present';
+      return {
+        employee: o.emp,
+        status,
+        month: {
+          presentDays: o.presentDays,
+          lateDays: o.lateDays,
+          absentDays: o.absentDays,
+          leaveDays: o.leaveDays,
+          workingMinutes: o.workingMinutes,
+        },
+      };
+    });
+
+    const [departments, leave, upcoming, resignations, newJoinersList, resignationsMonth, growthTrend] = await Promise.all([
+      buildDepartmentRows(items, department),
+      computeLeaveSummary(employees, year, monthIndex),
+      computeUpcoming(employees),
+      getRecentResignations(),
+      getNewJoinersList(start, end),
+      getResignationsMonth(start, end),
+      computeGrowthTrend(year, monthIndex),
+    ]);
+
+    data.departments = departments;
+    data.leave = leave;
+    data.upcoming = upcoming.upcoming;
+    data.pendingList = upcoming.pendingList;
+    data.birthdays = upcoming.birthdays;
+    data.resignations = resignations;
+    data.newJoinersList = newJoinersList;
+    data.resignationsMonth = resignationsMonth;
+    data.growthTrend = growthTrend;
+    data.attendance = attendance;
+  }
+
+  res.json({ success: true, data });
 });
 
 module.exports = { getDashboard };

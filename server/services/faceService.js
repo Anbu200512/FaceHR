@@ -82,6 +82,17 @@ async function loadModels() {
   }
   state.initStarted = true;
 
+  // Server-side recognition is opt-in. On small free-tier instances loading
+  // TensorFlow + model weights is slow and memory hungry, so it is skipped and
+  // verification falls back to the client-computed descriptor.
+  if (!config.faceServerEnabled) {
+    state.initDone = true;
+    state.backend = 'none';
+    state.error = 'Server-side face recognition disabled (FACE_SERVER_ENABLED is not true)';
+    console.log('[FaceService] Server-side face recognition disabled. Using client-computed descriptors.');
+    return state;
+  }
+
   const ok = await loadMLBackend();
   if (ok && faceapi) {
     try {

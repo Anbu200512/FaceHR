@@ -10,10 +10,11 @@ export default function NotificationBell({ admin }) {
   const ref = useRef(null);
 
   const load = async () => {
+    if (typeof document !== 'undefined' && document.hidden) return;
     try {
-      const [list, count] = await Promise.all([api.get('/notifications?limit=20'), api.get('/notifications/unread-count')]);
-      setItems(list.data.data);
-      setUnread(count.data.data.count);
+      const { data } = await api.get('/notifications/summary?limit=20');
+      setItems(data.data.items);
+      setUnread(data.data.unread);
     } catch (e) {
       /* silent */
     }
@@ -21,8 +22,16 @@ export default function NotificationBell({ admin }) {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 60000);
-    return () => clearInterval(t);
+    // Poll less often; also skip while the tab is hidden and refresh on focus.
+    const t = setInterval(load, 120000);
+    const onVisible = () => {
+      if (!document.hidden) load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   useEffect(() => {
@@ -58,7 +67,7 @@ export default function NotificationBell({ admin }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-2xl border bg-white shadow-lift animate-fade-in dark:bg-slate-900 sm:w-96">
+        <div className="absolute right-0 z-50 mt-2 w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border bg-white shadow-lift animate-fade-in dark:bg-slate-900">
           <div className="flex items-center justify-between border-b px-4 py-3 dark:border-slate-700">
             <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Notifications</p>
             {unread > 0 && (
