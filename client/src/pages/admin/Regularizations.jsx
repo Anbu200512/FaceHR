@@ -97,7 +97,7 @@ export default function Regularizations() {
                 <tr key={r._id} className="border-b last:border-0 dark:border-slate-700">
                   <td className="td">
                     <div className="flex items-center gap-2">
-                      <Avatar name={`${r.employee.firstName} ${r.employee.lastName}`} size="sm" />
+                      <Avatar name={`${r.employee.firstName} ${r.employee.lastName}`} src={resolveAsset(r.employee?.profilePhoto)} size="sm" />
                       <div>
                         <p className="font-semibold text-slate-800 dark:text-slate-100">{r.employee.firstName} {r.employee.lastName}</p>
                         <p className="text-xs text-slate-400">{r.employeeId}</p>

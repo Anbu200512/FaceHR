@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { resolveAsset, initials } from '../services/format';
 import clsx from 'clsx';
 
-export default function Avatar({ user, src, name, size = 'md', className }) {
+export default function Avatar({ user, src, name, size = 'md', className, onClick, title }) {
   const sizes = {
     xs: 'h-7 w-7 text-[10px]',
     sm: 'h-9 w-9 text-xs',
@@ -12,26 +13,50 @@ export default function Avatar({ user, src, name, size = 'md', className }) {
   const img = src ?? (user?.profilePhoto ?? user?.photoUrl ?? null);
   const displayName = name || user?.name || user?.fullName || '?';
   const resolved = img ? resolveAsset(img) : null;
+  const [broken, setBroken] = useState(false);
+  const clickable = typeof onClick === 'function';
 
-  if (resolved) {
-    return (
+  const base = clsx(
+    'shrink-0 rounded-full',
+    sizes[size],
+    clickable && 'cursor-pointer transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2',
+    className
+  );
+
+  if (resolved && !broken) {
+    const image = (
       <img
         src={resolved}
         alt={displayName}
         loading="lazy"
-        className={clsx('shrink-0 rounded-full object-cover', sizes[size], className)}
+        onError={() => setBroken(true)}
+        className={clsx(base, 'object-cover')}
       />
     );
+    return clickable ? (
+      <button type="button" onClick={onClick} title={title || 'View photo'} className="rounded-full">
+        {image}
+      </button>
+    ) : (
+      image
+    );
   }
-  return (
+
+  const fallback = (
     <div
       className={clsx(
-        'flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 font-bold text-white',
-        sizes[size],
-        className
+        base,
+        'flex items-center justify-center bg-gradient-to-br from-brand-500 to-brand-700 font-bold text-white'
       )}
     >
       {initials(displayName)}
     </div>
+  );
+  return clickable ? (
+    <button type="button" onClick={onClick} title={title || displayName} className="rounded-full">
+      {fallback}
+    </button>
+  ) : (
+    fallback
   );
 }

@@ -46,6 +46,7 @@ export default function MyProfile() {
   const [pwOpen, setPwOpen] = useState(false);
   const [tab, setTab] = useState('contact');
   const [preview, setPreview] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
 
   const { data, loading, refetch } = useApi(async () => {
     const { data } = await api.get(`/employees/${user.employee}`);
@@ -84,7 +85,13 @@ export default function MyProfile() {
       {/* Header summary */}
       <Card className="mb-6">
         <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center">
-          <Avatar name={fullName} src={resolveAsset(emp.profilePhoto)} size="xl" />
+          <Avatar
+            name={fullName}
+            src={resolveAsset(emp.profilePhoto)}
+            size="xl"
+            onClick={() => emp.profilePhoto && setPhotoPreview({ src: resolveAsset(emp.profilePhoto), label: fullName })}
+            title={emp.profilePhoto ? 'View profile photo' : undefined}
+          />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{fullName}</h2>
@@ -163,6 +170,14 @@ export default function MyProfile() {
           <div className="overflow-hidden rounded-xl">
             <img src={preview.src} alt={preview.label} className="h-auto max-h-[70vh] w-full object-contain" />
             <p className="mt-3 text-center text-sm font-medium text-slate-500">{preview.label}</p>
+          </div>
+        )}
+      </Modal>
+
+      <Modal open={!!photoPreview} onClose={() => setPhotoPreview(null)} title={photoPreview?.label} size="lg">
+        {photoPreview && (
+          <div className="overflow-hidden rounded-xl bg-slate-50 dark:bg-slate-800/40">
+            <img src={photoPreview.src} alt={photoPreview.label} className="mx-auto h-auto max-h-[75vh] w-full object-contain" />
           </div>
         )}
       </Modal>

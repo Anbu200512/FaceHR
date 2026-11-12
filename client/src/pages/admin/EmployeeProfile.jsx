@@ -58,7 +58,7 @@ export default function EmployeeProfile({ faceMode }) {
   const [sendBusy, setSendBusy] = useState(false);
   const [actionMode, setActionMode] = useState(null); // null | 'checkin' | 'checkout'
   const [actionBusy, setActionBusy] = useState(false);
-  const [capturedLocation, setCapturedLocation] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
   const [todayTick, setTodayTick] = useState(0);
 
   const { data, loading, refetch } = useApi(async () => {
@@ -204,7 +204,13 @@ export default function EmployeeProfile({ faceMode }) {
       {/* Header summary */}
       <Card className="mb-6">
         <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center">
-          <Avatar name={fullName} src={resolveAsset(emp.profilePhoto)} size="xl" />
+          <Avatar
+            name={fullName}
+            src={resolveAsset(emp.profilePhoto)}
+            size="xl"
+            onClick={() => emp.profilePhoto && setPhotoPreview({ src: resolveAsset(emp.profilePhoto), label: fullName })}
+            title={emp.profilePhoto ? 'View profile photo' : undefined}
+          />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{fullName}</h2>
@@ -321,9 +327,16 @@ export default function EmployeeProfile({ faceMode }) {
         loading={sendBusy}
         tone="primary"
         title="Send login details?"
-        message={`A new temporary password will be generated and the employee account login details will be emailed to ${emp.email || 'the employee’s work email'}.`}
-        confirmLabel="Send Login Details"
+        message={`A new temporary password will be generated and the employee account login details will be emailed to ${emp.email || 'the employee�?Ts work email'}.`}
       />
+
+      <Modal open={!!photoPreview} onClose={() => setPhotoPreview(null)} title={photoPreview?.label} size="lg">
+        {photoPreview && (
+          <div className="overflow-hidden rounded-xl bg-slate-50 dark:bg-slate-800/40">
+            <img src={photoPreview.src} alt={photoPreview.label} className="mx-auto h-auto max-h-[75vh] w-full object-contain" />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -2,7 +2,6 @@ import { Suspense, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
-  ScanFace,
   History,
   Plane,
   UserCircle,
@@ -32,7 +31,6 @@ import clsx from 'clsx';
 
 const NAV = [
   { to: '/employee', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/employee/attendance', label: 'Face Attendance', icon: ScanFace },
   { to: '/employee/history', label: 'My Attendance', icon: History },
   { to: '/employee/regularization', label: 'Regularization', icon: Clock },
   { to: '/employee/leave', label: 'Leave', icon: Plane },
@@ -144,10 +142,13 @@ export default function EmployeeLayout() {
                 <ChevronDown className="hidden h-4 w-4 text-slate-400 sm:block" />
               </button>
               {profileOpen && (
-                <div className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-xl border bg-white shadow-lift dark:bg-slate-900">
-                  <div className="border-b px-4 py-3 dark:border-slate-700">
-                    <p className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{user?.name}</p>
-                    <p className="truncate text-xs text-slate-400">{user?.employeeData?.employeeId || user?.email}</p>
+                <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-xl border bg-white shadow-lift dark:bg-slate-900">
+                  <div className="flex items-center gap-3 border-b px-4 py-3 dark:border-slate-700">
+                    <Avatar user={user?.employeeData || user} size="lg" name={user?.name} />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{user?.name}</p>
+                      <p className="truncate text-xs text-slate-400">{user?.employeeData?.employeeId || user?.email}</p>
+                    </div>
                   </div>
                   <button onClick={() => { setProfileOpen(false); setPwOpen(true); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">
                     <KeyRound className="h-4 w-4" /> Change Password

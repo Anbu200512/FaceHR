@@ -3,7 +3,7 @@ import { Check, X, Search, MessageSquareText } from 'lucide-react';
 import api, { extractError } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import { useToast } from '../../context/ToastContext';
-import { formatDate } from '../../services/format';
+import { formatDate, resolveAsset } from '../../services/format';
 import PageHeader from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -101,7 +101,7 @@ export default function Leaves() {
                 <tr key={l._id} className="border-b transition last:border-0 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50">
                   <td className="td">
                     <div className="flex items-center gap-2">
-                      <Avatar name={`${l.employee.firstName} ${l.employee.lastName}`} size="sm" />
+                      <Avatar name={`${l.employee.firstName} ${l.employee.lastName}`} src={resolveAsset(l.employee?.profilePhoto)} size="sm" />
                       <div>
                         <p className="font-semibold text-slate-800 dark:text-slate-100">{l.employee.firstName} {l.employee.lastName}</p>
                         <p className="text-xs text-slate-400">{l.employeeId}</p>
@@ -150,7 +150,7 @@ export default function Leaves() {
           <Card key={l._id} className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Avatar name={`${l.employee.firstName} ${l.employee.lastName}`} size="sm" />
+                <Avatar name={`${l.employee.firstName} ${l.employee.lastName}`} src={resolveAsset(l.employee?.profilePhoto)} size="sm" />
                 <div>
                   <p className="font-semibold text-slate-800 dark:text-slate-100">{l.employee.firstName} {l.employee.lastName}</p>
                   <p className="text-xs text-slate-400">{l.employeeId}</p>
