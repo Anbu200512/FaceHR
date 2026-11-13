@@ -29,7 +29,7 @@ export default function AuthLayout() {
           </h1>
           <p className="mt-4 text-brand-100">
             FaceHR brings your people operations and secure facial attendance together in one modern,
-            beautiful platform — for HR teams and every employee.
+            beautiful platform for HR teams and every employee.
           </p>
           <div className="mt-10 space-y-6">
             {FEATURES.map((f) => (
@@ -60,7 +60,7 @@ export default function AuthLayout() {
           <Outlet />
         </div>
         <p className="mt-8 text-center text-xs text-slate-400">
-          © {new Date().getFullYear()} FaceHR · Privacy-respecting attendance for modern teams
+          © {new Date().getFullYear()} FaceHR • Privacy-respecting attendance for modern teams
         </p>
       </div>
     </div>

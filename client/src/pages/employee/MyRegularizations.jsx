@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { CalendarClock, Send } from 'lucide-react';
 import api, { extractError } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
@@ -21,7 +21,7 @@ export default function MyRegularizations() {
 
   const mine = useApi(async () => {
     const { data } = await api.get('/regularizations/mine');
-    return data.data;
+    return data.data || [];
   });
 
   const submit = async () => {
@@ -29,7 +29,12 @@ export default function MyRegularizations() {
     if (!form.checkIn && !form.checkOut) { toast.error('Enter a check-in or check-out time'); return; }
     setSubmitting(true);
     try {
-      await api.post('/regularizations', form);
+      await api.post('/regularizations', {
+        date: form.date,
+        checkIn: form.checkIn || undefined,
+        checkOut: form.checkOut || undefined,
+        reason: form.reason.trim(),
+      });
       toast.success('Regularization request submitted');
       setForm({ date: today, checkIn: '', checkOut: '', reason: '' });
       mine.refetch();
@@ -55,7 +60,7 @@ export default function MyRegularizations() {
               <Input label="Check-in" type="time" value={form.checkIn} onChange={(e) => setForm({ ...form, checkIn: e.target.value })} />
               <Input label="Check-out" type="time" value={form.checkOut} onChange={(e) => setForm({ ...form, checkOut: e.target.value })} />
             </div>
-            <Textarea label="Reason" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={3} placeholder="Explain what happened…" />
+            <Textarea label="Reason" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={3} placeholder="Explain what happened (optional)..." />
             <Button className="w-full" onClick={submit} loading={submitting}>
               <Send className="h-4 w-4" /> Submit Request
             </Button>
@@ -70,11 +75,11 @@ export default function MyRegularizations() {
             <div className="space-y-3 p-5">
               {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />)}
             </div>
-          ) : mine.data?.length === 0 ? (
+          ) : !mine.data?.length ? (
             <EmptyState icon={CalendarClock} title="No requests yet" message="Your regularization requests will appear here." />
           ) : (
             <ul className="divide-y dark:divide-slate-700">
-              {mine.data?.map((r) => (
+              {mine.data.map((r) => (
                 <li key={r._id} className="flex items-center gap-4 px-5 py-4">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-400">
                     <CalendarClock className="h-5 w-5" />
@@ -82,12 +87,12 @@ export default function MyRegularizations() {
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-slate-800 dark:text-slate-100">{formatDate(r.date)}</p>
                     <p className="text-xs text-slate-400">
-                      In: {r.requestedCheckIn ? formatTime(r.requestedCheckIn) : '—'} · Out: {r.requestedCheckOut ? formatTime(r.requestedCheckOut) : '—'}
+                      In: {r.requestedCheckIn ? formatTime(r.requestedCheckIn) : '—'} • Out: {r.requestedCheckOut ? formatTime(r.requestedCheckOut) : '—'}
                     </p>
                     {r.reason && <p className="mt-1 truncate text-xs text-slate-500">{r.reason}</p>}
-                    {r.adminNote && <p className="mt-1 text-xs text-rose-500">{r.adminNote}</p>}
+                    {r.adminNote && <p className="mt-1 text-xs font-medium text-rose-500">Note: {r.adminNote}</p>}
                   </div>
-                  <Badge tone={TONES[r.status]}>{r.status}</Badge>
+                  <Badge tone={TONES[r.status] || 'slate'}>{r.status}</Badge>
                 </li>
               ))}
             </ul>

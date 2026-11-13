@@ -1,9 +1,18 @@
 const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 
+const sanitizeDepartmentId = (value) => {
+  if (value === undefined) return undefined;
+  const id = String(value || '').trim();
+  return id || null;
+};
+
 // @route  GET /api/designations
 const getDesignations = asyncHandler(async (req, res) => {
-  const designations = await prisma.designation.findMany();
+  const designations = await prisma.designation.findMany({
+    include: { department: { select: { id: true, name: true } } },
+    orderBy: { name: 'asc' },
+  });
   const counts = await prisma.employee.groupBy({
     by: ['designationId'],
     where: { designationId: { not: null } },
@@ -25,11 +34,19 @@ const createDesignation = asyncHandler(async (req, res) => {
   });
   if (exists) return res.status(409).json({ success: false, message: 'A designation with this name already exists' });
 
+  const departmentId = sanitizeDepartmentId(req.body.departmentId);
+  if (departmentId) {
+    const dept = await prisma.department.findUnique({ where: { id: departmentId } });
+    if (!dept) return res.status(400).json({ success: false, message: 'Selected department does not exist' });
+  }
+
   const designation = await prisma.designation.create({
     data: {
       name: String(name).trim(),
       description: String(description || '').trim(),
+      departmentId,
     },
+    include: { department: { select: { id: true, name: true } } },
   });
   res.status(201).json({ success: true, message: 'Designation created', data: designation });
 });
@@ -51,8 +68,20 @@ const updateDesignation = asyncHandler(async (req, res) => {
     data.name = String(req.body.name).trim();
   }
   if (req.body.description !== undefined) data.description = String(req.body.description).trim();
+  const departmentId = sanitizeDepartmentId(req.body.departmentId);
+  if (departmentId !== undefined) {
+    if (departmentId) {
+      const dept = await prisma.department.findUnique({ where: { id: departmentId } });
+      if (!dept) return res.status(400).json({ success: false, message: 'Selected department does not exist' });
+    }
+    data.departmentId = departmentId;
+  }
 
-  const updated = await prisma.designation.update({ where: { id: designation.id }, data });
+  const updated = await prisma.designation.update({
+    where: { id: designation.id },
+    data,
+    include: { department: { select: { id: true, name: true } } },
+  });
   res.json({ success: true, message: 'Designation updated', data: updated });
 });
 

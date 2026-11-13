@@ -132,6 +132,16 @@ const start = async () => {
       console.log(`[FaceHR] API running on http://localhost:${config.port}`);
     });
 
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`[FaceHR] Port ${config.port} is already in use — an API server is already running.`);
+        console.error('[FaceHR] Reuse the running instance (client: http://localhost:5173) instead of starting a second one.');
+        process.exit(0);
+      }
+      console.error('[FaceHR] Server error:', err);
+      process.exit(1);
+    });
+
     let shuttingDown = false;
     const shutdown = async (signal) => {
       if (shuttingDown) return;

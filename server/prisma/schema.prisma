@@ -131,20 +131,24 @@ model Department {
 
   employees     Employee[]     @relation("EmployeeDepartment")
   announcements Announcement[]
+  designations  Designation[]
 
   @@map("departments")
 }
 
 model Designation {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String   @default("")
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String      @id @default(uuid())
+  name         String      @unique
+  description  String      @default("")
+  departmentId String?     @map("department_id")
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   employees   Employee[]
 
+  @@index([departmentId])
   @@map("designations")
 }
 

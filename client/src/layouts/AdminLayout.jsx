@@ -321,7 +321,7 @@ export default function AdminLayout() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search employees by name, ID, email…"
+              placeholder="Search employees by name, ID, or email..."
               className="input pl-9"
             />
           </form>
@@ -365,7 +365,7 @@ export default function AdminLayout() {
         </header>
 
         <main className="mx-auto w-full min-w-0 max-w-7xl px-3 py-5 sm:px-6 sm:py-6 lg:px-8">
-          <Suspense fallback={<FullScreenLoader label="Loading page…" />}>
+          <Suspense fallback={<FullScreenLoader label="Loading page..." />}>
             <Outlet />
           </Suspense>
         </main>

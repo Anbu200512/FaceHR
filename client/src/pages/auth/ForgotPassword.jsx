@@ -69,7 +69,7 @@ export default function ForgotPassword() {
           error={error}
         />
         <Button type="submit" loading={loading} className="w-full">
-          {loading ? 'Sending request…' : 'Send Reset Request'}
+          {loading ? 'Sending request...' : 'Send Reset Request'}
         </Button>
         <Link to="/login" className="flex items-center justify-center gap-1.5 text-sm font-medium text-slate-500 hover:text-brand-600 dark:text-slate-400">
           <ArrowLeft className="h-4 w-4" /> Back to sign in

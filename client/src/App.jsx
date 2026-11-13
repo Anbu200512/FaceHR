@@ -47,14 +47,14 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 
 function Landing() {
   const { user, loading } = useAuth();
-  if (loading) return <FullScreenLoader label="Loading FaceHR…" />;
+  if (loading) return <FullScreenLoader label="Loading FaceHR..." />;
   if (!user) return <Navigate to="/login" replace />;
   return <Navigate to={user.role === 'admin' ? '/admin' : '/employee'} replace />;
 }
 
 export default function App() {
   return (
-    <Suspense fallback={<FullScreenLoader label="Loading…" />}>
+    <Suspense fallback={<FullScreenLoader label="Loading..." />}>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route element={<AuthLayout />}>
