@@ -27,6 +27,22 @@ const {
 
 const sanitizeString = (v, max = 200) => String(v || '').slice(0, max);
 
+// Manual marks may arrive either as a full ISO timestamp (preferred — the client
+// resolves the picked date + wall-clock time in the user's timezone) or as a
+// legacy "HH:MM" string. ISO values are stored untouched so the server timezone
+// never shifts the time the admin entered.
+function parseManualTimestamp(dayDate, raw) {
+  if (!raw) return null;
+  const value = String(raw);
+  if (value.includes('T')) {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  const minutes = parseTimeToMinutes(value);
+  if (minutes === null) return null;
+  return combineDateWithMinutes(dayDate, minutes);
+}
+
 // Parse an optional location payload (object or JSON string) sent by the client.
 function parseLocation(raw) {
   if (!raw) return null;
@@ -435,8 +451,11 @@ const getMonthly = asyncHandler(async (req, res) => {
     return res.status(403).json({ success: false, message: 'You can only view your own attendance' });
   }
 
-  const y = parseInt(req.query.year, 10) || new Date().getFullYear();
-  const m = parseInt(req.query.month, 10) || new Date().getMonth();
+  const now = new Date();
+  const yearParam = Number.parseInt(req.query.year, 10);
+  const monthParam = Number.parseInt(req.query.month, 10);
+  const y = Number.isInteger(yearParam) ? yearParam : now.getFullYear();
+  const m = Number.isInteger(monthParam) && monthParam >= 0 && monthParam <= 11 ? monthParam : now.getMonth();
   const { start, end } = monthRange(y, m);
 
   const [records, leaves] = await Promise.all([
@@ -486,7 +505,10 @@ const getMonthly = asyncHandler(async (req, res) => {
     });
   }
 
-  const presentDays = days.filter((d) => d.record).length;
+  // Count from the resolved day statuses so manual Absent / On Leave marks are
+  // never also counted as present (and weekends stay out of the totals).
+  const countStatus = (s) => days.filter((d) => d.status === s).length;
+  const presentDays = days.filter((d) => ['Present', 'Late', 'Half Day'].includes(d.status)).length;
   const totalHours = records.reduce((s, r) => s + (r.workingHoursMinutes || 0), 0);
 
   res.json({
@@ -503,10 +525,10 @@ const getMonthly = asyncHandler(async (req, res) => {
       days,
       summary: {
         presentDays,
-        absentDays: days.filter((d) => d.status === 'Absent').length,
-        lateDays: days.filter((d) => d.status === 'Late').length,
-        leaveDays: leaveDays.size,
-        weekendDays: days.filter((d) => d.status === 'Weekend').length,
+        absentDays: countStatus('Absent'),
+        lateDays: countStatus('Late'),
+        leaveDays: countStatus('On Leave'),
+        weekendDays: countStatus('Weekend'),
         totalHours,
       },
     },
@@ -676,7 +698,7 @@ const MANUAL_STATUSES = ['Present', 'Late', 'Half Day', 'Absent', 'On Leave'];
  */
 const markAttendanceManual = asyncHandler(async (req, res) => {
   const employeeId = String(req.params.employeeId || '');
-  const { date, checkIn, checkOut, status, note } = req.body || {};
+  const { date, checkIn, checkOut, checkInLocal, status, note } = req.body || {};
 
   if (!employeeId) return respondAttendance(res, { status: 400, message: 'Employee is required' });
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
@@ -702,21 +724,19 @@ const markAttendanceManual = asyncHandler(async (req, res) => {
   let checkOutDate = null;
 
   if (hasTimes) {
-    const inMin = parseTimeToMinutes(checkIn);
-    if (inMin === null) {
+    checkInDate = parseManualTimestamp(dayDate, checkIn);
+    if (!checkInDate) {
       return respondAttendance(res, { status: 400, message: 'Check-in time is required for this status' });
     }
-    checkInDate = combineDateWithMinutes(dayDate, inMin);
 
     if (checkOut) {
-      const outMin = parseTimeToMinutes(checkOut);
-      if (outMin === null) {
+      checkOutDate = parseManualTimestamp(dayDate, checkOut);
+      if (!checkOutDate) {
         return respondAttendance(res, { status: 400, message: 'Check-out time must be a valid time (HH:MM)' });
       }
-      if (outMin <= inMin) {
+      if (checkOutDate <= checkInDate) {
         return respondAttendance(res, { status: 400, message: 'Check-out time must be after check-in time' });
       }
-      checkOutDate = combineDateWithMinutes(dayDate, outMin);
     }
   }
 
@@ -726,7 +746,11 @@ const markAttendanceManual = asyncHandler(async (req, res) => {
 
   let lateMinutes = 0;
   if (checkInDate && status === 'Late') {
-    const evalResult = await evaluateCheckInStatus(dayDate, checkInDate);
+    // Prefer the wall-clock time the admin entered so the office-start
+    // comparison stays correct even if the server runs in another timezone.
+    const wallIn = parseTimeToMinutes(checkInLocal || (String(checkIn || '').includes('T') ? '' : checkIn));
+    const forLate = wallIn !== null ? combineDateWithMinutes(dayDate, wallIn) : checkInDate;
+    const evalResult = await evaluateCheckInStatus(dayDate, forLate);
     lateMinutes = evalResult.lateMinutes || 1;
   }
 

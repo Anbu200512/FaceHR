@@ -143,7 +143,13 @@ const getReport = asyncHandler(async (req, res) => {
       const trend = trendMap.get(toDateKey(day)) || { date: toDateKey(day), present: 0, late: 0, absent: 0, leave: 0 };
 
       if (rec) {
-        if (rec.status === 'Late') {
+        if (rec.status === 'Absent') {
+          absentDays += 1;
+          trend.absent += 1;
+        } else if (rec.status === 'On Leave') {
+          leaveDays += 1;
+          trend.leave += 1;
+        } else if (rec.status === 'Late') {
           lateDays += 1;
           trend.late += 1;
           trend.present += 1;
@@ -182,6 +188,7 @@ const getReport = asyncHandler(async (req, res) => {
   for (const key of trendMap.keys()) {
     const dayRecs = attendance.filter((r) => toDateKey(r.date) === key);
     dayRecs.forEach((r) => {
+      if (r.status === 'Absent' || r.status === 'On Leave') return;
       const emp = employees.find((e) => String(e.id) === String(r.employeeRefId));
       if (emp) {
         const dept = emp.department ? emp.department.name : 'Unassigned';

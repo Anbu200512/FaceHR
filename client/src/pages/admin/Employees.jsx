@@ -13,7 +13,7 @@ import api, { extractError } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useToast } from '../../context/ToastContext';
-import { resolveAsset, formatDate } from '../../services/format';
+import { resolveAsset } from '../../services/format';
 import PageHeader from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -23,7 +23,6 @@ import Pagination from '../../components/ui/Pagination';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { SkeletonRow } from '../../components/ui/Skeleton';
 import Avatar from '../../components/Avatar';
-import { employeeFullName, managerLabel } from '../../components/employeeForm/constants';
 
 export default function Employees() {
   const toast = useToast();
@@ -174,69 +173,37 @@ export default function Employees() {
               <tr>
                 <th className="th">Employee ID</th>
                 <th className="th">Name</th>
-                <th className="th">Work Email</th>
                 <th className="th">Department</th>
                 <th className="th">Designation</th>
-                <th className="th">Reporting Manager</th>
-                <th className="th">Mobile</th>
-                <th className="th">Date of Joining</th>
                 <th className="th">Status</th>
                 <th className="th text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} cols={10} />)
+                Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} cols={6} />)
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={10}>
+                  <td colSpan={6}>
                     <EmptyState title="No employees found" message="Try a different search or filter, or add a new employee." />
                   </td>
                 </tr>
               ) : (
                 rows.map((emp) => {
-                  const mobile = emp.contact?.mobileNumber || emp.phone || '—';
                   return (
                     <tr key={emp._id} className="border-b transition last:border-0 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50">
                       <td className="td font-mono text-xs font-semibold text-brand-600 dark:text-brand-400">{emp.employeeId}</td>
                       <td className="td">
                         <div className="flex items-center gap-3">
                           <Avatar name={`${emp.firstName} ${emp.lastName}`} src={resolveAsset(emp.profilePhoto)} size="sm" />
-                          <div className="min-w-0">
-                            <button onClick={() => navigate(`/admin/employees/${emp._id}`)} className="font-semibold text-slate-800 hover:text-brand-600 dark:text-slate-100 dark:hover:text-brand-400">
-                              {emp.firstName} {emp.lastName}
-                            </button>
-                            {(emp.roles || []).length > 0 && (
-                              <div className="mt-1 flex flex-wrap gap-1">
-                                {emp.roles.map((role) => <Badge key={role} tone="violet">{role}</Badge>)}
-                              </div>
-                            )}
-                          </div>
+                          <button onClick={() => navigate(`/admin/employees/${emp._id}`)} className="min-w-0 truncate font-semibold text-slate-800 hover:text-brand-600 dark:text-slate-100 dark:hover:text-brand-400">
+                            {emp.firstName} {emp.lastName}
+                          </button>
                         </div>
                       </td>
-                      <td className="td">{emp.email || '—'}</td>
                       <td className="td">{emp.department?.name || '—'}</td>
                       <td className="td">{emp.designation?.name || '—'}</td>
-                      <td className="td">
-                        {emp.manager1 ? (
-                          <div className="leading-tight">
-                            <p className="font-medium text-slate-700 dark:text-slate-200">{employeeFullName(emp.manager1)}</p>
-                            <p className="text-xs text-slate-400">
-                              {[emp.manager1.employeeId, emp.manager1.designation?.name].filter(Boolean).join(' · ') || '—'}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-slate-500">{emp.reportingManager || '—'}</span>
-                        )}
-                      </td>
-                      <td className="td">{mobile}</td>
-                      <td className="td">{formatDate(emp.joiningDate)}</td>
-                      <td className="td">
-                        <div className="flex flex-wrap items-center gap-1">
-                          <Badge>{emp.status}</Badge>
-                          {emp.face ? <Badge>Face</Badge> : null}
-                        </div>
-                      </td>
+                      <td className="td"><Badge>{emp.status}</Badge></td>
                       <td className="td">
                         <div className="flex justify-end gap-1">
                           <IconBtn title="View profile" onClick={() => navigate(`/admin/employees/${emp._id}`)}><Eye className="h-4 w-4" /></IconBtn>
@@ -275,15 +242,10 @@ export default function Employees() {
                   </p>
                   <p className="text-xs text-slate-400">{emp.employeeId} · {emp.department?.name || 'No dept'}</p>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    {emp.designation?.name || '—'} · {emp.contact?.mobileNumber || emp.phone || '—'}
-                  </p>
-                  <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
-                    Reports to: {managerLabel(emp.manager1, emp.reportingManager) || '—'}
+                    {emp.designation?.name || '—'}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     <Badge>{emp.status}</Badge>
-                    {emp.face ? <Badge>Face</Badge> : null}
-                    {(emp.roles || []).map((role) => <Badge key={role} tone="violet">{role}</Badge>)}
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-0.5" onClick={(e) => e.stopPropagation()}>

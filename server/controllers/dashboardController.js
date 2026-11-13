@@ -647,8 +647,12 @@ const getDashboard = asyncHandler(async (req, res) => {
       const rec = recMap.get(recMapKey(eid, key));
       if (rec) {
         workingMinutes += rec.workingHoursMinutes || 0;
-        if (rec.status === 'Late') lateDays += 1;
-        presentDays += 1;
+        if (rec.status === 'Absent') absentDays += 1;
+        else if (rec.status === 'On Leave') leaveDays += 1;
+        else {
+          presentDays += 1;
+          if (rec.status === 'Late') lateDays += 1;
+        }
       } else if (leaveSet.has(key)) {
         leaveDays += 1;
       } else {

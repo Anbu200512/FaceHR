@@ -23,6 +23,15 @@ function isoToTimeKey(iso) {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// Build the exact instant for the picked date + wall-clock time in the admin's
+// own timezone. Sending an ISO timestamp keeps the time correct even when the
+// API server runs in a different timezone (e.g. UTC on Render vs IST browsers).
+function toInstant(dayKey, hhmm) {
+  if (!dayKey || !hhmm) return undefined;
+  const d = new Date(`${dayKey}T${hhmm}:00`);
+  return Number.isNaN(d.getTime()) ? hhmm : d.toISOString();
+}
+
 export default function ManualAttendance() {
   const toast = useToast();
   const todayKey = toDateKey(new Date());
@@ -124,8 +133,11 @@ export default function ManualAttendance() {
     try {
       const payload = { date, status, note: note.trim() || undefined };
       if (!hideTimes) {
-        payload.checkIn = checkIn;
-        if (checkOut) payload.checkOut = checkOut;
+        payload.checkIn = toInstant(date, checkIn);
+        payload.checkInLocal = checkIn;
+        if (checkOut) {
+          payload.checkOut = toInstant(date, checkOut);
+        }
       }
       const { data } = await api.put(`/attendance/admin/${employee._id}/mark`, payload);
       toast.success(data.message || 'Attendance saved');
