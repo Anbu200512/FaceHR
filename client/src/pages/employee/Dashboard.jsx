@@ -8,7 +8,6 @@ import { usePolling } from '../../hooks/useDebounce';
 import { greeting, formatDate, formatTime, formatDuration } from '../../services/format';
 import { resolveAsset } from '../../services/format';
 import PageHeader from '../../components/PageHeader';
-import AttendanceCalendar from '../../components/attendance/AttendanceCalendar';
 import { Card } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -152,11 +151,6 @@ export default function EmployeeHome() {
             <div className="p-5 text-sm text-slate-400">Loading…</div>
           )}
         </Card>
-      </div>
-
-      {/* My Attendance calendar */}
-      <div className="mt-6">
-        <AttendanceCalendar />
       </div>
     </div>
   );

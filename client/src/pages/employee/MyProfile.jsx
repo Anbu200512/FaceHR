@@ -21,6 +21,8 @@ import {
   WeekOffSectionView,
   QualificationSectionView,
   DocumentsSectionView,
+  ReportingManagerCard,
+  RoleBadges,
 } from '../../components/employeeProfile/SectionViews';
 import { EMPLOYEE_PROFILE_TABS } from '../../components/employeeForm/constants';
 import clsx from 'clsx';
@@ -99,6 +101,7 @@ export default function MyProfile() {
               <Badge>{emp.employmentType}</Badge>
             </div>
             <p className="font-mono text-xs font-semibold text-brand-600 dark:text-brand-400">{emp.employeeId}</p>
+            <RoleBadges roles={emp.roles} className="mt-1.5" />
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {emp.designation?.name || 'No designation'} · {emp.department?.name || 'No department'}{emp.office?.name ? ` · ${emp.office.name}` : ''}
             </p>
@@ -119,6 +122,11 @@ export default function MyProfile() {
           </div>
         </div>
       </Card>
+
+      {/* Reporting managers */}
+      <div className="mb-6">
+        <ReportingManagerCard emp={emp} />
+      </div>
 
       {/* Face recognition status (read-only) */}
       <Card className="mb-6">

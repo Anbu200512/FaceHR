@@ -31,6 +31,7 @@ import Modal from '../../components/ui/Modal';
 import Avatar from '../../components/Avatar';
 import FaceCapture from '../../components/FaceCapture';
 import EmployeeSectionEditor from '../../components/employeeProfile/SectionEditors';
+import { ReportingManagerCard, RoleBadges } from '../../components/employeeProfile/SectionViews';
 import { ADMIN_PROFILE_TABS } from '../../components/employeeForm/constants';
 import { fetchMyAttendanceSettings, resolveGeoGate } from '../../services/attendanceSettings';
 import clsx from 'clsx';
@@ -218,6 +219,7 @@ export default function EmployeeProfile({ faceMode }) {
               {emp.exEmployee && <Badge>Ex Employee</Badge>}
             </div>
             <p className="font-mono text-xs font-semibold text-brand-600 dark:text-brand-400">{emp.employeeId}</p>
+            <RoleBadges roles={emp.roles} className="mt-1.5" />
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {emp.designation?.name || 'No designation'} · {emp.department?.name || 'No department'}{emp.office?.name ? ` · ${emp.office.name}` : ''}
             </p>
@@ -238,6 +240,10 @@ export default function EmployeeProfile({ faceMode }) {
           </div>
         </div>
       </Card>
+
+      <div className="mb-6">
+        <ReportingManagerCard emp={emp} />
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Face + attendance cards */}

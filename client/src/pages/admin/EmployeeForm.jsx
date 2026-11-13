@@ -16,6 +16,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 function cloneBlank() {
   return {
     ...BLANK,
+    roles: [...BLANK.roles],
     contact: { ...BLANK.contact, address: { ...BLANK.contact.address } },
     bankDetails: { ...BLANK.bankDetails },
     personal: { ...BLANK.personal },
@@ -38,6 +39,21 @@ export default function EmployeeForm() {
   const depts = useApi(async () => (await api.get('/departments')).data.data);
   const designations = useApi(async () => (await api.get('/designations')).data.data);
   const locations = useApi(async () => (await api.get('/locations')).data.data);
+
+  const employees = useApi(async () => {
+    const all = [];
+    let page = 1;
+    let total = Infinity;
+    while (all.length < total) {
+      const { data } = await api.get(`/employees?pageSize=100&page=${page}&sortBy=firstName&order=asc`);
+      const batch = data.data || [];
+      all.push(...batch);
+      total = data.meta?.total ?? all.length;
+      if (!batch.length) break;
+      page += 1;
+    }
+    return all;
+  });
 
   const existing = useApi(async () => (await api.get(`/employees/${id}`)).data.data, isEdit ? [id] : []);
 
@@ -67,8 +83,9 @@ export default function EmployeeForm() {
         category: d.category || '',
         subCategory: d.subCategory || '',
         grade: d.grade || '',
-        reportingManager: d.reportingManager || '',
-        reportingManager2: d.reportingManager2 || '',
+        roles: Array.isArray(d.roles) ? [...d.roles] : [],
+        manager1Id: d.manager1?._id || d.manager1Id || '',
+        manager2Id: d.manager2?._id || d.manager2Id || '',
         probation: d.probation || '',
         probationManage: Boolean(d.probationManage),
         totalExperience: d.totalExperience || '',
@@ -181,6 +198,8 @@ export default function EmployeeForm() {
         depts={depts.data}
         designations={designations.data}
         locations={locations.data}
+        employees={employees.data}
+        currentId={id}
         suggestId={suggestId}
         manualEmployeeId={manualEmployeeId}
         setManualEmployeeId={setManualEmployeeId}

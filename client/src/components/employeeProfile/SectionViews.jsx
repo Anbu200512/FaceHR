@@ -1,7 +1,9 @@
-import { IdCard, UserRound, Landmark, User, UsersRound, Briefcase, GraduationCap, PhoneCall, FileUp, FileText, CalendarDays, Settings2, Plane } from 'lucide-react';
+import { IdCard, UserRound, Landmark, User, UsersRound, Briefcase, GraduationCap, PhoneCall, FileUp, FileText, CalendarDays, Settings2, Plane, Mail, Phone } from 'lucide-react';
 import { Card } from '../ui/Card';
+import Badge from '../ui/Badge';
+import Avatar from '../Avatar';
 import { formatDate, resolveAsset } from '../../services/format';
-import { STEPS, KIND_LABEL, formatAddress } from '../employeeForm/constants';
+import { STEPS, KIND_LABEL, formatAddress, employeeFullName, managerLabel } from '../employeeForm/constants';
 
 export const PROFILE_TABS = STEPS.map((s) => ({ id: s.id, label: s.label }));
 
@@ -74,9 +76,70 @@ export function BasicDetailsSectionView({ emp }) {
         <Row icon={FileText} label="Mobile Number" value={emp.phone} />
         <Row icon={FileText} label="Department" value={emp.department?.name} />
         <Row icon={FileText} label="Designation" value={emp.designation?.name} />
+        <Row icon={FileText} label="Reporting Manager" value={managerLabel(emp.manager1, emp.reportingManager)} />
+        <Row icon={FileText} label="Roles" value={(emp.roles || []).join(', ')} />
         <Row icon={FileText} label="Status" value={emp.status} />
         <Row icon={FileText} label="Joining Date" value={formatDate(emp.joiningDate)} />
       </Grid>
+    </SectionCard>
+  );
+}
+
+export function RoleBadges({ roles, className }) {
+  if (!Array.isArray(roles) || roles.length === 0) return null;
+  return (
+    <div className={`flex flex-wrap items-center gap-1.5 ${className || ''}`}>
+      {roles.map((role) => <Badge key={role} tone="violet">{role}</Badge>)}
+    </div>
+  );
+}
+
+export function ReportingManagerCard({ emp }) {
+  const managers = [
+    { key: 'manager1', label: 'Reporting Manager', person: emp.manager1, fallback: emp.reportingManager },
+    { key: 'manager2', label: 'Reporting Manager 2', person: emp.manager2, fallback: emp.reportingManager2 },
+  ].filter((m) => m.person || m.fallback);
+
+  if (!managers.length) return null;
+
+  return (
+    <SectionCard title="Reporting Managers" icon={UsersRound}>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {managers.map(({ key, label, person, fallback }) => (
+          <div key={key} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
+            {person ? (
+              <>
+                <div className="mt-2 flex items-center gap-3">
+                  <Avatar name={employeeFullName(person)} src={resolveAsset(person.profilePhoto)} size="md" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{employeeFullName(person) || '—'}</p>
+                    <p className="truncate text-xs text-slate-400">
+                      {[person.employeeId, person.designation?.name, person.department?.name].filter(Boolean).join(' · ') || '—'}
+                    </p>
+                  </div>
+                </div>
+                {(person.email || person.phone) && (
+                  <div className="mt-3 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+                    {person.email && (
+                      <p className="flex items-center gap-2">
+                        <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" /> <span className="truncate">{person.email}</span>
+                      </p>
+                    )}
+                    {person.phone && (
+                      <p className="flex items-center gap-2">
+                        <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" /> <span className="truncate">{person.phone}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-200">{fallback}</p>
+            )}
+          </div>
+        ))}
+      </div>
     </SectionCard>
   );
 }

@@ -93,8 +93,9 @@ export function buildEmployeeFormData(values, { photo = null, sectionsOverride }
   append('category', values.category);
   append('subCategory', values.subCategory);
   append('grade', values.grade);
-  append('reportingManager', values.reportingManager);
-  append('reportingManager2', values.reportingManager2);
+  fd.append('reportingManagerId', values.manager1Id || '');
+  fd.append('reportingManager2Id', values.manager2Id || '');
+  fd.append('roles', JSON.stringify(values.roles || []));
   append('probation', values.probation);
   append('totalExperience', values.totalExperience);
   append('status', values.status);

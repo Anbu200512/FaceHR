@@ -1,6 +1,8 @@
-import { IdCard, KeyRound, ShieldCheck } from 'lucide-react';
+import { useState } from 'react';
+import { IdCard, KeyRound, ShieldCheck, Plus, X } from 'lucide-react';
 import { Input, Select } from '../ui/Form';
 import { SectionCard, CheckboxField } from './steps/shared';
+import { COMMON_ROLES, employeeFullName } from './constants';
 
 const EMPLOYEE_STATUSES = ['Active', 'Inactive'];
 
@@ -12,10 +14,16 @@ export default function BasicInfoEditor({
   depts,
   designations,
   locations,
+  employees = [],
+  currentId,
   suggestId,
   manualEmployeeId,
   setManualEmployeeId,
 }) {
+  const managerOptions = (employees || [])
+    .filter((e) => e._id !== currentId)
+    .map((e) => ({ value: e._id, label: `${employeeFullName(e)}${e.employeeId ? ` (${e.employeeId})` : ''}` }));
+
   return (
     <div className="space-y-6">
       <SectionCard
@@ -109,8 +117,25 @@ export default function BasicInfoEditor({
               options={(designations || []).map((d) => ({ value: d._id, label: d.name }))}
             />
             <Input label="Grade / Cadre" name="grade" value={values.grade} onChange={(e) => set('grade', e.target.value)} placeholder="Grade or cadre" />
-            <Input label="Reporting Manager" name="reportingManager" value={values.reportingManager} onChange={(e) => set('reportingManager', e.target.value)} placeholder="Reporting manager name" />
-            <Input label="Reporting Manager 2" name="reportingManager2" value={values.reportingManager2} onChange={(e) => set('reportingManager2', e.target.value)} placeholder="Second reporting manager" />
+            <Select
+              label="Reporting Manager"
+              name="manager1Id"
+              value={values.manager1Id}
+              onChange={(e) => set('manager1Id', e.target.value)}
+              placeholder="Select reporting manager"
+              options={managerOptions}
+            />
+            <Select
+              label="Reporting Manager 2"
+              name="manager2Id"
+              value={values.manager2Id}
+              onChange={(e) => set('manager2Id', e.target.value)}
+              placeholder="Select second reporting manager"
+              options={managerOptions}
+            />
+            <div className="sm:col-span-2">
+              <RolesEditor roles={values.roles || []} onChange={(roles) => set('roles', roles)} />
+            </div>
             <Input label="Probation" name="probation" value={values.probation} onChange={(e) => set('probation', e.target.value)} placeholder="e.g. 6 months" />
             <Input label="Experience" name="totalExperience" value={values.totalExperience} onChange={(e) => set('totalExperience', e.target.value)} placeholder="e.g. 5 years" />
 
@@ -166,6 +191,79 @@ export default function BasicInfoEditor({
           </div>
         </div>
       </SectionCard>
+    </div>
+  );
+}
+
+function RolesEditor({ roles = [], onChange }) {
+  const [draft, setDraft] = useState('');
+  const selected = new Set(roles);
+
+  const addRoles = (raw) => {
+    const parts = String(raw || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!parts.length) return;
+    onChange([...new Set([...roles, ...parts])]);
+    setDraft('');
+  };
+
+  const removeRole = (role) => onChange(roles.filter((r) => r !== role));
+
+  return (
+    <div>
+      <label className="label" htmlFor="employee-roles">Roles</label>
+      <p className="mb-2 text-xs text-slate-400">Assign one or more roles, e.g. Team Lead, HR, Software Engineer.</p>
+
+      {roles.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {roles.map((role) => (
+            <span key={role} className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-600/10 dark:bg-brand-500/10 dark:text-brand-300 dark:ring-brand-500/20">
+              {role}
+              <button type="button" onClick={() => removeRole(role)} className="rounded-full p-0.5 transition hover:bg-brand-100 dark:hover:bg-brand-500/20" aria-label={`Remove ${role}`}>
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <input
+          id="employee-roles"
+          list="employee-role-suggestions"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ',') {
+              e.preventDefault();
+              addRoles(draft);
+            }
+          }}
+          placeholder="Type a role and press Enter"
+          className="input flex-1"
+        />
+        <button type="button" onClick={() => addRoles(draft)} className="btn-ghost shrink-0" disabled={!draft.trim()}>
+          <Plus className="h-4 w-4" /> Add
+        </button>
+      </div>
+      <datalist id="employee-role-suggestions">
+        {COMMON_ROLES.map((role) => <option key={role} value={role} />)}
+      </datalist>
+
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {COMMON_ROLES.filter((role) => !selected.has(role)).map((role) => (
+          <button
+            key={role}
+            type="button"
+            onClick={() => addRoles(role)}
+            className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:border-brand-300 hover:text-brand-600 dark:border-slate-700 dark:text-slate-400 dark:hover:border-brand-500/40 dark:hover:text-brand-400"
+          >
+            + {role}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

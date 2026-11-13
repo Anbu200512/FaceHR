@@ -65,8 +65,13 @@ model Employee {
   category           String    @default("")
   subCategory        String    @default("")
   grade              String    @default("")
+  roles              String[]  @default([])
   reportingManager   String    @default("")
   reportingManager2  String    @default("")
+  manager1Id         String?   @map("reportingManager1Id")
+  manager1           Employee? @relation("EmployeeManager1", fields: [manager1Id], references: [id], onDelete: SetNull)
+  manager2Id         String?   @map("reportingManager2Id")
+  manager2           Employee? @relation("EmployeeManager2", fields: [manager2Id], references: [id], onDelete: SetNull)
   probation          String    @default("")
   probationManage    Boolean   @default(false)
   totalExperience    String    @default("")
@@ -103,6 +108,8 @@ model Employee {
   regularizations    AttendanceRegularization[]
   payslips           Payslip[]
   headedDepartments  Department[] @relation("DepartmentHead")
+  directReports1     Employee[]   @relation("EmployeeManager1")
+  directReports2     Employee[]   @relation("EmployeeManager2")
 
   @@index([status])
   @@index([departmentId])

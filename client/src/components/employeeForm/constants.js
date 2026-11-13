@@ -88,8 +88,11 @@ export const BLANK = {
   category: '',
   subCategory: '',
   grade: '',
+  roles: [],
   reportingManager: '',
   reportingManager2: '',
+  manager1Id: '',
+  manager2Id: '',
   probation: '',
   probationManage: false,
   totalExperience: '',
@@ -157,6 +160,33 @@ export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 export const ACCOUNT_TYPES = ['Savings', 'Current', 'Salary', 'Fixed Deposit', 'Other'];
 export const RELATIONSHIPS = ['Spouse', 'Parent', 'Child', 'Sibling', 'Relative', 'Friend', 'Other'];
 export const YEARS = Array.from({ length: 68 }, (_, i) => String(new Date().getFullYear() + 1 - i));
+
+export const COMMON_ROLES = [
+  'Team Lead',
+  'HR',
+  'Software Engineer',
+  'Senior Software Engineer',
+  'Project Manager',
+  'QA Engineer',
+  'UI/UX Designer',
+  'Finance',
+  'Admin',
+];
+
+export function employeeFullName(e) {
+  if (!e) return '';
+  return [e.firstName, e.middleName, e.lastName].filter(Boolean).join(' ').trim();
+}
+
+export function managerLabel(person, fallback) {
+  if (person) {
+    const name = employeeFullName(person);
+    return name ? `${name}${person.employeeId ? ` (${person.employeeId})` : ''}` : fallback || '';
+  }
+  return fallback || '';
+}
+
+
 
 export function formatAddress(addr) {
   if (!addr || typeof addr !== 'object') return '';

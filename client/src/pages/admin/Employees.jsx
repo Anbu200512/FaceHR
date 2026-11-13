@@ -23,6 +23,7 @@ import Pagination from '../../components/ui/Pagination';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { SkeletonRow } from '../../components/ui/Skeleton';
 import Avatar from '../../components/Avatar';
+import { employeeFullName, managerLabel } from '../../components/employeeForm/constants';
 
 export default function Employees() {
   const toast = useToast();
@@ -176,6 +177,7 @@ export default function Employees() {
                 <th className="th">Work Email</th>
                 <th className="th">Department</th>
                 <th className="th">Designation</th>
+                <th className="th">Reporting Manager</th>
                 <th className="th">Mobile</th>
                 <th className="th">Date of Joining</th>
                 <th className="th">Status</th>
@@ -184,10 +186,10 @@ export default function Employees() {
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} cols={9} />)
+                Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} cols={10} />)
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={9}>
+                  <td colSpan={10}>
                     <EmptyState title="No employees found" message="Try a different search or filter, or add a new employee." />
                   </td>
                 </tr>
@@ -200,14 +202,33 @@ export default function Employees() {
                       <td className="td">
                         <div className="flex items-center gap-3">
                           <Avatar name={`${emp.firstName} ${emp.lastName}`} src={resolveAsset(emp.profilePhoto)} size="sm" />
-                          <button onClick={() => navigate(`/admin/employees/${emp._id}`)} className="font-semibold text-slate-800 hover:text-brand-600 dark:text-slate-100 dark:hover:text-brand-400">
-                            {emp.firstName} {emp.lastName}
-                          </button>
+                          <div className="min-w-0">
+                            <button onClick={() => navigate(`/admin/employees/${emp._id}`)} className="font-semibold text-slate-800 hover:text-brand-600 dark:text-slate-100 dark:hover:text-brand-400">
+                              {emp.firstName} {emp.lastName}
+                            </button>
+                            {(emp.roles || []).length > 0 && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {emp.roles.map((role) => <Badge key={role} tone="violet">{role}</Badge>)}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="td">{emp.email || '—'}</td>
                       <td className="td">{emp.department?.name || '—'}</td>
                       <td className="td">{emp.designation?.name || '—'}</td>
+                      <td className="td">
+                        {emp.manager1 ? (
+                          <div className="leading-tight">
+                            <p className="font-medium text-slate-700 dark:text-slate-200">{employeeFullName(emp.manager1)}</p>
+                            <p className="text-xs text-slate-400">
+                              {[emp.manager1.employeeId, emp.manager1.designation?.name].filter(Boolean).join(' · ') || '—'}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-slate-500">{emp.reportingManager || '—'}</span>
+                        )}
+                      </td>
                       <td className="td">{mobile}</td>
                       <td className="td">{formatDate(emp.joiningDate)}</td>
                       <td className="td">
@@ -256,9 +277,13 @@ export default function Employees() {
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     {emp.designation?.name || '—'} · {emp.contact?.mobileNumber || emp.phone || '—'}
                   </p>
+                  <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
+                    Reports to: {managerLabel(emp.manager1, emp.reportingManager) || '—'}
+                  </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     <Badge>{emp.status}</Badge>
                     {emp.face ? <Badge>Face</Badge> : null}
+                    {(emp.roles || []).map((role) => <Badge key={role} tone="violet">{role}</Badge>)}
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-0.5" onClick={(e) => e.stopPropagation()}>

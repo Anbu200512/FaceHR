@@ -154,17 +154,35 @@ const cleanSections = (b) => {
   return Object.keys(out).length ? { sections: out, address } : null;
 };
 
+const MANAGER_SELECT = {
+  id: true,
+  employeeId: true,
+  firstName: true,
+  middleName: true,
+  lastName: true,
+  email: true,
+  phone: true,
+  profilePhoto: true,
+  status: true,
+  designation: { select: { id: true, name: true } },
+  department: { select: { id: true, name: true } },
+};
+
 const LIST_INCLUDE = {
   department: { select: { id: true, name: true } },
   designation: { select: { id: true, name: true } },
   office: { select: { id: true, name: true } },
   face: { select: { id: true, faceId: true, active: true } },
+  manager1: { select: MANAGER_SELECT },
+  manager2: { select: MANAGER_SELECT },
 };
 
 const EMPLOYEE_INCLUDE = {
   department: true,
   designation: true,
   office: true,
+  manager1: { select: MANAGER_SELECT },
+  manager2: { select: MANAGER_SELECT },
   face: {
     select: {
       id: true,
@@ -177,6 +195,38 @@ const EMPLOYEE_INCLUDE = {
     },
   },
   documents: true,
+};
+
+const employeeFullName = (e) => (e ? [e.firstName, e.middleName, e.lastName].filter(Boolean).join(' ') : '');
+
+/** Accept a JSON string, comma-separated string or array; return a de-duplicated string list. */
+const parseRoles = (value) => {
+  if (value === undefined) return undefined;
+  let raw = value;
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      raw = raw.split(',');
+    }
+  }
+  if (!Array.isArray(raw)) raw = [raw];
+  return [...new Set(raw.map((r) => String(r).trim()).filter(Boolean))];
+};
+
+/** Resolve the display names stored alongside linked manager ids (legacy fields). */
+const resolveManagerNames = async (manager1Id, manager2Id) => {
+  const ids = [manager1Id, manager2Id].filter(Boolean);
+  if (!ids.length) return { reportingManager: '', reportingManager2: '' };
+  const people = await prisma.employee.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, firstName: true, middleName: true, lastName: true },
+  });
+  const byId = new Map(people.map((p) => [p.id, employeeFullName(p)]));
+  return {
+    reportingManager: manager1Id ? byId.get(manager1Id) || '' : '',
+    reportingManager2: manager2Id ? byId.get(manager2Id) || '' : '',
+  };
 };
 
 // @route  GET /api/employees
@@ -298,6 +348,25 @@ const createEmployee = asyncHandler(async (req, res) => {
     joiningDate: b.joiningDate ? new Date(b.joiningDate) : new Date(),
   });
 
+  const roles = parseRoles(b.roles);
+  if (roles !== undefined) employeeData.roles = roles;
+
+  if (b.reportingManagerId && !sanitizeId(b.reportingManagerId)) {
+    return res.status(400).json({ success: false, message: 'Invalid reporting manager' });
+  }
+  if (b.reportingManager2Id && !sanitizeId(b.reportingManager2Id)) {
+    return res.status(400).json({ success: false, message: 'Invalid second reporting manager' });
+  }
+  const hasManager1 = b.reportingManagerId !== undefined;
+  const hasManager2 = b.reportingManager2Id !== undefined;
+  if (hasManager1) employeeData.manager1Id = sanitizeId(b.reportingManagerId);
+  if (hasManager2) employeeData.manager2Id = sanitizeId(b.reportingManager2Id);
+  if (hasManager1 || hasManager2) {
+    const names = await resolveManagerNames(employeeData.manager1Id, employeeData.manager2Id);
+    if (hasManager1) employeeData.reportingManager = names.reportingManager;
+    if (hasManager2) employeeData.reportingManager2 = names.reportingManager2;
+  }
+
   const extra = cleanSections(b);
   if (extra) {
     Object.assign(employeeData, extra.sections);
@@ -371,6 +440,31 @@ const updateEmployee = asyncHandler(async (req, res) => {
   if (b.department !== undefined) update.departmentId = sanitizeId(b.department) || null;
   if (b.office !== undefined) update.officeId = sanitizeId(b.office) || null;
   if (b.designation !== undefined) update.designationId = sanitizeId(b.designation) || null;
+
+  const roles = parseRoles(b.roles);
+  if (roles !== undefined) update.roles = roles;
+
+  if (b.reportingManagerId && !sanitizeId(b.reportingManagerId)) {
+    return res.status(400).json({ success: false, message: 'Invalid reporting manager' });
+  }
+  if (b.reportingManager2Id && !sanitizeId(b.reportingManager2Id)) {
+    return res.status(400).json({ success: false, message: 'Invalid second reporting manager' });
+  }
+  const hasManager1 = b.reportingManagerId !== undefined;
+  const hasManager2 = b.reportingManager2Id !== undefined;
+  if (hasManager1) update.manager1Id = sanitizeId(b.reportingManagerId);
+  if (hasManager2) update.manager2Id = sanitizeId(b.reportingManager2Id);
+  if (update.manager1Id === employee.id || update.manager2Id === employee.id) {
+    return res.status(400).json({ success: false, message: 'An employee cannot be their own reporting manager' });
+  }
+  if (hasManager1 || hasManager2) {
+    const names = await resolveManagerNames(
+      hasManager1 ? update.manager1Id : employee.manager1Id,
+      hasManager2 ? update.manager2Id : employee.manager2Id
+    );
+    if (hasManager1) update.reportingManager = names.reportingManager;
+    if (hasManager2) update.reportingManager2 = names.reportingManager2;
+  }
 
   const extra = cleanSections(b);
   if (extra) {

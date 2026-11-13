@@ -18,7 +18,7 @@ function dot(status) {
   return map[status] || 'bg-slate-200';
 }
 
-export default function AttendanceCalendar({ className }) {
+export default function AttendanceCalendar({ className, showFooterLink = true }) {
   const { user } = useAuth();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -184,9 +184,11 @@ export default function AttendanceCalendar({ className }) {
               </span>
             ))}
           </div>
-          <Link to="/employee/history" className="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">
-            Full history →
-          </Link>
+          {showFooterLink && (
+            <Link to="/employee/history" className="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">
+              Full history →
+            </Link>
+          )}
         </div>
       </div>
     </Card>
