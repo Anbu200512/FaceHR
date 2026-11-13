@@ -5,6 +5,7 @@ import { SectionCard, CheckboxField } from './steps/shared';
 import { COMMON_ROLES, employeeFullName } from './constants';
 
 const EMPLOYEE_STATUSES = ['Active', 'Inactive'];
+const EMPLOYEE_CATEGORIES = ['Full-time', 'Part-time', 'Intern', 'Contract'];
 
 export default function BasicInfoEditor({
   values,
@@ -23,6 +24,23 @@ export default function BasicInfoEditor({
   const managerOptions = (employees || [])
     .filter((e) => e._id !== currentId)
     .map((e) => ({ value: e._id, label: `${employeeFullName(e)}${e.employeeId ? ` (${e.employeeId})` : ''}` }));
+
+  const selectedDepartment = values.department;
+  const filteredDesignations = (designations || []).filter((d) => {
+    if (!selectedDepartment) return true;
+    const designationDeptId = d.departmentId || d.department?.id || d.department?._id;
+    return !designationDeptId || designationDeptId === selectedDepartment;
+  });
+
+  const handleDepartmentChange = (e) => {
+    const dept = e.target.value;
+    set('department', dept);
+    if (values.designation) {
+      const current = (designations || []).find((d) => d._id === values.designation);
+      const currentDeptId = current?.departmentId || current?.department?.id || current?.department?._id;
+      if (dept && currentDeptId && currentDeptId !== dept) set('designation', '');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -95,7 +113,7 @@ export default function BasicInfoEditor({
               label="Department *"
               name="department"
               value={values.department}
-              onChange={(e) => set('department', e.target.value)}
+              onChange={handleDepartmentChange}
               placeholder="Select department"
               error={errors.department}
               options={(depts || []).map((d) => ({ value: d._id, label: d.name }))}
@@ -104,7 +122,14 @@ export default function BasicInfoEditor({
             <div className="hidden sm:block" />
             <Input label="Sub Department 1" name="subDepartment1" value={values.subDepartment1} onChange={(e) => set('subDepartment1', e.target.value)} placeholder="Sub department 1" />
             <Input label="Sub Department 2" name="subDepartment2" value={values.subDepartment2} onChange={(e) => set('subDepartment2', e.target.value)} placeholder="Sub department 2" />
-            <Input label="Category" name="category" value={values.category} onChange={(e) => set('category', e.target.value)} placeholder="Category" />
+            <Select
+              label="Category"
+              name="category"
+              value={values.category}
+              onChange={(e) => set('category', e.target.value)}
+              placeholder="Select category"
+              options={EMPLOYEE_CATEGORIES}
+            />
             <Input label="Sub Category" name="subCategory" value={values.subCategory} onChange={(e) => set('subCategory', e.target.value)} placeholder="Sub category" />
 
             <Select
@@ -112,9 +137,9 @@ export default function BasicInfoEditor({
               name="designation"
               value={values.designation}
               onChange={(e) => set('designation', e.target.value)}
-              placeholder="Select designation"
+              placeholder={selectedDepartment ? 'Select designation' : 'Select department first (optional)'}
               error={errors.designation}
-              options={(designations || []).map((d) => ({ value: d._id, label: d.name }))}
+              options={filteredDesignations.map((d) => ({ value: d._id, label: d.name }))}
             />
             <Input label="Grade / Cadre" name="grade" value={values.grade} onChange={(e) => set('grade', e.target.value)} placeholder="Grade or cadre" />
             <Select
