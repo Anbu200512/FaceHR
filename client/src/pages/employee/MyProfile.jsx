@@ -98,7 +98,7 @@ export default function MyProfile() {
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{fullName}</h2>
               <Badge>{emp.status}</Badge>
-              <Badge>{emp.employmentType}</Badge>
+              <Badge>{emp.employmentType || emp.category || '—'}</Badge>
             </div>
             <p className="font-mono text-xs font-semibold text-brand-600 dark:text-brand-400">{emp.employeeId}</p>
             <RoleBadges roles={emp.roles} className="mt-1.5" />
@@ -112,11 +112,18 @@ export default function MyProfile() {
               <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
                 <Phone className="h-4 w-4 text-slate-400" /> {mobile}
               </span>
-              <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                <CalendarDays className="h-4 w-4 text-slate-400" /> Joining {formatDate(emp.joiningDate)}
-              </span>
-              <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                <Briefcase className="h-4 w-4 text-slate-400" /> {emp.employmentType}
+              <span className="inline-flex flex-wrap items-center gap-2 text-slate-600 dark:text-slate-300">
+                <span className="inline-flex items-center gap-1.5">
+                  <Briefcase className="h-4 w-4 text-slate-400" /> {emp.employmentType || emp.category || '—'}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <CalendarDays className="h-4 w-4 text-slate-400" /> Joining {formatDate(emp.joiningDate)}
+                </span>
+                {emp.employmentType === 'Intern' && emp.internEndDate ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <CalendarDays className="h-4 w-4 text-slate-400" /> End {formatDate(emp.internEndDate)}
+                  </span>
+                ) : null}
               </span>
             </div>
           </div>

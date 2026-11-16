@@ -67,11 +67,7 @@ export default function EmployeeHome() {
                 <p className="truncate font-bold text-slate-900 dark:text-slate-100">{emp.firstName} {emp.lastName}</p>
                 <p className="text-xs text-slate-400">
                   {emp.designation?.name || '—'} · {emp.department?.name || '—'}
-                  {emp.employmentType
-                    ? emp.employmentType === 'Intern' && emp.internEndDate
-                      ? ` · Intern (ends ${formatDate(emp.internEndDate)})`
-                      : ` · ${emp.employmentType}`
-                    : ''}
+                  {emp.employmentType ? ` · ${emp.employmentType}` : ''}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {rec?.status ? <Badge>{rec.status}</Badge> : <Badge>Not Checked In</Badge>}

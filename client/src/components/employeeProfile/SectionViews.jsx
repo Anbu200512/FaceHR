@@ -76,6 +76,10 @@ export function BasicDetailsSectionView({ emp }) {
         <Row icon={FileText} label="Mobile Number" value={emp.phone} />
         <Row icon={FileText} label="Department" value={emp.department?.name} />
         <Row icon={FileText} label="Designation" value={emp.designation?.name} />
+        <Row icon={FileText} label="Employment Type" value={emp.employmentType || emp.category} />
+        {emp.employmentType === 'Intern' && (
+          <Row icon={FileText} label="Intern End Date" value={formatDate(emp.internEndDate)} />
+        )}
         <Row icon={FileText} label="Reporting Manager" value={managerLabel(emp.manager1, emp.reportingManager)} />
         <Row icon={FileText} label="Roles" value={(emp.roles || []).join(', ')} />
         <Row icon={FileText} label="Status" value={emp.status} />
