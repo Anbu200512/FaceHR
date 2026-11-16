@@ -65,7 +65,10 @@ export default function EmployeeHome() {
               <Avatar name={user?.name} src={resolveAsset(emp.profilePhoto)} size="lg" />
               <div className="min-w-0">
                 <p className="truncate font-bold text-slate-900 dark:text-slate-100">{emp.firstName} {emp.lastName}</p>
-                <p className="text-xs text-slate-400">{emp.designation?.name || '—'} · {emp.department?.name || '—'}</p>
+                <p className="text-xs text-slate-400">
+                  {emp.designation?.name || '—'} · {emp.department?.name || '—'}
+                  {emp.employmentType ? ` · ${emp.employmentType}` : ''}
+                </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {rec?.status ? <Badge>{rec.status}</Badge> : <Badge>Not Checked In</Badge>}
                   {rec?.faceVerified && <Badge>Face Verified</Badge>}
