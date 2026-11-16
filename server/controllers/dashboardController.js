@@ -494,25 +494,7 @@ const getDashboard = asyncHandler(async (req, res) => {
   if (isCurrentMonth) {
     const rows = await computeDayStatus(employees, now);
 
-    // Fallback to the latest record when today has no check-in yet (weekend / before
-    // office start) and the employee is not on approved leave today.
-    const noRecIds = rows.filter((r) => !r.record && r.status === 'Absent').map((r) => r.employee.id);
-    if (noRecIds.length) {
-      const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-      const latest = await prisma.attendance.findMany({
-        where: { employeeRefId: { in: noRecIds }, checkInTime: { gte: since } },
-        orderBy: { checkInTime: { sort: 'desc', nulls: 'last' } },
-        select: { employeeRefId: true, status: true },
-      });
-      const latestMap = new Map();
-      for (const rec of latest) {
-        if (!latestMap.has(rec.employeeRefId)) latestMap.set(rec.employeeRefId, rec);
-      }
-      rows.forEach((r) => {
-        const rec = latestMap.get(r.employee.id);
-        if (rec) r.status = rec.status;
-      });
-    }
+    // Do NOT override today's status with old/latest records; keeps "Present Today" accurate.
 
     const items = rows.map((r) => classifyDayItem(r.employee, r.status));
 
