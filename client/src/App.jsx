@@ -40,6 +40,7 @@ const MyRegularizations = lazy(() => import('./pages/employee/MyRegularizations'
 const MyPayslips = lazy(() => import('./pages/employee/Payslips'));
 const EmployeeAnnouncements = lazy(() => import('./pages/employee/Announcements'));
 const EmployeeHolidays = lazy(() => import('./pages/employee/Holidays'));
+const EmployeeWeekOff = lazy(() => import('./pages/employee/WeekOff'));
 const Resignation = lazy(() => import('./pages/employee/Resignation'));
 const MyProfile = lazy(() => import('./pages/employee/MyProfile'));
 
@@ -119,6 +120,7 @@ export default function App() {
           <Route path="payslips" element={<EmployeePayslipsGuard />} />
           <Route path="announcements" element={<EmployeeAnnouncements />} />
           <Route path="holidays" element={<EmployeeHolidays />} />
+          <Route path="weekoff" element={<EmployeeWeekOff />} />
           <Route path="resignation" element={<Resignation />} />
           <Route path="profile" element={<MyProfile />} />
         </Route>

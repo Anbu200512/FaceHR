@@ -14,6 +14,7 @@ const {
   replaceEmployeeDocument,
   deleteEmployeeDocument,
   updateEmployeeSection,
+  updateEmployeeSectionAccess,
   sendEmployeeLoginDetails,
   uploadEmployeePhoto,
 } = require('../controllers/employeeController');
@@ -29,7 +30,8 @@ router.patch('/:id/status', authorize('admin'), setEmployeeStatus);
 router.delete('/:id', authorize('admin'), deleteEmployee);
 router.post('/:id/send-login', authorize('admin'), sendEmployeeLoginDetails);
 router.post('/:id/photo', authorize('admin'), uploadProfilePhoto, uploadEmployeePhoto);
-router.patch('/:id/sections/:section', authorize('admin'), updateEmployeeSection);
+router.patch('/:id/sections/:section', authorize('admin', 'employee'), updateEmployeeSection);
+router.patch('/:id/section-access', authorize('admin'), updateEmployeeSectionAccess);
 router.post('/:id/documents', authorize('admin'), uploadDocument, uploadEmployeeDocument);
 router.put('/:id/documents/:docId', authorize('admin'), uploadDocument, replaceEmployeeDocument);
 router.delete('/:id/documents/:docId', authorize('admin'), deleteEmployeeDocument);

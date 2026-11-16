@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, Phone, CalendarDays, Briefcase, Lock, ScanFace } from 'lucide-react';
+import { Mail, Phone, CalendarDays, Briefcase, Lock, ScanFace, LockKeyhole } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../hooks/useApi';
@@ -24,12 +24,13 @@ import {
   ReportingManagerCard,
   RoleBadges,
 } from '../../components/employeeProfile/SectionViews';
+import EmployeeSectionEditor from '../../components/employeeProfile/SectionEditors';
 import { EMPLOYEE_PROFILE_TABS } from '../../components/employeeForm/constants';
 import clsx from 'clsx';
 
 // Mirror of the Admin Portal's employee profile tabs, with the admin-only
 // Certification section removed.
-const SELF_TABS = EMPLOYEE_PROFILE_TABS.filter((t) => t.id !== 'certification');
+const SELF_TABS = EMPLOYEE_PROFILE_TABS.filter((t) => t.id !== 'certification' && t.id !== 'weekOff');
 
 const SECTION_VIEWS = {
   contact: ContactSectionView,
@@ -178,7 +179,20 @@ export default function MyProfile() {
       </div>
 
       {/* Section content */}
-      {SectionView && <SectionView key={tab} emp={emp} onPreview={onPreviewDocument} />}
+      {(() => {
+        const accessMap = emp.sectionEditAccess && typeof emp.sectionEditAccess === 'object' ? emp.sectionEditAccess : null;
+        const key = tab === 'qualification' ? 'qualifications' : tab;
+        if (key === 'weekOff') {
+          return <EmployeeSectionEditor key={tab} section={tab} emp={emp} onSaved={refetch} readOnly />;
+        }
+        const allowed = ['contact','bank','personal','family','emergency','experience','qualifications','documents'].includes(key)
+          ? (accessMap && Object.prototype.hasOwnProperty.call(accessMap, key) ? accessMap[key] !== false : (key === 'bank' && emp.employmentType === 'Intern' ? false : true))
+          : true;
+        if (!allowed) {
+          return SectionView ? <SectionView key={tab} emp={emp} onPreview={onPreviewDocument} /> : null;
+        }
+        return <EmployeeSectionEditor key={tab} section={tab} emp={emp} onSaved={refetch} />;
+      })()}
 
       <Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.label} size="md">
         {preview && (

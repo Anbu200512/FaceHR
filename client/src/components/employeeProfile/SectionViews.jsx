@@ -1,4 +1,4 @@
-import { IdCard, UserRound, Landmark, User, UsersRound, Briefcase, GraduationCap, PhoneCall, FileUp, FileText, CalendarDays, Settings2, Plane, Mail, Phone } from 'lucide-react';
+import { IdCard, UserRound, Landmark, User, UsersRound, Briefcase, GraduationCap, PhoneCall, FileUp, FileText, CalendarDays, Settings2, Plane, Mail, Phone, MapPin, Heart, Building2 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import Badge from '../ui/Badge';
 import Avatar from '../Avatar';
@@ -16,52 +16,53 @@ export function formatFileSize(bytes) {
 
 function Row({ icon: Icon, label, value }) {
   return (
-    <div className="flex items-start gap-3">
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-      <div className="min-w-0">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
-        <p className="mt-0.5 break-words text-sm font-medium text-slate-700 dark:text-slate-200">{value || '—'}</p>
+    <div className="flex items-start gap-3 rounded-xl border border-slate-200/80 bg-white px-4 py-3 dark:border-slate-700/80 dark:bg-slate-900/40">
+      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+        {Icon ? <Icon className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+        <p className="mt-0.5 break-words text-sm font-medium text-slate-800 dark:text-slate-100">{value || '—'}</p>
       </div>
     </div>
   );
 }
 
-function SectionCard({ title, icon: Icon, children }) {
+function SectionCard({ title, icon: Icon, subtitle, children }) {
   return (
-    <Card>
-      <div className="flex items-start gap-3 border-b px-5 py-4 dark:border-slate-700">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
-          {Icon && <Icon className="h-4 w-4" />}
+    <Card className="overflow-hidden border-slate-200/80 shadow-sm dark:border-slate-700/80">
+      <div className="flex items-start gap-3 border-b border-slate-200/80 bg-gradient-to-r from-slate-50 to-white px-5 py-4 dark:border-slate-700/80 dark:from-slate-800/50 dark:to-slate-900">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:ring-brand-500/20">
+          {Icon && <Icon className="h-5 w-5" />}
         </div>
-        <h3 className="font-bold text-slate-900 dark:text-slate-100">{title}</h3>
+        <div className="min-w-0">
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{title}</h3>
+          {subtitle && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>}
+        </div>
       </div>
-      <div className="p-5">{children}</div>
+      <div className="p-4 sm:p-5">{children}</div>
     </Card>
   );
 }
 
 function Grid({ children }) {
-  return <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">{children}</div>;
+  return <div className="grid gap-3 sm:grid-cols-2">{children}</div>;
 }
 
 function Empty({ label = 'No information provided' }) {
-  return <p className="py-2 text-sm text-slate-400">{label}</p>;
+  return <p className="py-3 text-sm text-slate-400">{label}</p>;
 }
 
 function ListItem({ title, fields }) {
   const rows = fields.filter((f) => f.value || f.value === 0);
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-700">
-      <div className="border-b px-4 py-2.5 dark:border-slate-700">
-        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</p>
-      </div>
-      <div className="p-4">
-        {rows.length ? (
-          <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">{rows.map((r) => <Row key={r.label} {...r} />)}</div>
-        ) : (
-          <Empty />
-        )}
-      </div>
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/40 p-4 dark:border-slate-700 dark:bg-slate-800/30">
+      <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100">{title}</p>
+      {rows.length ? (
+        <div className="grid gap-3 sm:grid-cols-2">{rows.map((r) => <Row key={r.label} {...r} />)}</div>
+      ) : (
+        <Empty />
+      )}
     </div>
   );
 }
@@ -151,11 +152,11 @@ export function ReportingManagerCard({ emp }) {
 export function ContactSectionView({ emp }) {
   const addr = formatAddress(emp.contact?.address) || emp.address;
   return (
-    <SectionCard title="Contact" icon={UserRound}>
+    <SectionCard title="Contact" subtitle="Reach-out details for this employee" icon={UserRound}>
       <Grid>
-        <Row icon={FileText} label="Personal Email" value={emp.contact?.personalEmail} />
-        <Row icon={FileText} label="Alternate Mobile" value={emp.contact?.alternatePhone} />
-        <Row icon={FileText} label="Full Address" value={addr} />
+        <Row icon={Mail} label="Personal Email" value={emp.contact?.personalEmail || emp.email} />
+        <Row icon={Phone} label="Alternate Mobile" value={emp.contact?.alternatePhone || emp.phone} />
+        <Row icon={MapPin} label="Full Address" value={addr} />
       </Grid>
     </SectionCard>
   );
@@ -196,7 +197,7 @@ export function PersonalSectionView({ emp }) {
 
 export function FamilySectionView({ emp }) {
   return (
-    <SectionCard title="Family" icon={UsersRound}>
+    <SectionCard title="Family" subtitle="Emergency and family references" icon={UsersRound}>
       <div className="space-y-4">
         {(emp.family || []).length ? (
           emp.family.map((m, i) => (
@@ -204,12 +205,12 @@ export function FamilySectionView({ emp }) {
               key={i}
               title={`${m.fullName || 'Member'}${m.relationship ? ` · ${m.relationship}` : ''}`}
               fields={[
-                { icon: FileText, label: 'Full Name', value: m.fullName },
-                { icon: FileText, label: 'Relationship', value: m.relationship },
-                { icon: FileText, label: 'Date of Birth', value: formatDate(m.dateOfBirth) },
-                { icon: FileText, label: 'Phone Number', value: m.phoneNumber },
-                { icon: FileText, label: 'Occupation', value: m.occupation },
-                { icon: FileText, label: 'Address', value: m.address },
+                { icon: User, label: 'Full Name', value: m.fullName },
+                { icon: Heart, label: 'Relationship', value: m.relationship },
+                { icon: CalendarDays, label: 'Date of Birth', value: formatDate(m.dateOfBirth) },
+                { icon: Phone, label: 'Phone Number', value: m.phoneNumber },
+                { icon: Briefcase, label: 'Occupation', value: m.occupation },
+                { icon: MapPin, label: 'Address', value: m.address },
               ]}
             />
           ))
@@ -221,7 +222,7 @@ export function FamilySectionView({ emp }) {
 
 export function ExperienceSectionView({ emp }) {
   return (
-    <SectionCard title="Experience" icon={Briefcase}>
+    <SectionCard title="Experience" subtitle="Previous employment history" icon={Briefcase}>
       <div className="space-y-4">
         {(emp.experience || []).length ? (
           emp.experience.map((x, i) => {
@@ -231,11 +232,11 @@ export function ExperienceSectionView({ emp }) {
                 key={i}
                 title={`${x.company || 'Company'}${x.jobTitle ? ` · ${x.jobTitle}` : ''}`}
                 fields={[
-                  { icon: FileText, label: 'Company', value: x.company },
-                  { icon: FileText, label: 'Job Title', value: x.jobTitle },
+                  { icon: Building2, label: 'Company', value: x.company },
+                  { icon: Briefcase, label: 'Job Title', value: x.jobTitle },
                   { icon: FileText, label: 'Employment Type', value: x.employmentType },
-                  { icon: FileText, label: 'Period', value: period },
-                  { icon: FileText, label: 'Location', value: x.location },
+                  { icon: CalendarDays, label: 'Period', value: period },
+                  { icon: MapPin, label: 'Location', value: x.location },
                   { icon: FileText, label: 'Description', value: x.description },
                 ]}
               />
@@ -265,7 +266,7 @@ export function WeekOffSectionView({ emp }) {
 
 export function QualificationSectionView({ emp }) {
   return (
-    <SectionCard title="Qualification" icon={GraduationCap}>
+    <SectionCard title="Qualification" subtitle="Education and academic background" icon={GraduationCap}>
       <div className="space-y-4">
         {(emp.qualifications || []).length ? (
           emp.qualifications.map((q, i) => (
@@ -273,10 +274,10 @@ export function QualificationSectionView({ emp }) {
               key={i}
               title={`${q.degree || 'Degree'}${q.institution ? ` · ${q.institution}` : ''}`}
               fields={[
-                { icon: FileText, label: 'Degree', value: q.degree },
-                { icon: FileText, label: 'Institution', value: q.institution },
+                { icon: GraduationCap, label: 'Degree', value: q.degree },
+                { icon: Building2, label: 'Institution', value: q.institution },
                 { icon: FileText, label: 'Field of Study', value: q.fieldOfStudy },
-                { icon: FileText, label: 'Years', value: [q.startYear, q.endYear].filter(Boolean).join(' — ') },
+                { icon: CalendarDays, label: 'Years', value: [q.startYear, q.endYear].filter(Boolean).join(' — ') },
                 { icon: FileText, label: 'Grade', value: q.grade },
                 { icon: FileText, label: 'Description', value: q.description },
               ]}

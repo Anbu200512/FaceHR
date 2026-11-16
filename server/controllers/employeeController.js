@@ -27,6 +27,19 @@ const STRING_FIELDS = [
 const BOOLEAN_FIELDS = ['probationManage', 'exEmployee'];
 const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Intern', 'Contract', 'Temporary', 'Consultant'];
 
+const EMPLOYEE_EDITABLE_SECTIONS = ['contact', 'bank', 'personal', 'family', 'emergency', 'experience', 'qualifications', 'documents'];
+
+const defaultSectionEditAccess = (employmentType) => ({
+  contact: true,
+  bank: employmentType !== 'Intern',
+  personal: true,
+  family: true,
+  emergency: true,
+  experience: true,
+  qualifications: true,
+  documents: true,
+});
+
 const toBool = (v) => v === true || v === 'true';
 
 /** Basic scalar employee fields. Relation ids (department/office/designation) are handled separately. */
@@ -382,6 +395,11 @@ const createEmployee = asyncHandler(async (req, res) => {
 
   const roles = parseRoles(b.roles);
   if (roles !== undefined) employeeData.roles = roles;
+  if (b.sectionEditAccess && typeof b.sectionEditAccess === 'object') {
+    employeeData.sectionEditAccess = b.sectionEditAccess;
+  } else {
+    employeeData.sectionEditAccess = defaultSectionEditAccess(employeeData.employmentType || 'Full-time');
+  }
 
   if (b.reportingManagerId && !sanitizeId(b.reportingManagerId)) {
     return res.status(400).json({ success: false, message: 'Invalid reporting manager' });
@@ -779,6 +797,20 @@ const updateEmployeeSection = asyncHandler(async (req, res) => {
   const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
 
+  if (req.user?.role === 'employee') {
+    if (String(req.user.employee) !== String(employee.id)) {
+      return res.status(403).json({ success: false, message: 'You can only edit your own profile' });
+    }
+    const accessKey = section === 'qualification' ? 'qualifications' : section;
+    if (!EMPLOYEE_EDITABLE_SECTIONS.includes(accessKey)) {
+      return res.status(403).json({ success: false, message: 'You cannot edit this section' });
+    }
+    const map = employee.sectionEditAccess && typeof employee.sectionEditAccess === 'object' ? employee.sectionEditAccess : null;
+    const allowedByDefault = defaultSectionEditAccess(employee.employmentType || 'Full-time');
+    const allowed = map && Object.prototype.hasOwnProperty.call(map, accessKey) ? map[accessKey] !== false : allowedByDefault[accessKey] !== false;
+    if (!allowed) return res.status(403).json({ success: false, message: 'Editing this section is locked by admin' });
+  }
+
   const data = req.body.data !== undefined ? req.body.data : req.body;
 
   switch (section) {
@@ -1071,6 +1103,23 @@ const normalizeFaceDescriptor = (d) => {
   return null;
 };
 
+const updateEmployeeSectionAccess = asyncHandler(async (req, res) => {
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
+  if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
+  const body = req.body || {};
+  const raw = body.sectionEditAccess && typeof body.sectionEditAccess === 'object' ? body.sectionEditAccess : null;
+  let next = raw || defaultSectionEditAccess(employee.employmentType || 'Full-time');
+  // enforce bank=false for interns unless explicitly allowed? safest: for interns default bank false
+  if (employee.employmentType === 'Intern') {
+    next = { ...next, bank: false };
+  }
+  const cleaned = {};
+  EMPLOYEE_EDITABLE_SECTIONS.forEach((k) => { cleaned[k] = next[k] !== false; });
+  if (employee.employmentType === 'Intern') cleaned.bank = false;
+  await prisma.employee.update({ where: { id: employee.id }, data: { sectionEditAccess: cleaned } });
+  res.json({ success: true, message: 'Section edit access updated', data: { sectionEditAccess: cleaned } });
+});
+
 module.exports = {
   getEmployees,
   getEmployee,
@@ -1083,6 +1132,7 @@ module.exports = {
   replaceEmployeeDocument,
   deleteEmployeeDocument,
   updateEmployeeSection,
+  updateEmployeeSectionAccess,
   sendEmployeeLoginDetails,
   uploadEmployeePhoto,
   normalizeFaceDescriptor,

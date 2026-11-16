@@ -49,18 +49,18 @@ export const EMPLOYEE_PROFILE_TABS = [
 // self-service mirror excludes Admin, Document and Immigration.
 export const ADMIN_PROFILE_TABS = [
   { id: 'attendance', label: 'Attendance', icon: MapPinned },
-  { id: 'contact', label: 'Contact', icon: UserRound },
-  { id: 'bank', label: 'Bank Details', icon: Landmark },
+  { id: 'admin', label: 'Admin', icon: Settings2 },
   { id: 'salary', label: 'Salary', icon: Banknote },
   { id: 'pf', label: 'PF', icon: PiggyBank },
-  { id: 'admin', label: 'Admin', icon: Settings2 },
+  { id: 'contact', label: 'Contact', icon: UserRound },
+  { id: 'bank', label: 'Bank Details', icon: Landmark },
   { id: 'personal', label: 'Personal', icon: User },
   { id: 'family', label: 'Family', icon: UsersRound },
   { id: 'emergency', label: 'Emergency Contact', icon: PhoneCall },
   { id: 'experience', label: 'Experience', icon: Briefcase },
   { id: 'weekOff', label: 'Week Off', icon: CalendarDays },
   { id: 'qualification', label: 'Qualification', icon: GraduationCap },
-  { id: 'documents', label: 'Document', icon: FileUp },
+  { id: 'documents', label: 'Documents', icon: FileUp },
   { id: 'immigration', label: 'Immigration', icon: Plane },
 ];
 
@@ -160,7 +160,10 @@ export const MARITAL_STATUSES = ['Single', 'Married', 'Divorced', 'Widowed'];
 export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 export const ACCOUNT_TYPES = ['Savings', 'Current', 'Salary', 'Fixed Deposit', 'Other'];
 export const RELATIONSHIPS = ['Spouse', 'Parent', 'Child', 'Sibling', 'Relative', 'Friend', 'Other'];
-export const YEARS = Array.from({ length: 68 }, (_, i) => String(new Date().getFullYear() + 1 - i));
+export const YEARS = Array.from(
+  { length: 2030 - 1958 + 1 },
+  (_, i) => String(2030 - i)
+);
 export const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Intern', 'Contract', 'Temporary', 'Consultant'];
 
 export const COMMON_ROLES = [

@@ -90,24 +90,24 @@ function useSave(context) {
   return [run, saving];
 }
 
-export default function EmployeeSectionEditor({ section, emp, onSaved }) {
+export default function EmployeeSectionEditor({ section, emp, onSaved, readOnly = false }) {
   const context = { employeeId: emp._id };
   switch (section) {
-    case 'contact': return <ContactEditor emp={emp} ctx={context} onSaved={onSaved} />;
-    case 'bank': return <BankEditor emp={emp} ctx={context} onSaved={onSaved} />;
-    case 'admin': return <AdminEditor emp={emp} ctx={context} onSaved={onSaved} />;
-    case 'personal': return <PersonalEditor emp={emp} ctx={context} onSaved={onSaved} />;
-    case 'family': return <FamilyEditor emp={emp} ctx={context} onSaved={onSaved} />;
-    case 'emergency': return <EmergencyEditor emp={emp} ctx={context} onSaved={onSaved} />;
-    case 'experience': return <ExperienceEditor emp={emp} ctx={context} onSaved={onSaved} />;
-    case 'weekOff': return <WeekOffEditor emp={emp} ctx={context} onSaved={onSaved} />;
-    case 'qualification': return <QualificationEditor emp={emp} ctx={context} onSaved={onSaved} />;
-    case 'workLocation': return <WorkLocationEditor emp={emp} ctx={context} onSaved={onSaved} />;
-    case 'salary': return <SalaryEditor emp={emp} ctx={context} onSaved={onSaved} />;
-    case 'pf': return <PfEditor emp={emp} ctx={context} onSaved={onSaved} />;
-    case 'documents': return <DocumentsEditor emp={emp} ctx={context} onSaved={onSaved} />;
-    case 'immigration': return <ImmigrationEditor emp={emp} ctx={context} onSaved={onSaved} />;
-    case 'attendance': return <AttendanceEditor emp={emp} ctx={context} onSaved={onSaved} />;
+    case 'contact': return <ContactEditor emp={emp} ctx={context} onSaved={onSaved} readOnly={readOnly} />;
+    case 'bank': return <BankEditor emp={emp} ctx={context} onSaved={onSaved} readOnly={readOnly} />;
+    case 'admin': return <AdminEditor emp={emp} ctx={context} onSaved={onSaved} readOnly={readOnly} />;
+    case 'personal': return <PersonalEditor emp={emp} ctx={context} onSaved={onSaved} readOnly={readOnly} />;
+    case 'family': return <FamilyEditor emp={emp} ctx={context} onSaved={onSaved} readOnly={readOnly} />;
+    case 'emergency': return <EmergencyEditor emp={emp} ctx={context} onSaved={onSaved} readOnly={readOnly} />;
+    case 'experience': return <ExperienceEditor emp={emp} ctx={context} onSaved={onSaved} readOnly={readOnly} />;
+    case 'weekOff': return <WeekOffEditor emp={emp} ctx={context} onSaved={onSaved} readOnly={readOnly} />;
+    case 'qualification': return <QualificationEditor emp={emp} ctx={context} onSaved={onSaved} readOnly={readOnly} />;
+    case 'workLocation': return <WorkLocationEditor emp={emp} ctx={context} onSaved={onSaved} readOnly={readOnly} />;
+    case 'salary': return <SalaryEditor emp={emp} ctx={context} onSaved={onSaved} readOnly={readOnly} />;
+    case 'pf': return <PfEditor emp={emp} ctx={context} onSaved={onSaved} readOnly={readOnly} />;
+    case 'documents': return <DocumentsEditor emp={emp} ctx={context} onSaved={onSaved} readOnly={readOnly} />;
+    case 'immigration': return <ImmigrationEditor emp={emp} ctx={context} onSaved={onSaved} readOnly={readOnly} />;
+    case 'attendance': return <AttendanceEditor emp={emp} ctx={context} onSaved={onSaved} readOnly={readOnly} />;
     default: return <EmptyState title="Unknown section" />;
   }
 }
@@ -190,7 +190,7 @@ function AttendanceEditor({ emp, ctx, onSaved }) {
   );
 }
 
-function ContactEditor({ emp, ctx, onSaved }) {
+function ContactEditor({ emp, ctx, onSaved, readOnly = false }) {
   const c = emp.contact || {};
   const [form, setForm] = useSectionSync(() => ({
     personalEmail: c.personalEmail || '',
@@ -226,10 +226,10 @@ function ContactEditor({ emp, ctx, onSaved }) {
   return (
     <SectionCard title="Contact" subtitle="How to reach the employee outside of work." icon={UserRound}>
       <FieldGrid>
-        <Input label="Personal Email" name="personalEmail" type="email" value={form.personalEmail} onChange={(e) => { set('personalEmail', e.target.value); touch(); }} placeholder="personal@example.com" />
-        <Input label="Alternate Email" name="alternateEmail" type="email" value={form.alternateEmail} onChange={(e) => { set('alternateEmail', e.target.value); touch(); }} placeholder="alternate@example.com" />
-        <Input label="Mobile Number" name="mobileNumber" value={form.mobileNumber} onChange={(e) => { set('mobileNumber', e.target.value); touch(); }} placeholder="+91 98765 43210" />
-        <Input label="Alternate Mobile Number" name="alternatePhone" value={form.alternatePhone} onChange={(e) => { set('alternatePhone', e.target.value); touch(); }} placeholder="+91 90000 00000" />
+        <Input label="Personal Email" name="personalEmail" type="email" value={form.personalEmail} onChange={(e) => { set('personalEmail', e.target.value); touch(); }} placeholder="personal@example.com" disabled={readOnly} />
+        <Input label="Alternate Email" name="alternateEmail" type="email" value={form.alternateEmail} onChange={(e) => { set('alternateEmail', e.target.value); touch(); }} placeholder="alternate@example.com" disabled={readOnly} />
+        <Input label="Mobile Number" name="mobileNumber" value={form.mobileNumber} onChange={(e) => { set('mobileNumber', e.target.value); touch(); }} placeholder="+91 98765 43210" disabled={readOnly} />
+        <Input label="Alternate Mobile Number" name="alternatePhone" value={form.alternatePhone} onChange={(e) => { set('alternatePhone', e.target.value); touch(); }} placeholder="+91 90000 00000" disabled={readOnly} />
       </FieldGrid>
 
       <div className="mt-5">
@@ -269,7 +269,7 @@ function ContactEditor({ emp, ctx, onSaved }) {
 
 const EMPTY_ADDRESS = { line1: '', line2: '', city: '', state: '', country: '', pincode: '' };
 
-function BankEditor({ emp, ctx, onSaved }) {
+function BankEditor({ emp, ctx, onSaved, readOnly = false }) {
   const b = emp.bankDetails || {};
   const [form, setForm] = useSectionSync(() => ({
     accountHolderName: b.accountHolderName || '',
@@ -298,13 +298,13 @@ function BankEditor({ emp, ctx, onSaved }) {
   return (
     <SectionCard title="Bank Details" subtitle="Where payroll and reimbursements are sent. Not shown in the employee list." icon={Landmark}>
       <FieldGrid>
-        <Input label="Account Holder Name" name="accountHolderName" value={form.accountHolderName} onChange={(e) => set('accountHolderName', e.target.value)} placeholder="Arul Prakash" />
-        <Input label="Bank Name" name="bankName" value={form.bankName} onChange={(e) => set('bankName', e.target.value)} placeholder="HDFC Bank" />
-        <Input label="Account Number" name="accountNumber" value={form.accountNumber} onChange={(e) => set('accountNumber', e.target.value)} placeholder="01234567890123" />
-        <Input label="Confirm Account Number" name="confirmAccountNumber" value={form.confirmAccountNumber} onChange={(e) => set('confirmAccountNumber', e.target.value)} placeholder="Re-enter account number" />
-        <Input label="IFSC Code" name="ifscCode" value={form.ifscCode} onChange={(e) => set('ifscCode', e.target.value)} placeholder="HDFC0001234" />
-        <Input label="Branch Name" name="branchName" value={form.branchName} onChange={(e) => set('branchName', e.target.value)} placeholder="Anna Nagar" />
-        <Select label="Account Type" name="accountType" value={form.accountType} onChange={(e) => set('accountType', e.target.value)} placeholder="Select account type" options={ACCOUNT_TYPES} />
+          <Input label="Account Holder Name" name="accountHolderName" value={form.accountHolderName} onChange={(e) => set('accountHolderName', e.target.value)} placeholder="Arul Prakash" disabled={readOnly} />
+          <Input label="Bank Name" name="bankName" value={form.bankName} onChange={(e) => set('bankName', e.target.value)} placeholder="HDFC Bank" disabled={readOnly} />
+          <Input label="Account Number" name="accountNumber" value={form.accountNumber} onChange={(e) => set('accountNumber', e.target.value)} placeholder="01234567890123" disabled={readOnly} />
+          <Input label="Confirm Account Number" name="confirmAccountNumber" value={form.confirmAccountNumber} onChange={(e) => set('confirmAccountNumber', e.target.value)} placeholder="Re-enter account number" disabled={readOnly} />
+          <Input label="IFSC Code" name="ifscCode" value={form.ifscCode} onChange={(e) => set('ifscCode', e.target.value)} placeholder="HDFC0001234" disabled={readOnly} />
+          <Input label="Branch Name" name="branchName" value={form.branchName} onChange={(e) => set('branchName', e.target.value)} placeholder="Anna Nagar" disabled={readOnly} />
+          <Select label="Account Type" name="accountType" value={form.accountType} onChange={(e) => set('accountType', e.target.value)} placeholder="Select account type" options={ACCOUNT_TYPES} disabled={readOnly} />
       </FieldGrid>
       <SaveBar onSave={onSave} saving={saving} dirty={dirty} />
     </SectionCard>
@@ -539,7 +539,7 @@ function AdminEditor({ emp, ctx, onSaved }) {
 
 const GENDERS = ['Male', 'Female', 'Other'];
 
-function PersonalEditor({ emp, ctx, onSaved }) {
+function PersonalEditor({ emp, ctx, onSaved, readOnly = false }) {
   const p = emp.personal || {};
   const [form, setForm] = useSectionSync(() => ({
     dateOfBirth: toInputDate(emp.dateOfBirth),
@@ -575,14 +575,14 @@ function PersonalEditor({ emp, ctx, onSaved }) {
   return (
     <SectionCard title="Personal" subtitle="Personal and demographic information." icon={User}>
       <FieldGrid>
-        <Input label="Date of Birth" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={(e) => set('dateOfBirth', e.target.value)} />
-        <Select label="Gender" name="gender" value={form.gender} onChange={(e) => set('gender', e.target.value)} options={GENDERS} />
-        <Select label="Marital Status" name="maritalStatus" value={form.maritalStatus} onChange={(e) => set('maritalStatus', e.target.value)} placeholder="Select marital status" options={MARITAL_STATUSES} />
-        <Select label="Blood Group" name="bloodGroup" value={form.bloodGroup} onChange={(e) => set('bloodGroup', e.target.value)} placeholder="Select blood group" options={BLOOD_GROUPS} />
-        <Input label="Nationality" name="nationality" value={form.nationality} onChange={(e) => set('nationality', e.target.value)} placeholder="Indian" />
-        <Input label="Personal Email" name="personalEmail" type="email" value={form.personalEmail} onChange={(e) => set('personalEmail', e.target.value)} placeholder="personal@example.com" />
-        <Input label="Mobile Number" name="mobileNumber" value={form.mobileNumber} onChange={(e) => set('mobileNumber', e.target.value)} placeholder="+91 98765 43210" />
-        <Textarea label="Address" name="address" className="sm:col-span-2" value={form.address} onChange={(e) => set('address', e.target.value)} placeholder="Street, City, State" />
+        <Input label="Date of Birth" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={(e) => set('dateOfBirth', e.target.value)} disabled={readOnly} />
+        <Select label="Gender" name="gender" value={form.gender} onChange={(e) => set('gender', e.target.value)} options={GENDERS} disabled={readOnly} />
+        <Select label="Marital Status" name="maritalStatus" value={form.maritalStatus} onChange={(e) => set('maritalStatus', e.target.value)} placeholder="Select marital status" options={MARITAL_STATUSES} disabled={readOnly} />
+        <Select label="Blood Group" name="bloodGroup" value={form.bloodGroup} onChange={(e) => set('bloodGroup', e.target.value)} placeholder="Select blood group" options={BLOOD_GROUPS} disabled={readOnly} />
+        <Input label="Nationality" name="nationality" value={form.nationality} onChange={(e) => set('nationality', e.target.value)} placeholder="Indian" disabled={readOnly} />
+        <Input label="Personal Email" name="personalEmail" type="email" value={form.personalEmail} onChange={(e) => set('personalEmail', e.target.value)} placeholder="personal@example.com" disabled={readOnly} />
+        <Input label="Mobile Number" name="mobileNumber" value={form.mobileNumber} onChange={(e) => set('mobileNumber', e.target.value)} placeholder="+91 98765 43210" disabled={readOnly} />
+        <Textarea label="Address" name="address" className="sm:col-span-2" value={form.address} onChange={(e) => set('address', e.target.value)} placeholder="Street, City, State" disabled={readOnly} />
       </FieldGrid>
       <SaveBar onSave={onSave} saving={saving} dirty={dirty} />
     </SectionCard>
@@ -731,7 +731,7 @@ function ExperienceEditor({ emp, ctx, onSaved }) {
   );
 }
 
-function WeekOffEditor({ emp, ctx, onSaved }) {
+function WeekOffEditor({ emp, ctx, onSaved, readOnly = false }) {
   const w = emp.weekOff || {};
   const [form, setForm] = useSectionSync(() => ({
     weeklyOffDay: w.weeklyOffDay || '',
@@ -743,6 +743,7 @@ function WeekOffEditor({ emp, ctx, onSaved }) {
   const set = (k, v) => { setForm((f) => ({ ...f, [k]: v })); setDirty(true); };
 
   const toggleDay = (day, on) => {
+    if (readOnly) return;
     setForm((f) => {
       const set2 = new Set(f.workingDays);
       if (on) set2.add(day);
@@ -752,7 +753,32 @@ function WeekOffEditor({ emp, ctx, onSaved }) {
     setDirty(true);
   };
 
-  const onSave = () => save({ section: 'weekOff', payload: form, onSaved, message: 'Week off configuration saved' });
+  const onSave = () => { if (readOnly) return; save({ section: 'weekOff', payload: form, onSaved, message: 'Week off configuration saved' }); };
+
+  if (readOnly) {
+    const weeklyOffDay = form.weeklyOffDay || 'Not set';
+    const secondWeeklyOffDay = form.secondWeeklyOffDay || 'None';
+    return (
+      <SectionCard title="Week Off" subtitle="Your weekly schedule (managed by admin)." icon={CalendarDays}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Primary week off</p>
+            <p className="mt-2 text-base font-semibold text-slate-800 dark:text-slate-100">{weeklyOffDay}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Second week off</p>
+            <p className="mt-2 text-base font-semibold text-slate-800 dark:text-slate-100">{secondWeeklyOffDay}</p>
+          </div>
+        </div>
+        <div className="mt-5">
+          <p className="label">Working Days</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {form.workingDays.map((d) => <Badge key={d} tone="brand">{d}</Badge>)}
+          </div>
+        </div>
+      </SectionCard>
+    );
+  }
 
   return (
     <SectionCard title="Week Off" subtitle="Configure the employee’s weekly off days and working days." icon={CalendarDays}>
@@ -764,6 +790,7 @@ function WeekOffEditor({ emp, ctx, onSaved }) {
           onChange={(e) => { set('weeklyOffDay', e.target.value); if (e.target.value) toggleDay(e.target.value, false); }}
           placeholder="Select a day"
           options={WEEK_DAYS}
+          disabled={readOnly}
         />
         <Select
           label="Second Weekly Off (optional)"
@@ -772,6 +799,7 @@ function WeekOffEditor({ emp, ctx, onSaved }) {
           onChange={(e) => { set('secondWeeklyOffDay', e.target.value); if (e.target.value) toggleDay(e.target.value, false); }}
           placeholder="Select a day"
           options={WEEK_DAYS}
+          disabled={readOnly}
         />
       </FieldGrid>
 
@@ -783,9 +811,9 @@ function WeekOffEditor({ emp, ctx, onSaved }) {
             return (
               <label
                 key={day}
-                className={`cursor-pointer rounded-xl border px-3 py-2.5 text-sm font-medium transition ${on ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400' : 'border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400'}`}
+                className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition ${readOnly ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'} ${on ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400' : 'border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400'}`}
               >
-                <input type="checkbox" className="sr-only" checked={on} onChange={(e) => toggleDay(day, e.target.checked)} />
+                <input type="checkbox" className="sr-only" checked={on} disabled={readOnly} onChange={(e) => toggleDay(day, e.target.checked)} />
                 <span className="flex items-center gap-2">
                   <span className={`h-2 w-2 rounded-full ${on ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
                   {day}
@@ -797,7 +825,7 @@ function WeekOffEditor({ emp, ctx, onSaved }) {
         <p className="mt-2 text-xs text-slate-400">Days that are off will be removed automatically from the working day list.</p>
       </div>
 
-      <SaveBar onSave={onSave} saving={saving} dirty={dirty} />
+      {!readOnly && <SaveBar onSave={onSave} saving={saving} dirty={dirty} />}
     </SectionCard>
   );
 }

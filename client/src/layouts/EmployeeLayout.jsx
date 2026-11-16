@@ -18,6 +18,7 @@ import {
   Wallet,
   Megaphone,
   CalendarCheck,
+  CalendarDays,
 } from 'lucide-react';
 import Logo from '../components/Logo';
 import Avatar from '../components/Avatar';
@@ -37,6 +38,7 @@ const NAV = [
   { to: '/employee/payslips', label: 'Payslips', icon: Wallet, internHidden: true },
   { to: '/employee/announcements', label: 'Announcements', icon: Megaphone },
   { to: '/employee/holidays', label: 'Holidays', icon: CalendarCheck },
+  { to: '/employee/weekoff', label: 'Week Off', icon: CalendarDays },
   { to: '/employee/resignation', label: 'Resignation', icon: FileSignature },
   { to: '/employee/profile', label: 'Profile', icon: UserCircle },
 ];

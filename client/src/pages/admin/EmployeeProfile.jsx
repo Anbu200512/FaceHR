@@ -16,6 +16,7 @@ import {
   LogOut,
   MapPin,
   Clock,
+  Lock,
 } from 'lucide-react';
 import api, { extractError } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
@@ -47,6 +48,17 @@ function captureLocation() {
   });
 }
 
+const SECTION_ACCESS_LABELS = {
+  contact: 'Contact',
+  bank: 'Bank Details',
+  personal: 'Personal',
+  family: 'Family',
+  emergency: 'Emergency Contact',
+  experience: 'Experience',
+  qualifications: 'Qualifications',
+  documents: 'Documents',
+};
+
 export default function EmployeeProfile({ faceMode }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -61,6 +73,7 @@ export default function EmployeeProfile({ faceMode }) {
   const [actionBusy, setActionBusy] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [todayTick, setTodayTick] = useState(0);
+  const [accessBusy, setAccessBusy] = useState(false);
 
   const { data, loading, refetch } = useApi(async () => {
     const { data } = await api.get(`/employees/${id}`);
@@ -151,6 +164,19 @@ export default function EmployeeProfile({ faceMode }) {
       toast.error(extractError(err, 'Could not send login details'));
     } finally {
       setSendBusy(false);
+    }
+  };
+
+  const saveSectionAccess = async (nextMap) => {
+    setAccessBusy(true);
+    try {
+      await api.patch(`/employees/${id}/section-access`, { sectionEditAccess: nextMap });
+      toast.success('Employee edit access updated');
+      refetch();
+    } catch (err) {
+      toast.error(extractError(err, 'Could not update access'));
+    } finally {
+      setAccessBusy(false);
     }
   };
 
@@ -246,6 +272,50 @@ export default function EmployeeProfile({ faceMode }) {
       <div className="mb-6">
         <ReportingManagerCard emp={emp} />
       </div>
+
+      <Card className="mb-6">
+        <div className="flex items-center justify-between border-b px-5 py-4 dark:border-slate-700">
+          <h3 className="font-bold text-slate-900 dark:text-slate-100">Employee Edit Access</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={accessBusy}
+            onClick={() => {
+              const closed = Object.keys(SECTION_ACCESS_LABELS).reduce((acc, k) => ({ ...acc, [k]: false }), {});
+              saveSectionAccess(closed);
+            }}
+          >
+            <Lock className="h-4 w-4" /> Close all
+          </Button>
+        </div>
+        <div className="p-5">
+          <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+            Choose which sections this employee can edit from their profile. Interns cannot have Bank Details access.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {Object.entries(SECTION_ACCESS_LABELS).map(([key, label]) => {
+              const map = emp.sectionEditAccess && typeof emp.sectionEditAccess === 'object' ? emp.sectionEditAccess : null;
+              const checked = map && Object.prototype.hasOwnProperty.call(map, key) ? map[key] !== false : (key === 'bank' && emp.employmentType === 'Intern' ? false : true);
+              const disabled = accessBusy || (key === 'bank' && emp.employmentType === 'Intern');
+              return (
+                <label key={key} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={disabled}
+                    onChange={(e) => {
+                      const next = { ...(map || {}), [key]: e.target.checked };
+                      if (emp.employmentType === 'Intern') next.bank = false;
+                      saveSectionAccess(next);
+                    }}
+                  />
+                  <span className={disabled ? 'text-slate-400' : 'text-slate-700 dark:text-slate-200'}>{label}{key === 'bank' && emp.employmentType === 'Intern' ? ' (locked for Intern)' : ''}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      </Card>
 
       <div className="mb-6 grid gap-6 xl:grid-cols-2">
         <FaceStatusCard emp={emp} hasFace={hasFace} onRegister={() => setRegisterMode(true)} onRemove={() => setRemoveOpen(true)} />

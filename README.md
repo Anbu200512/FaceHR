@@ -32,6 +32,7 @@ A full-stack **PERN** (PostgreSQL · Express · React · Node) Human Resources m
 
 ### 🏢 HR Management
 - Employees: multi-step create/edit form, profile sections, **documents upload** (upload/replace/delete), soft-deactivate, auto-created login account (generated password shown once), "send login details" email.
+- Employment type (Full-time, Part-time, **Intern**, Contract, Temporary, Consultant) with **Intern End Date** (required for Interns, validated after joining date); intern end date clears when switching away from Intern.
 - Departments (with department head), Designations, and office Locations assigned to employees.
 - Leave requests (apply / approve / reject with admin note + notifications), annual leave balance, leave summary.
 - **Resignations**: employee applies, admin approves/rejects, with notifications.
@@ -52,9 +53,9 @@ A full-stack **PERN** (PostgreSQL · Express · React · Node) Human Resources m
 - Employees see published, non-expired announcements and receive in-app notifications.
 
 ### 💰 Payroll & Payslips
-- Generate a monthly payroll run from employee salary, attendance, approved leaves and holidays.
+- Generate a monthly payroll run from employee salary, attendance, approved leaves and holidays (Interns are excluded from payroll runs).
 - Payslips include gross, deductions, loss-of-pay, present/working days and net pay; admins can review, regenerate (until paid) and mark as paid.
-- Employees view their own payslips and salary breakdown.
+- Employees view their own payslips and salary breakdown (Intern employees cannot access payslips).
 
 ### 📊 Reports & Exports
 - Interactive dashboard with today's live board and HR widgets (growth, new joiners, resignations, monthly leave, department/location breakdowns).
@@ -103,7 +104,7 @@ facehr/
 │   │                         # notification, setting, activity, dashboard
 │   ├── routes/               # one router per resource (mounted under /api/*)
 │   ├── utils/                # asyncHandler, date, geo (haversine)
-│   ├── scripts/              # download-face-models.js, pg-dev.ps1 (local Postgres)
+│   ├── scripts/              # download-face-models.js, pg-dev.ps1, deploy/migrate helpers, internEndDateReminders.js
 │   ├── uploads/              # runtime uploads (gitignored)
 │   └── face-models/          # downloaded face-api weights (server side, optional)
 └── client/
@@ -163,6 +164,11 @@ Default departments, locations, designations, settings and the admin account are
 > npm run db:start --workspace server   # start the bundled .pgdata cluster
 > npm run db:status --workspace server
 > npm run db:stop  --workspace server
+> ```
+>
+> Optional: send intern end-date reminders to admins (checks next 7 days by default; set `N_DAYS`):
+> ```bash
+> npm run remind:interns --workspace server
 > ```
 
 ```bash
@@ -252,7 +258,7 @@ Base path: `/api` — responses follow `{ success, message, data?, meta? }`; err
 Leaf CRUD (+ `approve`/`reject`), `GET /leaves/mine`, `GET /leaves/balance`, `GET /leaves/summary` · Resignation CRUD (+ `approve`/`reject`, `GET /resignations/mine`) · Department, Designation and Location CRUD.
 
 ### Holidays / Leave Policies / Regularization / Announcements / Payroll
-`GET /holidays?year=` (CRUD admin) · `GET /leave-policies` (CRUD admin) · `POST /regularizations` + `GET /regularizations/mine` (employee), `GET /regularizations` + `approve`/`reject` (admin) · `GET /announcements` (CRUD admin) · `GET /payroll` + `POST /payroll/generate` + `PUT /payroll/:id/pay` + `DELETE /payroll/:id` (admin), `GET /payroll/mine` + `GET /payroll/payslips/:id` (employee).
+`GET /holidays?year=` (CRUD admin) · `GET /leave-policies` (CRUD admin) · `POST /regularizations` + `GET /regularizations/mine` (employee), `GET /regularizations` + `approve`/`reject` (admin) · `GET /announcements` (CRUD admin) · `GET /payroll` + `POST /payroll/generate` + `PUT /payroll/:id/pay` + `DELETE /payroll/:id` (admin), `GET /payroll/mine` + `GET /payroll/payslips/:id` (employee; returns 403 for Interns).
 
 ### Notifications / Settings / Activity / Dashboard
 `GET /notifications`, `GET /notifications/unread-count`, `PUT /notifications/:id/read`, `PUT /notifications/read-all` · `GET/PUT /settings`, `GET/PUT /settings/attendance` (office time, half-day, geofence) · `GET /activity` (admin) · `GET /dashboard` (admin).

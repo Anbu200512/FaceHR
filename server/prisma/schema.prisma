@@ -96,6 +96,7 @@ model Employee {
   admin              Json?
   immigration        Json?     @default("[]")
   attendanceSettings Json?
+  sectionEditAccess  Json?
 
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
