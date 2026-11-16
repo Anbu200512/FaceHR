@@ -52,7 +52,10 @@ const generateRun = asyncHandler(async (req, res) => {
   const { month, year, notes } = req.body;
   const run = await generatePayroll({ month, year, notes, adminId: req.user.id });
 
-  const users = await prisma.user.findMany({ where: { role: 'employee', active: true }, select: { id: true } });
+  const users = await prisma.user.findMany({
+    where: { role: 'employee', active: true, employeeRef: { employmentType: { not: 'Intern' } } },
+    select: { id: true },
+  });
   await Promise.all(
     users.map((u) =>
       createNotification({
@@ -119,6 +122,13 @@ const deleteRun = asyncHandler(async (req, res) => {
 
 // @route  GET /api/payroll/mine  (employee)
 const getMyPayslips = asyncHandler(async (req, res) => {
+  const emp = await prisma.employee.findUnique({
+    where: { id: req.user.employee },
+    select: { employmentType: true, category: true },
+  });
+  if (emp && (emp.employmentType === 'Intern' || emp.category === 'Intern')) {
+    return res.status(403).json({ success: false, message: 'Payslips are not available for interns' });
+  }
   const where = { employeeRefId: req.user.employee };
   const year = parseInt(req.query.year, 10);
   if (Number.isFinite(year)) where.year = year;
@@ -138,7 +148,7 @@ const getPayslip = asyncHandler(async (req, res) => {
     where: { id: req.params.id },
     relationLoadStrategy: 'join',
     include: {
-      employee: EMPLOYEE_SELECT,
+      employee: { select: { id: true, firstName: true, lastName: true, employeeId: true, profilePhoto: true, department: { select: { id: true, name: true } }, employmentType: true, category: true } },
       payrollRun: { select: { id: true, status: true, notes: true } },
     },
   });
@@ -146,6 +156,9 @@ const getPayslip = asyncHandler(async (req, res) => {
 
   if (req.user.role !== 'admin' && payslip.employeeRefId !== req.user.employee) {
     return res.status(403).json({ success: false, message: 'You can only view your own payslips' });
+  }
+  if (req.user.role !== 'admin' && (payslip.employee?.employmentType === 'Intern' || payslip.employee?.category === 'Intern')) {
+    return res.status(403).json({ success: false, message: 'Payslips are not available for interns' });
   }
 
   res.json({ success: true, data: payslip });

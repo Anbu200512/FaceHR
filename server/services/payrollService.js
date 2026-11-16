@@ -154,7 +154,7 @@ async function generatePayroll({ month, year, adminId, notes }) {
   const workingDates = await listWorkingDates(monthStart, monthEnd, holidaySet);
 
   const employees = await prisma.employee.findMany({
-    where: { status: 'Active' },
+    where: { status: 'Active', employmentType: { not: 'Intern' } },
     orderBy: { employeeId: 'asc' },
   });
 

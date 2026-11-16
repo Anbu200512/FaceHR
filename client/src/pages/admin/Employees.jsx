@@ -35,6 +35,7 @@ export default function Employees() {
   const [designation, setDesignation] = useState(params.get('designation') || '');
   const [branch, setBranch] = useState(params.get('branch') || '');
   const [status, setStatus] = useState(params.get('status') || '');
+  const [employmentType, setEmploymentType] = useState(params.get('employmentType') || '');
   const [page, setPage] = useState(parseInt(params.get('page'), 10) || 1);
   const [pageSize, setPageSize] = useState(25);
   const [deactivateId, setDeactivateId] = useState(null);
@@ -64,9 +65,10 @@ export default function Employees() {
     if (designation) sp.set('designation', designation);
     if (branch) sp.set('branch', branch);
     if (status) sp.set('status', status);
+    if (employmentType) sp.set('employmentType', employmentType);
     if (page > 1) sp.set('page', String(page));
     setParams(sp, { replace: true });
-  }, [debounced, department, designation, branch, status, page, setParams]);
+  }, [debounced, department, designation, branch, status, employmentType, page, setParams]);
 
   const { data, loading, refetch } = useApi(() => {
     const sp = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
@@ -75,8 +77,9 @@ export default function Employees() {
     if (designation) sp.set('designation', designation);
     if (branch) sp.set('branch', branch);
     if (status) sp.set('status', status);
+    if (employmentType) sp.set('employmentType', employmentType);
     return api.get(`/employees?${sp.toString()}`).then((r) => r.data);
-  }, [page, pageSize, debounced, department, designation, branch, status]);
+  }, [page, pageSize, debounced, department, designation, branch, status, employmentType]);
 
   const onPageChange = (p) => {
     setPage(p);
@@ -162,6 +165,15 @@ export default function Employees() {
             <option value="Active">Active</option>
             <option value="Inactive">Inactive</option>
           </select>
+          <select value={employmentType} onChange={(e) => { setEmploymentType(e.target.value); setPage(1); }} className="input">
+            <option value="">All Types</option>
+            <option value="Full-time">Full-time</option>
+            <option value="Part-time">Part-time</option>
+            <option value="Intern">Intern</option>
+            <option value="Contract">Contract</option>
+            <option value="Temporary">Temporary</option>
+            <option value="Consultant">Consultant</option>
+          </select>
         </div>
       </Card>
 
@@ -175,6 +187,7 @@ export default function Employees() {
                 <th className="th">Name</th>
                 <th className="th">Department</th>
                 <th className="th">Designation</th>
+                <th className="th">Employment Type</th>
                 <th className="th">Status</th>
                 <th className="th text-right">Actions</th>
               </tr>
@@ -183,11 +196,11 @@ export default function Employees() {
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} cols={6} />)
               ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={6}>
-                    <EmptyState title="No employees found" message="Try a different search or filter, or add a new employee." />
-                  </td>
-                </tr>
+                    <tr>
+                      <td colSpan={7}>
+                        <EmptyState title="No employees found" message="Try a different search or filter, or add a new employee." />
+                      </td>
+                    </tr>
               ) : (
                 rows.map((emp) => {
                   return (
@@ -203,6 +216,12 @@ export default function Employees() {
                       </td>
                       <td className="td">{emp.department?.name || '—'}</td>
                       <td className="td">{emp.designation?.name || '—'}</td>
+                      <td className="td">
+                        {emp.employmentType || emp.category || '—'}
+                        {emp.employmentType === 'Intern' && emp.internEndDate ? (
+                          <span className="block text-[11px] text-slate-400">Ends {new Date(emp.internEndDate).toLocaleDateString()}</span>
+                        ) : null}
+                      </td>
                       <td className="td"><Badge>{emp.status}</Badge></td>
                       <td className="td">
                         <div className="flex justify-end gap-1">
@@ -242,8 +261,11 @@ export default function Employees() {
                   </p>
                   <p className="text-xs text-slate-400">{emp.employeeId} · {emp.department?.name || 'No dept'}</p>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    {emp.designation?.name || '—'}
+                    {emp.designation?.name || '—'} · {emp.employmentType || emp.category || '—'}
                   </p>
+                  {emp.employmentType === 'Intern' && emp.internEndDate && (
+                    <p className="mt-0.5 text-[11px] text-slate-400">Ends {new Date(emp.internEndDate).toLocaleDateString()}</p>
+                  )}
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     <Badge>{emp.status}</Badge>
                   </div>

@@ -50,11 +50,20 @@ const pickFields = (b) => {
     }
     data.employmentType = et;
     data.category = et;
+    if (et !== 'Intern') {
+      data.internEndDate = null;
+    }
   }
   if (b.internEndDate !== undefined) {
     data.internEndDate = b.internEndDate ? new Date(b.internEndDate) : null;
     if (data.internEndDate && Number.isNaN(data.internEndDate.getTime())) {
       throw new Error('internEndDate must be a valid date');
+    }
+  }
+  if (data.employmentType === 'Intern' && data.internEndDate && b.joiningDate) {
+    const jd = new Date(b.joiningDate);
+    if (!Number.isNaN(jd.getTime()) && data.internEndDate <= jd) {
+      throw new Error('internEndDate must be after joining date');
     }
   }
   return data;
@@ -258,11 +267,13 @@ const getEmployees = asyncHandler(async (req, res) => {
   const department = sanitizeId(req.query.department);
   const designation = sanitizeId(req.query.designation);
   const branch = sanitizeId(req.query.branch || req.query.office);
+  const employmentType = req.query.employmentType ? String(req.query.employmentType).trim() : '';
 
   if (department) where.departmentId = department;
   if (designation) where.designationId = designation;
   if (status) where.status = status;
   if (branch) where.officeId = branch;
+  if (employmentType && EMPLOYMENT_TYPES.includes(employmentType)) where.employmentType = employmentType;
 
   if (noFace) {
     const faces = await prisma.faceProfile.findMany({ select: { employeeRefId: true } });

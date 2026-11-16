@@ -16,7 +16,10 @@ export function validateStep(stepId, v) {
     if (!String(v.department || '').trim()) errors.department = 'Department is required';
     if (!String(v.designation || '').trim()) errors.designation = 'Designation is required';
     if (v.password && String(v.password).length < 6) errors.password = 'Password must be at least 6 characters';
-    if (v.employmentType === 'Intern' && !String(v.internEndDate || '').trim()) errors.internEndDate = 'Intern end date is required';
+    if (v.employmentType === 'Intern') {
+      if (!String(v.internEndDate || '').trim()) errors.internEndDate = 'Intern end date is required';
+      else if (v.joiningDate && new Date(v.internEndDate) <= new Date(v.joiningDate)) errors.internEndDate = 'Intern end date must be after joining date';
+    }
   }
   if (stepId === 'bank') {
     const acct = String(v.bankDetails.accountNumber || '').trim();

@@ -18,7 +18,8 @@
     "db:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pg-dev.ps1 start",
     "db:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pg-dev.ps1 stop",
     "db:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pg-dev.ps1 status",
-    "models:download": "node scripts/download-face-models.js"
+    "models:download": "node scripts/download-face-models.js",
+    "remind:interns": "node scripts/internEndDateReminders.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
