@@ -476,11 +476,14 @@ const getMonthly = asyncHandler(async (req, res) => {
   const recMap = new Map(records.map((r) => [toDateKey(r.date), r]));
   const leaveDays = new Set();
   leaves.forEach((l) => {
-    const d = diffDays(l.startDate, l.endDate);
-    for (let i = 0; i < d; i++) {
-      const day = new Date(l.startDate);
-      day.setDate(l.startDate.getDate() + i);
-      leaveDays.add(toDateKey(day));
+    const leaveStart = startOfDay(l.startDate);
+    const leaveEnd = startOfDay(l.endDate);
+    const rangeStart = leaveStart < start ? start : leaveStart;
+    const rangeEnd = leaveEnd >= end ? new Date(end.getTime() - 86400000) : leaveEnd; // end is exclusive
+    const cursor = new Date(rangeStart);
+    while (cursor <= rangeEnd) {
+      if (!isWeekend(cursor)) leaveDays.add(toDateKey(cursor));
+      cursor.setDate(cursor.getDate() + 1);
     }
   });
 
@@ -552,14 +555,20 @@ async function performMarkAttendance(employeeId, mode, req) {
 
   const settings = await getEffectiveAttendanceSettings(empDoc);
   const requireFace = settings.faceEnabled !== false;
+  const isAdminActor = req.user?.role === 'admin';
 
   const location = parseLocation(req.body.location);
 
-  const geofence = evaluateGeofence(settings, location);
-  if (!geofence.ok) {
-    return { status: 403, code: geofence.code, message: geofence.message, data: { distance: geofence.distance, allowed: geofence.allowed } };
+  let distanceFromCompany = null;
+  if (!isAdminActor) {
+    const geofence = evaluateGeofence(settings, location);
+    if (!geofence.ok) {
+      return { status: 403, code: geofence.code, message: geofence.message, data: { distance: geofence.distance, allowed: geofence.allowed } };
+    }
+    distanceFromCompany = geofence.distance;
+  } else if (location) {
+    distanceFromCompany = computeDistanceFromCompany(location, settings.location);
   }
-  const distanceFromCompany = geofence.distance;
 
   if (requireFace && (!req.file || !req.file.buffer)) {
     return { status: 400, message: 'A face photo is required to mark attendance' };
@@ -608,7 +617,7 @@ async function performMarkAttendance(employeeId, mode, req) {
     : null;
 
   const now = new Date();
-  const deviceInfo = summarizeDevice(req);
+  const deviceInfo = { ...summarizeDevice(req), source: isAdminActor ? 'admin' : 'employee' };
 
   if (mode === 'check-in') {
     const { status, lateMinutes } = await evaluateCheckInStatus(today, now);

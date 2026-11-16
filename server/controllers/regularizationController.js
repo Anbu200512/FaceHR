@@ -170,29 +170,52 @@ async function reviewRegularization(req, res, status) {
     }
 
     const day = startOfDay(row.date);
+    const existingAttendance = await prisma.attendance.findUnique({
+      where: { employeeRefId_date: { employeeRefId: row.employeeRefId, date: day } },
+    });
+    if (existingAttendance) {
+      const hasProof =
+        Boolean(existingAttendance.checkInPhoto || existingAttendance.checkOutPhoto || existingAttendance.faceVerified);
+      const hasPunch = Boolean(existingAttendance.checkInTime || existingAttendance.checkOutTime);
+      const force = req.body.force === true || req.body.force === 'true';
+      if (hasProof && hasPunch && !force) {
+        return res.status(409).json({
+          success: false,
+          message:
+            'Attendance already has face/photo-verified punch data for this day. Re-send approval with force=true to overwrite.',
+          code: 'OVERWRITE_CONFIRMATION_REQUIRED',
+        });
+      }
+    }
+
+    const updateData = {
+      status: attendanceStatus,
+      lateMinutes,
+      workingHoursMinutes,
+      note: adminNote ? `Regularized: ${adminNote}` : 'Regularized by admin',
+      deviceInfo: { regularized: true, regularizationId: row.id },
+    };
+    if (row.requestedCheckIn) updateData.checkInTime = row.requestedCheckIn;
+    if (row.requestedCheckOut) updateData.checkOutTime = row.requestedCheckOut;
+
+    const createData = {
+      employeeRefId: row.employeeRefId,
+      employeeId: row.employeeId,
+      date: day,
+      dayName: getDayName(day),
+      checkInTime: row.requestedCheckIn || null,
+      checkOutTime: row.requestedCheckOut || null,
+      status: attendanceStatus,
+      lateMinutes,
+      workingHoursMinutes,
+      note: adminNote ? `Regularized: ${adminNote}` : 'Regularized by admin',
+      deviceInfo: { regularized: true, regularizationId: row.id },
+    };
+
     attendance = await prisma.attendance.upsert({
       where: { employeeRefId_date: { employeeRefId: row.employeeRefId, date: day } },
-      update: {
-        checkInTime: row.requestedCheckIn,
-        checkOutTime: row.requestedCheckOut,
-        status: attendanceStatus,
-        lateMinutes,
-        workingHoursMinutes,
-        note: adminNote ? `Regularized: ${adminNote}` : 'Regularized by admin',
-      },
-      create: {
-        employeeRefId: row.employeeRefId,
-        employeeId: row.employeeId,
-        date: day,
-        dayName: getDayName(day),
-        checkInTime: row.requestedCheckIn,
-        checkOutTime: row.requestedCheckOut,
-        status: attendanceStatus,
-        lateMinutes,
-        workingHoursMinutes,
-        note: adminNote ? `Regularized: ${adminNote}` : 'Regularized by admin',
-        deviceInfo: { regularized: true, regularizationId: row.id },
-      },
+      update: updateData,
+      create: createData,
     });
   }
 

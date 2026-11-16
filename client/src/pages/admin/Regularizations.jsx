@@ -34,17 +34,28 @@ export default function Regularizations() {
 
   const openReview = (row, action) => { setReview({ row, action }); setNote(''); };
 
-  const submitReview = async () => {
+  const submitReview = async (force = false) => {
     if (!review) return;
+    if (review.action !== 'approve') force = false;
     setBusy(true);
     try {
       const payload = note.trim() ? { adminNote: note.trim() } : {};
-      await api.put(`/regularizations/${review.row._id}/${review.action}`, payload);
+      if (force) payload.force = true;
+      await api.put(`/regularizations/${review.row.id || review.row._id}/${review.action}`, payload);
       toast.success(review.action === 'approve' ? 'Regularization approved' : 'Regularization rejected');
       setReview(null);
       setNote('');
       refetch();
     } catch (err) {
+      if (review.action === 'approve' && err?.response?.status === 409 && err?.response?.data?.code === 'OVERWRITE_CONFIRMATION_REQUIRED') {
+        const ok = window.confirm(
+          'This day already has face/photo-verified punch data. Approving will overwrite existing attendance times/status. Continue?'
+        );
+        if (ok) {
+          setBusy(false);
+          return submitReview(true);
+        }
+      }
       toast.error(extractError(err, 'Could not update request'));
     } finally {
       setBusy(false);
@@ -186,7 +197,7 @@ export default function Regularizations() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" onClick={() => setReview(null)} disabled={busy}>Cancel</Button>
-              <Button variant={review.action === 'approve' ? 'primary' : 'danger'} onClick={submitReview} loading={busy}>
+              <Button variant={review.action === 'approve' ? 'primary' : 'danger'} onClick={() => submitReview(false)} loading={busy}>
                 {review.action === 'approve' ? 'Approve' : 'Reject'}
               </Button>
             </div>

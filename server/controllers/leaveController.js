@@ -180,6 +180,24 @@ async function reviewLeave(req, res, status) {
   if (!leave) return res.status(404).json({ success: false, message: 'Leave not found' });
   if (leave.status !== 'Pending') return res.status(400).json({ success: false, message: `Leave is already ${leave.status.toLowerCase()}` });
 
+  if (status === 'Approved') {
+    const policy = await getPolicy(leave.leaveType);
+    if (policy && policy.annualAllowance > 0) {
+      const year = new Date(leave.startDate).getFullYear();
+      const balance = await computeLeaveBalance(leave.employeeRefId, year);
+      const typeBalance = (balance.policies || []).find((p) => p.leaveType === leave.leaveType);
+      if (typeBalance && typeBalance.remaining !== null) {
+        const availableForApproval = typeBalance.allowance - typeBalance.used; // excludes other approved; pending not counted in used
+        if (leave.days > availableForApproval) {
+          return res.status(400).json({
+            success: false,
+            message: `Cannot approve: only ${availableForApproval} day(s) of ${leave.leaveType} available for ${year} (request needs ${leave.days}).`,
+          });
+        }
+      }
+    }
+  }
+
   const adminNote = String(req.body.adminNote || '').trim();
   const updated = await prisma.leave.update({
     where: { id: leave.id },
