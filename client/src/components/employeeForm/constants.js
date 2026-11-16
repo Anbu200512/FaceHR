@@ -160,6 +160,7 @@ export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 export const ACCOUNT_TYPES = ['Savings', 'Current', 'Salary', 'Fixed Deposit', 'Other'];
 export const RELATIONSHIPS = ['Spouse', 'Parent', 'Child', 'Sibling', 'Relative', 'Friend', 'Other'];
 export const YEARS = Array.from({ length: 68 }, (_, i) => String(new Date().getFullYear() + 1 - i));
+export const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Intern', 'Contract', 'Temporary', 'Consultant'];
 
 export const COMMON_ROLES = [
   'Team Lead',

@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { IdCard, KeyRound, ShieldCheck, Plus, X } from 'lucide-react';
 import { Input, Select } from '../ui/Form';
 import { SectionCard, CheckboxField } from './steps/shared';
-import { COMMON_ROLES, employeeFullName } from './constants';
+import { COMMON_ROLES, EMPLOYMENT_TYPES, employeeFullName } from './constants';
 
 const EMPLOYEE_STATUSES = ['Active', 'Inactive'];
-const EMPLOYEE_CATEGORIES = ['Full-time', 'Part-time', 'Intern', 'Contract'];
 
 export default function BasicInfoEditor({
   values,
@@ -123,12 +122,14 @@ export default function BasicInfoEditor({
             <Input label="Sub Department 1" name="subDepartment1" value={values.subDepartment1} onChange={(e) => set('subDepartment1', e.target.value)} placeholder="Sub department 1" />
             <Input label="Sub Department 2" name="subDepartment2" value={values.subDepartment2} onChange={(e) => set('subDepartment2', e.target.value)} placeholder="Sub department 2" />
             <Select
-              label="Category"
-              name="category"
-              value={values.category}
-              onChange={(e) => set('category', e.target.value)}
-              placeholder="Select category"
-              options={EMPLOYEE_CATEGORIES}
+              label="Employment Type *"
+              name="employmentType"
+              value={values.employmentType || 'Full-time'}
+              onChange={(e) => {
+                set('employmentType', e.target.value);
+                set('category', e.target.value);
+              }}
+              options={EMPLOYMENT_TYPES}
             />
             <Input label="Sub Category" name="subCategory" value={values.subCategory} onChange={(e) => set('subCategory', e.target.value)} placeholder="Sub category" />
 
