@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Check, X, Search, MessageSquareText } from 'lucide-react';
-import api, { extractError } from '../../services/api';
+import { Search, Eye } from 'lucide-react';
+import api from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import { useToast } from '../../context/ToastContext';
 import { formatDate, formatTime, resolveAsset } from '../../services/format';
@@ -21,9 +21,8 @@ export default function Regularizations() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  const [review, setReview] = useState(null);
-  const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  const [viewRow, setViewRow] = useState(null);
 
   const { data, loading, refetch } = useApi(() => {
     const sp = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
@@ -31,36 +30,6 @@ export default function Regularizations() {
     if (search) sp.set('search', search);
     return api.get(`/regularizations?${sp.toString()}`).then((r) => r.data);
   }, [page, pageSize, status, search]);
-
-  const openReview = (row, action) => { setReview({ row, action }); setNote(''); };
-
-  const submitReview = async (force = false) => {
-    if (!review) return;
-    if (review.action !== 'approve') force = false;
-    setBusy(true);
-    try {
-      const payload = note.trim() ? { adminNote: note.trim() } : {};
-      if (force) payload.force = true;
-      await api.put(`/regularizations/${review.row.id || review.row._id}/${review.action}`, payload);
-      toast.success(review.action === 'approve' ? 'Regularization approved' : 'Regularization rejected');
-      setReview(null);
-      setNote('');
-      refetch();
-    } catch (err) {
-      if (review.action === 'approve' && err?.response?.status === 409 && err?.response?.data?.code === 'OVERWRITE_CONFIRMATION_REQUIRED') {
-        const ok = window.confirm(
-          'This day already has face/photo-verified punch data. Approving will overwrite existing attendance times/status. Continue?'
-        );
-        if (ok) {
-          setBusy(false);
-          return submitReview(true);
-        }
-      }
-      toast.error(extractError(err, 'Could not update request'));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const rows = data?.data || [];
   const meta = data?.meta || {};
@@ -103,18 +72,17 @@ export default function Regularizations() {
                 <th className="th">Requested</th>
                 <th className="th">Reason</th>
                 <th className="th">Status</th>
-                <th className="th text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i} className="border-b dark:border-slate-700">
-                    <td colSpan={6} className="h-12 animate-pulse bg-slate-100 dark:bg-slate-800" />
+                    <td colSpan={5} className="h-12 animate-pulse bg-slate-100 dark:bg-slate-800" />
                   </tr>
                 ))
               ) : rows.length === 0 ? (
-                <tr><td colSpan={6}><EmptyState title="No regularization requests" message="Employee requests will appear here." /></td></tr>
+                <tr>                  <td colSpan={5}><EmptyState title="No regularization requests" message="Employee requests will appear here." /></td></tr>
               ) : rows.map((r) => (
                 <tr key={r._id} className="border-b last:border-0 dark:border-slate-700">
                   <td className="td">
@@ -131,22 +99,16 @@ export default function Regularizations() {
                     <div>In: <span className="font-medium text-slate-700 dark:text-slate-200">{r.requestedCheckIn ? formatTime(r.requestedCheckIn) : '—'}</span></div>
                     <div>Out: <span className="font-medium text-slate-700 dark:text-slate-200">{r.requestedCheckOut ? formatTime(r.requestedCheckOut) : '—'}</span></div>
                   </td>
-                  <td className="td max-w-[220px]"><p className="truncate text-sm text-slate-500" title={r.reason || ''}>{r.reason || '—'}</p></td>
-                  <td className="td"><Badge tone={STATUS_TONES[r.status] || 'slate'}>{r.status}</Badge></td>
-                  <td className="td">
-                    <div className="flex justify-end gap-2">
-                      {r.status === 'Pending' ? (
-                        <>
-                          <Button size="sm" variant="secondary" onClick={() => openReview(r, 'approve')}><Check className="h-4 w-4" /> Approve</Button>
-                          <Button size="sm" variant="danger" onClick={() => openReview(r, 'reject')}><X className="h-4 w-4" /> Reject</Button>
-                        </>
-                      ) : (
-                        <span className="max-w-[180px] text-right text-xs text-slate-400" title={r.adminNote || ''}>
-                          {r.reviewedBy?.name ? `by ${r.reviewedBy.name}` : 'Reviewed'}{r.adminNote ? ` • ${r.adminNote}` : ''}
-                        </span>
-                      )}
-                    </div>
+                  <td className="td max-w-[220px]">
+                    {r.reason ? (
+                      <Button size="sm" variant="ghost" className="px-2" onClick={() => setViewRow(r)}>
+                        <Eye className="h-4 w-4" /> View
+                      </Button>
+                    ) : (
+                      <span className="text-sm text-slate-400">—</span>
+                    )}
                   </td>
+                  <td className="td"><Badge tone={STATUS_TONES[r.status] || 'slate'}>{r.status}</Badge></td>
                 </tr>
               ))}
             </tbody>
@@ -163,44 +125,29 @@ export default function Regularizations() {
         )}
       </Card>
 
+
+
       <Modal
-        open={!!review}
-        onClose={() => !busy && setReview(null)}
-        title={review?.action === 'approve' ? 'Approve Regularization' : 'Reject Regularization'}
+        open={!!viewRow}
+        onClose={() => setViewRow(null)}
+        title="Regularization Details"
         size="sm"
       >
-        {review && (
-          <div className="space-y-4">
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              <span className="font-semibold text-slate-800 dark:text-slate-100">{review.row.employee?.firstName} {review.row.employee?.lastName}</span>
-              {' • '}{formatDate(review.row.date)}
-              {' • '}In {review.row.requestedCheckIn ? formatTime(review.row.requestedCheckIn) : '—'}
-              {' / '}Out {review.row.requestedCheckOut ? formatTime(review.row.requestedCheckOut) : '—'}
-            </p>
-            {review.row.reason && (
-              <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
-                <span className="font-medium text-slate-700 dark:text-slate-200">Reason: </span>{review.row.reason}
+        {viewRow && (
+          <div className="space-y-3 text-sm">
+            <p><span className="font-medium text-slate-700 dark:text-slate-200">Employee:</span> {viewRow.employee?.firstName} {viewRow.employee?.lastName} ({viewRow.employeeId || viewRow.employee?.employeeId || '—'})</p>
+            <p><span className="font-medium text-slate-700 dark:text-slate-200">Date:</span> {formatDate(viewRow.date)}</p>
+            <p><span className="font-medium text-slate-700 dark:text-slate-200">Requested:</span> In {viewRow.requestedCheckIn ? formatTime(viewRow.requestedCheckIn) : '—'} / Out {viewRow.requestedCheckOut ? formatTime(viewRow.requestedCheckOut) : '—'}</p>
+            <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+              <p className="mb-1 text-xs font-semibold uppercase text-slate-400">Reason</p>
+              <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-200">{viewRow.reason || '—'}</p>
+            </div>
+            {viewRow.adminNote && (
+              <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                <p className="mb-1 text-xs font-semibold uppercase text-slate-400">Admin Note</p>
+                <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-200">{viewRow.adminNote}</p>
               </div>
             )}
-            <div>
-              <label className="label">Admin note {review.action === 'reject' && '(recommended)'}</label>
-              <div className="relative">
-                <MessageSquareText className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  rows={3}
-                  className="input pl-9"
-                  placeholder="Add a note for the employee (optional)..."
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" onClick={() => setReview(null)} disabled={busy}>Cancel</Button>
-              <Button variant={review.action === 'approve' ? 'primary' : 'danger'} onClick={() => submitReview(false)} loading={busy}>
-                {review.action === 'approve' ? 'Approve' : 'Reject'}
-              </Button>
-            </div>
           </div>
         )}
       </Modal>

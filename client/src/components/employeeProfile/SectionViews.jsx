@@ -116,9 +116,9 @@ export function ReportingManagerCard({ emp }) {
               <>
                 <div className="mt-2 flex items-center gap-3">
                   <Avatar name={employeeFullName(person)} src={resolveAsset(person.profilePhoto)} size="md" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{employeeFullName(person) || '—'}</p>
-                    <p className="truncate text-xs text-slate-400">
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words text-sm font-semibold text-slate-800 dark:text-slate-100">{employeeFullName(person) || '—'}</p>
+                    <p className="break-words text-xs text-slate-400">
                       {[person.employeeId, person.designation?.name, person.department?.name].filter(Boolean).join(' · ') || '—'}
                     </p>
                   </div>
@@ -126,20 +126,20 @@ export function ReportingManagerCard({ emp }) {
                 {(person.email || person.phone) && (
                   <div className="mt-3 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
                     {person.email && (
-                      <p className="flex items-center gap-2">
-                        <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" /> <span className="truncate">{person.email}</span>
+                      <p className="flex min-w-0 items-start gap-2">
+                        <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" /> <span className="break-all">{person.email}</span>
                       </p>
                     )}
                     {person.phone && (
-                      <p className="flex items-center gap-2">
-                        <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" /> <span className="truncate">{person.phone}</span>
+                      <p className="flex min-w-0 items-start gap-2">
+                        <Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" /> <span className="break-words">{person.phone}</span>
                       </p>
                     )}
                   </div>
                 )}
               </>
             ) : (
-              <p className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-200">{fallback}</p>
+              <p className="mt-2 break-words text-sm font-semibold text-slate-700 dark:text-slate-200">{fallback}</p>
             )}
           </div>
         ))}

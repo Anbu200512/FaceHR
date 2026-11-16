@@ -191,15 +191,17 @@ export default function EmployeeProfile({ faceMode }) {
   return (
     <div>
       <PageHeader title="Employee Profile" description={`${emp.employeeId} · joined ${formatDate(emp.joiningDate)}`}>
-        <Button variant="ghost" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <Button variant="secondary" onClick={() => setSendOpen(true)}>
-          <Send className="h-4 w-4" /> Send Login Details
-        </Button>
-        <Link to={`/admin/employees/${emp._id}/edit`}>
-          <Button variant="secondary"><Pencil className="h-4 w-4" /> Edit</Button>
-        </Link>
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4" /> Back
+          </Button>
+          <Button variant="secondary" onClick={() => setSendOpen(true)}>
+            <Send className="h-4 w-4" /> Send Login Details
+          </Button>
+          <Link to={`/admin/employees/${emp._id}/edit`}>
+            <Button variant="secondary"><Pencil className="h-4 w-4" /> Edit</Button>
+          </Link>
+        </div>
       </PageHeader>
 
       {/* Header summary */}
@@ -214,27 +216,27 @@ export default function EmployeeProfile({ faceMode }) {
           />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{fullName}</h2>
+              <h2 className="break-words text-xl font-bold text-slate-900 dark:text-slate-100">{fullName}</h2>
               <Badge tone={statusColor}>{emp.status}</Badge>
               {emp.exEmployee && <Badge>Ex Employee</Badge>}
             </div>
             <p className="font-mono text-xs font-semibold text-brand-600 dark:text-brand-400">{emp.employeeId}</p>
             <RoleBadges roles={emp.roles} className="mt-1.5" />
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-1 break-words text-sm text-slate-500 dark:text-slate-400">
               {emp.designation?.name || 'No designation'} · {emp.department?.name || 'No department'}{emp.office?.name ? ` · ${emp.office.name}` : ''}
             </p>
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-              <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                <Mail className="h-4 w-4 text-slate-400" /> {emp.email || '—'}
+              <span className="inline-flex min-w-0 items-center gap-2 break-all text-slate-600 dark:text-slate-300">
+                <Mail className="h-4 w-4 shrink-0 text-slate-400" /> {emp.email || '—'}
               </span>
               <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                <Phone className="h-4 w-4 text-slate-400" /> {mobile}
+                <Phone className="h-4 w-4 shrink-0 text-slate-400" /> {mobile}
               </span>
               <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                <CalendarDays className="h-4 w-4 text-slate-400" /> DOJ {formatDate(emp.joiningDate)}
+                <CalendarDays className="h-4 w-4 shrink-0 text-slate-400" /> DOJ {formatDate(emp.joiningDate)}
               </span>
               <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                <Briefcase className="h-4 w-4 text-slate-400" /> {emp.employmentType}
+                <Briefcase className="h-4 w-4 shrink-0 text-slate-400" /> {emp.employmentType}
               </span>
             </div>
           </div>
@@ -245,14 +247,9 @@ export default function EmployeeProfile({ faceMode }) {
         <ReportingManagerCard emp={emp} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Face + attendance cards */}
-        <div className="space-y-6 lg:col-span-3">
-          <div className="grid gap-6 xl:grid-cols-2">
-            <FaceStatusCard emp={emp} hasFace={hasFace} onRegister={() => setRegisterMode(true)} onRemove={() => setRemoveOpen(true)} />
-            <AttendanceSummary emp={emp} />
-          </div>
-        </div>
+      <div className="mb-6 grid gap-6 xl:grid-cols-2">
+        <FaceStatusCard emp={emp} hasFace={hasFace} onRegister={() => setRegisterMode(true)} onRemove={() => setRemoveOpen(true)} />
+        <AttendanceSummary emp={emp} />
       </div>
 
       <EmployeeActionsCard
@@ -265,7 +262,7 @@ export default function EmployeeProfile({ faceMode }) {
 
       {/* Section navigation */}
       <div className="sticky top-16 z-10 mb-6 -mx-4 bg-surface-light px-4 py-2 dark:bg-surface-dark sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto [scrollbar-width:thin]">
           <div className="flex min-w-max gap-1 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
             {ADMIN_PROFILE_TABS.map((t) => (
               <button
@@ -333,7 +330,7 @@ export default function EmployeeProfile({ faceMode }) {
         loading={sendBusy}
         tone="primary"
         title="Send login details?"
-        message={`A new temporary password will be generated and the employee account login details will be emailed to ${emp.email || 'the employee�?Ts work email'}.`}
+        message={`A new temporary password will be generated and the employee account login details will be emailed to ${emp.email || "the employee's work email"}.`}
       />
 
       <Modal open={!!photoPreview} onClose={() => setPhotoPreview(null)} title={photoPreview?.label} size="lg">
@@ -367,22 +364,22 @@ function FaceStatusCard({ emp, hasFace, onRegister, onRemove }) {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          {hasFace ? (
-            <>
-              <Button variant="secondary" onClick={onRemove}>
-                <Trash2 className="h-4 w-4" /> Remove
-              </Button>
+          <div className="flex flex-wrap gap-2">
+            {hasFace ? (
+              <>
+                <Button variant="secondary" onClick={onRemove}>
+                  <Trash2 className="h-4 w-4" /> Remove
+                </Button>
+                <Button onClick={onRegister}>
+                  <ScanFace className="h-4 w-4" /> Re-register
+                </Button>
+              </>
+            ) : (
               <Button onClick={onRegister}>
-                <ScanFace className="h-4 w-4" /> Re-register
+                <ScanFace className="h-4 w-4" /> Register Face
               </Button>
-            </>
-          ) : (
-            <Button onClick={onRegister}>
-              <ScanFace className="h-4 w-4" /> Register Face
-            </Button>
-          )}
-        </div>
+            )}
+          </div>
       </div>
     </Card>
   );
@@ -402,7 +399,7 @@ function AttendanceSummary({ emp }) {
       <div className="border-b px-5 py-4 dark:border-slate-700">
         <h3 className="font-bold text-slate-900 dark:text-slate-100">Attendance Highlights</h3>
       </div>
-      <div className="grid grid-cols-2 gap-px sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-px sm:grid-cols-3 lg:grid-cols-5">
         {[
           ['Present', s?.presentDays],
           ['Late', s?.lateDays],
@@ -412,7 +409,7 @@ function AttendanceSummary({ emp }) {
         ].map(([label, val]) => (
           <div key={label} className="p-4">
             <p className="text-xs font-medium text-slate-400">{label}</p>
-            <p className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">{val ?? (loading ? '…' : '—')}</p>
+            <p className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100 sm:text-xl">{val ?? (loading ? '…' : '—')}</p>
           </div>
         ))}
       </div>
@@ -444,7 +441,7 @@ function EmployeeActionsCard({ emp, reloadKey, busy, onCheckIn, onCheckOut }) {
         <Badge>{rec?.status || day?.status || 'Not Marked Yet'}</Badge>
       </div>
       <div className="flex flex-col gap-5 p-5">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ActionDetail icon={LogIn} label="Check In Today" value={rec ? formatTime(rec.checkInTime) : 'Not checked in'} sub={checkInLoc || 'No GPS location captured'} />
           <ActionDetail icon={LogOut} label="Check Out Today" value={rec?.checkOutTime ? formatTime(rec.checkOutTime) : '—'} sub={checkOutLoc || 'No GPS location captured'} />
           <ActionDetail icon={Clock} label="Worked Today" value={rec?.workingHoursMinutes ? formatDuration(rec.workingHoursMinutes) : '—'} sub={rec?.faceVerified ? 'Face verified' : 'No record yet'} />
@@ -453,7 +450,7 @@ function EmployeeActionsCard({ emp, reloadKey, busy, onCheckIn, onCheckOut }) {
           <p className="max-w-md text-xs text-slate-400">
             Mark today's attendance on this employee's behalf. The employee's face is verified against their registered profile on this device before any record is created.
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
             <Button onClick={onCheckIn} disabled={!canCheckIn || loading || busy} loading={busy} variant="secondary">
               <LogIn className="h-4 w-4" /> Check In
             </Button>

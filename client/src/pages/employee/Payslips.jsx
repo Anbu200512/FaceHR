@@ -57,21 +57,25 @@ export default function Payslips() {
       ) : (
         <div className="space-y-3">
           {rows.map((p) => (
-            <Card key={p._id} className="flex items-center gap-4 p-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
-                <Wallet className="h-5 w-5" />
+            <Card key={p._id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
+              <div className="flex min-w-0 flex-1 items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+                  <Wallet className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-slate-800 dark:text-slate-100">{monthName(p.month)} {p.year}</p>
+                  <p className="text-xs text-slate-400">{p.presentDays}/{p.workingDays} days present · {p.lopDays} LOP</p>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-slate-800 dark:text-slate-100">{monthName(p.month)} {p.year}</p>
-                <p className="text-xs text-slate-400">{p.presentDays}/{p.workingDays} days present · {p.lopDays} LOP</p>
+              <div className="flex items-center justify-between gap-3 sm:justify-end">
+                <div className="text-left sm:text-right">
+                  <p className="font-bold text-slate-900 dark:text-slate-100">{money(p.netPay, p.currency)}</p>
+                  <Badge tone={p.status === 'Paid' ? 'emerald' : 'sky'}>{p.status}</Badge>
+                </div>
+                <Button size="sm" variant="secondary" onClick={() => open(p._id)} loading={loadingId === p._id}>
+                  <Eye className="h-4 w-4" /> View
+                </Button>
               </div>
-              <div className="text-right">
-                <p className="font-bold text-slate-900 dark:text-slate-100">{money(p.netPay, p.currency)}</p>
-                <Badge tone={p.status === 'Paid' ? 'emerald' : 'sky'}>{p.status}</Badge>
-              </div>
-              <Button size="sm" variant="secondary" onClick={() => open(p._id)} loading={loadingId === p._id}>
-                <Eye className="h-4 w-4" /> View
-              </Button>
             </Card>
           ))}
         </div>

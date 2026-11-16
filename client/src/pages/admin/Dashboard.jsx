@@ -79,7 +79,7 @@ export default function Dashboard() {
           <SkeletonGrid count={5} />
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <StatCard label="Total Employees" value={s?.totalEmployees} icon={Users} tone="indigo" loading={loading} />
           <StatCard label="Present Today" value={s?.present} icon={UserCheck} tone="emerald" loading={loading} />
           <StatCard label="Late Today" value={s?.late} icon={AlarmClock} tone="amber" loading={loading} />
@@ -89,17 +89,21 @@ export default function Dashboard() {
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3">
+        <div className="min-w-0 lg:col-span-3">
           <LocationAttendance rows={d?.locations} loading={loading} />
         </div>
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
           <AgeDistribution data={d?.ageDistribution} loading={loading} />
         </div>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <ResignationOverview data={d?.resignationBreakdown} loading={loading} />
-        <HRActivitySummary hr={d?.hr} loading={loading} />
+        <div className="min-w-0">
+          <ResignationOverview data={d?.resignationBreakdown} loading={loading} />
+        </div>
+        <div className="min-w-0">
+          <HRActivitySummary hr={d?.hr} loading={loading} />
+        </div>
       </div>
 
       <div>

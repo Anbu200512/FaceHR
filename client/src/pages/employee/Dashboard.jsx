@@ -61,11 +61,11 @@ export default function EmployeeHome() {
       ) : (
         <Card className="mb-6 overflow-hidden">
           <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex min-w-0 items-center gap-4">
               <Avatar name={user?.name} src={resolveAsset(emp.profilePhoto)} size="lg" />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate font-bold text-slate-900 dark:text-slate-100">{emp.firstName} {emp.lastName}</p>
-                <p className="text-xs text-slate-400">
+                <p className="break-words text-xs text-slate-400">
                   {emp.designation?.name || '—'} · {emp.department?.name || '—'}
                   {emp.employmentType ? ` · ${emp.employmentType}` : ''}
                 </p>
@@ -75,7 +75,7 @@ export default function EmployeeHome() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 text-center sm:grid-cols-2">
+            <div className="grid w-full grid-cols-1 gap-4 text-center sm:w-auto sm:min-w-[260px] sm:grid-cols-2">
               <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                 <p className="flex items-center justify-center gap-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">
                   <Clock3 className="h-3.5 w-3.5" /> Check-in
@@ -98,11 +98,11 @@ export default function EmployeeHome() {
       )}
 
       {/* Quick actions */}
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {actions.map((a) => (
           <Link key={a.to} to={a.to} className="card flex items-center gap-3 p-4 transition hover:shadow-lift">
-            <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${a.tone}`}><a.icon className="h-4.5 w-4.5" /></div>
-            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{a.label}</span>
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${a.tone}`}><a.icon className="h-4.5 w-4.5" /></div>
+            <span className="min-w-0 break-words text-xs font-semibold text-slate-700 dark:text-slate-200">{a.label}</span>
           </Link>
         ))}
       </div>

@@ -259,8 +259,8 @@ export default function Employees() {
                   <p className="truncate font-semibold text-slate-800 dark:text-slate-100">
                     {emp.firstName} {emp.lastName}
                   </p>
-                  <p className="text-xs text-slate-400">{emp.employeeId} · {emp.department?.name || 'No dept'}</p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-slate-400 break-words">{emp.employeeId} · {emp.department?.name || 'No dept'}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 break-words">
                     {emp.designation?.name || '—'} · {emp.employmentType || emp.category || '—'}
                   </p>
                   {emp.employmentType === 'Intern' && emp.internEndDate && (
@@ -270,7 +270,7 @@ export default function Employees() {
                     <Badge>{emp.status}</Badge>
                   </div>
                 </div>
-                <div className="flex shrink-0 gap-0.5" onClick={(e) => e.stopPropagation()}>
+                <div className="flex shrink-0 flex-wrap justify-end gap-0.5 max-w-[140px]" onClick={(e) => e.stopPropagation()}>
                   <IconBtn title="Edit" onClick={() => navigate(`/admin/employees/${emp._id}/edit`)}><Pencil className="h-4 w-4" /></IconBtn>
                   <IconBtn title="Send login details" onClick={() => { setSendId(emp._id); setSendName(`${emp.firstName} ${emp.lastName}`); }}><Send className="h-4 w-4" /></IconBtn>
                   <IconBtn title="Deactivate" danger onClick={() => setDeactivateId(emp._id)}><Power className="h-4 w-4" /></IconBtn>

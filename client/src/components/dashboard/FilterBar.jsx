@@ -19,9 +19,9 @@ export default function FilterBar({ value, onChange, locations = [], departments
 
   return (
     <Card className="mb-5 p-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex items-end gap-2">
-          <div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
+        <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-1">
+          <div className="min-w-0">
             <label className="label">Month</label>
             <div className="flex items-center gap-1">
               <button
@@ -35,7 +35,7 @@ export default function FilterBar({ value, onChange, locations = [], departments
               <select
                 value={value.month}
                 onChange={(e) => onChange({ ...value, month: Number(e.target.value) })}
-                className="input w-36"
+                className="input w-full min-w-[8rem] sm:w-36"
               >
                 {MONTH_NAMES.map((name, i) => (
                   <option key={name} value={i + 1}>{name}</option>
@@ -63,7 +63,7 @@ export default function FilterBar({ value, onChange, locations = [], departments
           </div>
         </div>
 
-        <div>
+        <div className="min-w-0">
           <label className="label">
             <MapPin className="mr-1 inline h-3 w-3" /> Location
           </label>
@@ -78,7 +78,7 @@ export default function FilterBar({ value, onChange, locations = [], departments
           </select>
         </div>
 
-        <div>
+        <div className="min-w-0">
           <label className="label">
             <Building2 className="mr-1 inline h-3 w-3" /> Department
           </label>
@@ -93,7 +93,7 @@ export default function FilterBar({ value, onChange, locations = [], departments
           </select>
         </div>
 
-        <Button variant="ghost" size="sm" onClick={resetToCurrent} className="mb-0.5">
+        <Button variant="ghost" size="sm" onClick={resetToCurrent} className="w-full sm:w-auto">
           <Calendar className="h-4 w-4" /> This Month
         </Button>
       </div>
