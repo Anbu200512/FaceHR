@@ -128,10 +128,21 @@ export default function BasicInfoEditor({
               onChange={(e) => {
                 set('employmentType', e.target.value);
                 set('category', e.target.value);
+                if (e.target.value !== 'Intern') set('internEndDate', '');
               }}
               options={EMPLOYMENT_TYPES}
             />
             <Input label="Sub Category" name="subCategory" value={values.subCategory} onChange={(e) => set('subCategory', e.target.value)} placeholder="Sub category" />
+            {values.employmentType === 'Intern' && (
+              <Input
+                label="Intern End Date *"
+                name="internEndDate"
+                type="date"
+                value={values.internEndDate || ''}
+                onChange={(e) => set('internEndDate', e.target.value)}
+                error={errors.internEndDate}
+              />
+            )}
 
             <Select
               label="Designation *"

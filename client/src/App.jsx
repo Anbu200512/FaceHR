@@ -52,6 +52,14 @@ function Landing() {
   return <Navigate to={user.role === 'admin' ? '/admin' : '/employee'} replace />;
 }
 
+function EmployeePayslipsGuard() {
+  const { user, loading } = useAuth();
+  if (loading) return <FullScreenLoader label="Loading..." />;
+  const isIntern = user?.employeeData?.employmentType === 'Intern' || user?.employeeData?.category === 'Intern';
+  if (isIntern) return <Navigate to="/employee" replace />;
+  return <MyPayslips />;
+}
+
 export default function App() {
   return (
     <Suspense fallback={<FullScreenLoader label="Loading..." />}>
@@ -108,7 +116,7 @@ export default function App() {
           <Route path="history" element={<History />} />
           <Route path="regularization" element={<MyRegularizations />} />
           <Route path="leave" element={<MyLeaves />} />
-          <Route path="payslips" element={<MyPayslips />} />
+          <Route path="payslips" element={<EmployeePayslipsGuard />} />
           <Route path="announcements" element={<EmployeeAnnouncements />} />
           <Route path="holidays" element={<EmployeeHolidays />} />
           <Route path="resignation" element={<Resignation />} />

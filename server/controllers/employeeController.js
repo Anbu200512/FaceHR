@@ -25,6 +25,7 @@ const STRING_FIELDS = [
   'employmentType', 'status',
 ];
 const BOOLEAN_FIELDS = ['probationManage', 'exEmployee'];
+const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Intern', 'Contract', 'Temporary', 'Consultant'];
 
 const toBool = (v) => v === true || v === 'true';
 
@@ -41,6 +42,20 @@ const pickFields = (b) => {
   if (b.dateOfBirth !== undefined) data.dateOfBirth = b.dateOfBirth ? new Date(b.dateOfBirth) : null;
   if (b.joiningDate !== undefined && b.joiningDate !== null && b.joiningDate !== '') {
     data.joiningDate = new Date(b.joiningDate);
+  }
+  if (b.employmentType !== undefined && b.employmentType !== null && b.employmentType !== '') {
+    const et = String(b.employmentType).trim();
+    if (!EMPLOYMENT_TYPES.includes(et)) {
+      throw new Error(`employmentType must be one of: ${EMPLOYMENT_TYPES.join(', ')}`);
+    }
+    data.employmentType = et;
+    data.category = et;
+  }
+  if (b.internEndDate !== undefined) {
+    data.internEndDate = b.internEndDate ? new Date(b.internEndDate) : null;
+    if (data.internEndDate && Number.isNaN(data.internEndDate.getTime())) {
+      throw new Error('internEndDate must be a valid date');
+    }
   }
   return data;
 };
@@ -303,7 +318,7 @@ const getEmployee = asyncHandler(async (req, res) => {
 
 // @route  POST /api/employees
 const createEmployee = asyncHandler(async (req, res) => {
-  const b = req.body;
+  const b = req.body || {};
   if (!b.employeeId || !b.firstName || !b.lastName || !b.email) {
     return res.status(400).json({
       success: false,
@@ -337,16 +352,22 @@ const createEmployee = asyncHandler(async (req, res) => {
   const givenPassword = b.password || crypto.randomBytes(6).toString('hex');
   const hashed = await bcrypt.hash(String(givenPassword), 10);
 
-  const employeeData = stripUndefined({
-    ...pickFields(b),
-    employeeId,
-    email,
-    profilePhoto,
-    departmentId: department,
-    officeId: office,
-    designationId: designation,
-    joiningDate: b.joiningDate ? new Date(b.joiningDate) : new Date(),
-  });
+  let employeeData;
+  try {
+    const picked = pickFields(b);
+    employeeData = stripUndefined({
+      ...picked,
+      employeeId,
+      email,
+      profilePhoto,
+      departmentId: department,
+      officeId: office,
+      designationId: designation,
+      joiningDate: b.joiningDate ? new Date(b.joiningDate) : new Date(),
+    });
+  } catch (e) {
+    return res.status(400).json({ success: false, message: e.message || 'Invalid employee data' });
+  }
 
   const roles = parseRoles(b.roles);
   if (roles !== undefined) employeeData.roles = roles;
@@ -432,8 +453,13 @@ const updateEmployee = asyncHandler(async (req, res) => {
   const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
 
-  const b = req.body;
-  const update = pickFields(b);
+  const b = req.body || {};
+  let update;
+  try {
+    update = pickFields(b);
+  } catch (e) {
+    return res.status(400).json({ success: false, message: e.message || 'Invalid employee data' });
+  }
 
   if (b.employeeId) update.employeeId = String(b.employeeId).trim().toUpperCase();
   if (b.email) update.email = String(b.email).trim().toLowerCase();

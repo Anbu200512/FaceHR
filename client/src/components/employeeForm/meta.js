@@ -16,6 +16,7 @@ export function validateStep(stepId, v) {
     if (!String(v.department || '').trim()) errors.department = 'Department is required';
     if (!String(v.designation || '').trim()) errors.designation = 'Designation is required';
     if (v.password && String(v.password).length < 6) errors.password = 'Password must be at least 6 characters';
+    if (v.employmentType === 'Intern' && !String(v.internEndDate || '').trim()) errors.internEndDate = 'Intern end date is required';
   }
   if (stepId === 'bank') {
     const acct = String(v.bankDetails.accountNumber || '').trim();
@@ -87,6 +88,7 @@ export function buildEmployeeFormData(values, { photo = null, sectionsOverride }
   append('designation', values.designation);
   append('joiningDate', values.joiningDate);
   append('employmentType', values.employmentType);
+  append('internEndDate', values.internEndDate);
   append('subDepartment', values.subDepartment);
   append('subDepartment1', values.subDepartment1);
   append('subDepartment2', values.subDepartment2);

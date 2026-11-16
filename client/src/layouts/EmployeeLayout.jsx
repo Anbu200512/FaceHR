@@ -34,7 +34,7 @@ const NAV = [
   { to: '/employee/history', label: 'My Attendance', icon: History },
   { to: '/employee/regularization', label: 'Regularization', icon: Clock },
   { to: '/employee/leave', label: 'Leave', icon: Plane },
-  { to: '/employee/payslips', label: 'Payslips', icon: Wallet },
+  { to: '/employee/payslips', label: 'Payslips', icon: Wallet, internHidden: true },
   { to: '/employee/announcements', label: 'Announcements', icon: Megaphone },
   { to: '/employee/holidays', label: 'Holidays', icon: CalendarCheck },
   { to: '/employee/resignation', label: 'Resignation', icon: FileSignature },
@@ -50,6 +50,7 @@ export default function EmployeeLayout() {
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
+  const isIntern = user?.employeeData?.employmentType === 'Intern' || user?.employeeData?.category === 'Intern';
 
   const doLogout = () => {
     logout();
@@ -73,7 +74,7 @@ export default function EmployeeLayout() {
         </button>
       </div>
       <nav className={clsx('flex-1 space-y-1 overflow-y-auto py-4', desktopSidebarCollapsed && !drawer ? 'px-2' : 'px-3')}>
-        {NAV.map((item) => (
+        {NAV.filter((item) => !(item.internHidden && isIntern)).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

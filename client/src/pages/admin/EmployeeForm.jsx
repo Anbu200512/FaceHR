@@ -77,6 +77,7 @@ export default function EmployeeForm() {
         designation: d.designation?._id || '',
         joiningDate: toInputDate(d.joiningDate) || today(),
         employmentType: d.employmentType || d.category || 'Full-time',
+        internEndDate: toInputDate(d.internEndDate),
         subDepartment: d.subDepartment || '',
         subDepartment1: d.subDepartment1 || '',
         subDepartment2: d.subDepartment2 || '',

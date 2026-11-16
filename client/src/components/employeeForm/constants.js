@@ -82,6 +82,7 @@ export const BLANK = {
   designation: '',
   joiningDate: '',
   employmentType: 'Full-time',
+  internEndDate: '',
   subDepartment: '',
   subDepartment1: '',
   subDepartment2: '',
