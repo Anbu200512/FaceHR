@@ -12,7 +12,7 @@ export default function EmployeeSummary({ hr, loading }) {
         <StatCard label="Total Employees" value={hr?.totalEmployees ?? 0} icon={Users} tone="indigo" loading={loading} />
         <StatCard label="New Joiners This Month" value={hr?.newJoiners ?? 0} icon={UserPlus} tone="emerald" loading={loading} />
         <StatCard label="Resignations This Month" value={hr?.resignations ?? 0} icon={LogOut} tone="rose" loading={loading} />
-        <StatCard label="Average Age" value={hr?.averageAge != null ? `${hr.averageAge} yrs` : '—'} icon={CalendarDays} tone="violet" loading={loading} />
+        <StatCard label="Average Age" value={hr?.averageAge != null ? `${hr.averageAge} yrs` : '-'} icon={CalendarDays} tone="violet" loading={loading} />
       </div>
     </section>
   );

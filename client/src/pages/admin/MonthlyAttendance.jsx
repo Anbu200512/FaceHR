@@ -111,7 +111,7 @@ export default function MonthlyAttendance() {
                     <tr key={r._id} className="border-b transition last:border-0 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50">
                       <td className="td">
                         <p className="font-semibold text-slate-800 dark:text-slate-100">{r.firstName} {r.lastName}</p>
-                        <p className="text-xs text-slate-400">{r.employeeId} · {r.department?.name || '—'}</p>
+                        <p className="text-xs text-slate-400">{r.employeeId} · {r.department?.name || '-'}</p>
                       </td>
                       <td className="td text-emerald-600">{s.presentDays}</td>
                       <td className="td text-amber-600">{s.lateDays}</td>

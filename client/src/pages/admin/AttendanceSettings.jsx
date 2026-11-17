@@ -182,7 +182,7 @@ export default function AttendanceSettings() {
               />
               <p className="pt-2 text-xs leading-relaxed text-slate-400">
                 {form.faceEnabled === false
-                  ? 'Face attendance is disabled — the attendance camera will not open for any employee until this is turned on.'
+                  ? 'Face attendance is disabled - the attendance camera will not open for any employee until this is turned on.'
                   : 'When face attendance is on, the camera opens only after a successful identity check.'}
                 {form.geoEnabled && ' The GPS location is always re-verified by the server; a device outside the geofence is blocked.'}
               </p>
@@ -273,7 +273,7 @@ export default function AttendanceSettings() {
                   </Button>
                 </div>
                 <p className="mb-2 text-xs text-slate-400">
-                  Pick the exact spot on the map — the blue circle shows the allowed radius that is applied to everyone.
+                  Pick the exact spot on the map - the blue circle shows the allowed radius that is applied to everyone.
                 </p>
                 {hasValidCenter ? (
                   <GeofenceMap

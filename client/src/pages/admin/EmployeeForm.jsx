@@ -151,7 +151,7 @@ export default function EmployeeForm() {
         const created = data?.data;
         if (created?._id) {
           if (data.emailSent) {
-            toast.success(`Employee created — login credentials sent to ${created.email}.`);
+            toast.success(`Employee created - login credentials sent to ${created.email}.`);
           } else {
             toast.success('Employee created.');
             if (data.generatedPassword) {
@@ -179,7 +179,7 @@ export default function EmployeeForm() {
   return (
     <div>
       <PageHeader
-        title={isEdit ? 'Edit Employee — Basic Information' : 'Add Employee'}
+        title={isEdit ? 'Edit Employee - Basic Information' : 'Add Employee'}
         description={
           isEdit
             ? 'Update the employee’s basic employment and login information.'

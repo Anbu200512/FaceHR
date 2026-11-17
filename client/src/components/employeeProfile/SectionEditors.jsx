@@ -361,7 +361,7 @@ const SALARY_ON_OPTIONS = [
 ];
 
 const OT_APPLICABLE_OPTIONS = ['Not Applicable', 'Per Day', 'Per Week', 'Per Month', 'Fixed Hours (Monthly)'];
-const ATTENDANCE_POLICY_OPTIONS = ['Standard (Mon–Fri)', '5.5-Day Week', '6-Day Week', 'Shift Based', 'Flexi Hours'];
+const ATTENDANCE_POLICY_OPTIONS = ['Standard (Mon-Fri)', '5.5-Day Week', '6-Day Week', 'Shift Based', 'Flexi Hours'];
 const PAYMENT_MODE_OPTIONS = ['Bank Transfer', 'Cheque', 'Cash', 'Other'];
 const WORKSHIFT_OPTIONS = ['Day Shift', 'Evening Shift', 'Night Shift', 'Rotational'];
 
@@ -419,7 +419,7 @@ function AdminEditor({ emp, ctx, onSaved }) {
     if (!String(form.salaryOn || '').trim()) errs.salaryOn = 'Salary On is required';
     if (form.uan && !/^\d{12}$/.test(String(form.uan).trim())) errs.uan = 'UAN must be exactly 12 digits';
     if (form.aadhaarCardNo && !/^\d{12}$/.test(String(form.aadhaarCardNo).trim())) errs.aadhaarCardNo = 'Aadhaar must be exactly 12 digits';
-    if (form.esiNo && !/^\d{10,20}$/.test(String(form.esiNo).trim().replace(/[- ]/g, ''))) errs.esiNo = 'ESI No. must be 10–20 digits';
+    if (form.esiNo && !/^\d{10,20}$/.test(String(form.esiNo).trim().replace(/[- ]/g, ''))) errs.esiNo = 'ESI No. must be 10-20 digits';
     if (form.pfNo && !/^[A-Za-z0-9/.-]{4,32}$/.test(String(form.pfNo).trim())) errs.pfNo = 'Enter a valid PF number';
     if (form.rfidCardNo && !/^[A-Za-z0-9-]{4,24}$/.test(String(form.rfidCardNo).trim())) errs.rfidCardNo = 'Enter a valid RFID card number';
     if (form.fingerprintId && !/^[A-Za-z0-9_-]{1,32}$/.test(String(form.fingerprintId).trim())) errs.fingerprintId = 'Enter a valid fingerprint ID';
@@ -495,7 +495,7 @@ function AdminEditor({ emp, ctx, onSaved }) {
           step="0.1"
           value={form.vpfPercentage}
           onChange={(e) => { set('vpfPercentage', e.target.value); setErrors((er) => ({ ...er, vpfPercentage: undefined })); }}
-          placeholder="0 – 100"
+          placeholder="0 - 100"
           error={errors.vpfPercentage}
         />
         <Input
@@ -503,7 +503,7 @@ function AdminEditor({ emp, ctx, onSaved }) {
           name="esiNo"
           value={form.esiNo}
           onChange={(e) => { set('esiNo', e.target.value); setErrors((er) => ({ ...er, esiNo: undefined })); }}
-          placeholder="10–20 digit ESI number"
+          placeholder="10-20 digit ESI number"
           error={errors.esiNo}
         />
         <Input
@@ -1210,7 +1210,7 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
               onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value }))}
               options={DOCUMENT_KINDS}
             />
-            <Input label="Document Name" name="name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Optional — defaults to type" />
+            <Input label="Document Name" name="name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Optional - defaults to type" />
             <div className="sm:pt-6">
               <label className="btn-secondary block cursor-pointer text-center text-xs">
                 <FileUp className="h-4 w-4" /> {form.file ? form.file.name : 'Choose file'}

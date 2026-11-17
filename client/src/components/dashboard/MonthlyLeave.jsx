@@ -25,7 +25,7 @@ function LeaveMetric({ icon: Icon, label, value, sub, tone = 'indigo', loading }
         ) : (
           <>
             <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{label}</p>
-            <p className="mt-0.5 text-2xl font-bold text-slate-900 dark:text-slate-100">{value ?? '—'}</p>
+            <p className="mt-0.5 text-2xl font-bold text-slate-900 dark:text-slate-100">{value ?? '-'}</p>
             {sub && <p className="truncate text-xs text-slate-400">{sub}</p>}
           </>
         )}

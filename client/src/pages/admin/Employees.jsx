@@ -107,7 +107,7 @@ export default function Employees() {
       if (data.emailSent) {
         toast.success(`Login credentials sent to ${sendName}'s work email.`);
       } else {
-        toast.success('Email service is not configured — temporary password generated.');
+        toast.success('Email service is not configured - temporary password generated.');
         if (data.generatedPassword) {
           toast.info(`Temporary password for ${sendName}: ${data.generatedPassword}`, { duration: 0 });
         }
@@ -180,7 +180,7 @@ export default function Employees() {
       {/* Desktop table */}
       <Card className="hidden overflow-hidden md:block">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[980px]">
             <thead className="border-b bg-slate-50 dark:bg-slate-800/60">
               <tr>
                 <th className="th">Employee ID</th>
@@ -214,10 +214,10 @@ export default function Employees() {
                           </button>
                         </div>
                       </td>
-                      <td className="td">{emp.department?.name || '—'}</td>
-                      <td className="td">{emp.designation?.name || '—'}</td>
+                      <td className="td">{emp.department?.name || '-'}</td>
+                      <td className="td">{emp.designation?.name || '-'}</td>
                       <td className="td">
-                        {emp.employmentType || emp.category || '—'}
+                        {emp.employmentType || emp.category || '-'}
                         {emp.employmentType === 'Intern' && emp.internEndDate ? (
                           <span className="block text-[11px] text-slate-400">Ends {new Date(emp.internEndDate).toLocaleDateString()}</span>
                         ) : null}
@@ -261,7 +261,7 @@ export default function Employees() {
                   </p>
                   <p className="text-xs text-slate-400 break-words">{emp.employeeId} · {emp.department?.name || 'No dept'}</p>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 break-words">
-                    {emp.designation?.name || '—'} · {emp.employmentType || emp.category || '—'}
+                    {emp.designation?.name || '-'} · {emp.employmentType || emp.category || '-'}
                   </p>
                   {emp.employmentType === 'Intern' && emp.internEndDate && (
                     <p className="mt-0.5 text-[11px] text-slate-400">Ends {new Date(emp.internEndDate).toLocaleDateString()}</p>

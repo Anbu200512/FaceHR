@@ -165,7 +165,7 @@ export default function ManualAttendance() {
     <div>
       <PageHeader
         title="Manual Attendance"
-        description="Create or edit any employee's attendance for a past date or today — no face photo required."
+        description="Create or edit any employee's attendance for a past date or today - no face photo required."
       />
 
       <Card className="mb-5 p-4">
@@ -297,25 +297,25 @@ export default function ManualAttendance() {
                   <div>
                     <dt className="text-xs text-slate-400">Check-in</dt>
                     <dd className="font-semibold text-slate-700 dark:text-slate-200">
-                      {record.checkInTime ? formatTime(record.checkInTime) : '—'}
+                      {record.checkInTime ? formatTime(record.checkInTime) : '-'}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-xs text-slate-400">Check-out</dt>
                     <dd className="font-semibold text-slate-700 dark:text-slate-200">
-                      {record.checkOutTime ? formatTime(record.checkOutTime) : '—'}
+                      {record.checkOutTime ? formatTime(record.checkOutTime) : '-'}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-xs text-slate-400">Working hours</dt>
                     <dd className="font-semibold text-slate-700 dark:text-slate-200">
-                      {record.workingHoursMinutes ? formatDuration(record.workingHoursMinutes) : '—'}
+                      {record.workingHoursMinutes ? formatDuration(record.workingHoursMinutes) : '-'}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-xs text-slate-400">Late by</dt>
                     <dd className="font-semibold text-slate-700 dark:text-slate-200">
-                      {record.lateMinutes ? `${record.lateMinutes}m` : '—'}
+                      {record.lateMinutes ? `${record.lateMinutes}m` : '-'}
                     </dd>
                   </div>
                 </dl>
@@ -360,14 +360,14 @@ export default function ManualAttendance() {
 
               <div>
                 <label className="label">
-                  Note <span className="font-normal text-slate-400">(optional — skip if not needed)</span>
+                  Note <span className="font-normal text-slate-400">(optional - skip if not needed)</span>
                 </label>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={3}
                   maxLength={500}
-                  placeholder="e.g. Forgot to check in — arrived at 10:15"
+                  placeholder="e.g. Forgot to check in - arrived at 10:15"
                   className="input resize-none"
                 />
               </div>

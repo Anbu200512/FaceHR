@@ -154,7 +154,7 @@ export default function Settings() {
               </div>
               <div>
                 <dt className="text-xs font-medium text-slate-400">Model dir</dt>
-                <dd className="mt-0.5 truncate font-mono text-xs text-slate-600 dark:text-slate-300" title={face?.modelDir}>{face?.modelDir || '—'}</dd>
+                <dd className="mt-0.5 truncate font-mono text-xs text-slate-600 dark:text-slate-300" title={face?.modelDir}>{face?.modelDir || '-'}</dd>
               </div>
               <div>
                 <dt className="text-xs font-medium text-slate-400">Status</dt>
@@ -163,7 +163,7 @@ export default function Settings() {
             </dl>
             <p className="flex items-start gap-2 text-xs leading-relaxed text-slate-400">
               <ToggleLeft className="mt-0.5 h-4 w-4 shrink-0" />
-              When the optional native TensorFlow backend isn't available, the server still validates every matching step using the descriptor sent from the browser — no recognized fallback lowers security.
+              When the optional native TensorFlow backend isn't available, the server still validates every matching step using the descriptor sent from the browser - no recognized fallback lowers security.
             </p>
           </div>
         </Card>

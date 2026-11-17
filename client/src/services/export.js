@@ -62,13 +62,13 @@ export function buildAttendanceExportPayload(summary, rows) {
     { key: 'employeeName', label: 'Employee' },
     { key: 'department', label: 'Department' },
     { key: 'date', label: 'Date' },
-    { key: 'checkInTime', label: 'Check In', render: (r) => (r.checkInTime ? new Date(r.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—') },
-    { key: 'checkOutTime', label: 'Check Out', render: (r) => (r.checkOutTime ? new Date(r.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—') },
+    { key: 'checkInTime', label: 'Check In', render: (r) => (r.checkInTime ? new Date(r.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-') },
+    { key: 'checkOutTime', label: 'Check Out', render: (r) => (r.checkOutTime ? new Date(r.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-') },
     {
       key: 'workingHoursMinutes',
       label: 'Working Hours',
       render: (r) => {
-        if (!r.workingHoursMinutes) return '—';
+        if (!r.workingHoursMinutes) return '-';
         const h = Math.floor(r.workingHoursMinutes / 60);
         const m = r.workingHoursMinutes % 60;
         return `${h}h ${String(m).padStart(2, '0')}m`;

@@ -154,7 +154,7 @@ export default function Announcements() {
             <div>
               <label className="label">Department *</label>
               <select value={form.departmentId} onChange={(e) => setForm({ ...form, departmentId: e.target.value })} className="input">
-                <option value="">— Select department —</option>
+                <option value="">- Select department -</option>
                 {(departments.data || []).map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
               </select>
             </div>

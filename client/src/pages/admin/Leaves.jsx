@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Check, X, Search, MessageSquareText } from 'lucide-react';
-import api, { extractError } from '../../services/api';
+﻿import { useMemo, useState } from 'react';
+import { Search, Check, X, StickyNote, MessageSquareText } from 'lucide-react';
+import api from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import { useToast } from '../../context/ToastContext';
 import { formatDate, resolveAsset } from '../../services/format';
@@ -12,6 +12,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import Pagination from '../../components/ui/Pagination';
 import Modal from '../../components/ui/Modal';
 import Avatar from '../../components/Avatar';
+import { SkeletonRow } from '../../components/ui/Skeleton';
 
 const STATUS_TONES = { Pending: 'amber', Approved: 'emerald', Rejected: 'rose' };
 
@@ -20,7 +21,7 @@ export default function Leaves() {
   const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
   const [review, setReview] = useState(null);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -28,9 +29,18 @@ export default function Leaves() {
   const { data, loading, refetch } = useApi(() => {
     const sp = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (status) sp.set('status', status);
-    if (search) sp.set('search', search);
     return api.get(`/leaves?${sp.toString()}`).then((r) => r.data);
-  }, [page, pageSize, status, search]);
+  }, [page, pageSize, status]);
+
+  const rows = useMemo(() => {
+    const list = data?.data || [];
+    if (!search) return list;
+    const q = search.toLowerCase();
+    return list.filter((l) =>
+      `${l.employee.firstName} ${l.employee.middleName || ''} ${l.employee.lastName} ${l.employeeId} ${l.leaveType}`.toLowerCase().includes(q)
+    );
+  }, [data, search]);
+  const meta = data?.meta || {};
 
   const openReview = (leave, action) => {
     setReview({ leave, action });
@@ -38,32 +48,32 @@ export default function Leaves() {
   };
 
   const submitReview = async () => {
+    if (!review) return;
     setBusy(true);
     try {
-      const payload = note ? { adminNote: note } : {};
-      await api.put(`/leaves/${review.leave._id}/${review.action}`, payload);
-      toast.success(review.action === 'approve' ? 'Leave approved' : 'Leave rejected');
+      await api.put(`/leaves/${review.leave._id}`, {
+        status: review.action === 'approve' ? 'Approved' : 'Rejected',
+        adminNote: note,
+      });
+      toast.success(`Leave ${review.action === 'approve' ? 'approved' : 'rejected'}`);
       setReview(null);
       refetch();
     } catch (err) {
-      toast.error(extractError(err, 'Could not update leave'));
+      toast.error(err?.response?.data?.message || 'Failed to update leave');
     } finally {
       setBusy(false);
     }
   };
 
-  const rows = data?.data || [];
-  const meta = data?.meta || {};
-
   return (
     <div>
-      <PageHeader title="Leave Management" description="Review and respond to leave requests." />
+      <PageHeader title="Leave Requests" description="Review, approve or reject leave requests from employees." />
 
       <Card className="mb-5 p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="relative sm:col-span-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search by name or employee ID…" className="input pl-9" />
+            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search employee or leave type..." className="input pl-9" />
           </div>
           <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="input">
             <option value="">All Statuses</option>
@@ -76,7 +86,7 @@ export default function Leaves() {
 
       <Card className="hidden overflow-hidden md:block">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[860px]">
             <thead className="border-b bg-slate-50 dark:bg-slate-800/60">
               <tr>
                 <th className="th">Employee</th>
@@ -90,20 +100,18 @@ export default function Leaves() {
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i} className="border-b dark:border-slate-700">
-                    <td colSpan={7} className="h-12 animate-pulse bg-slate-100 dark:bg-slate-800" />
-                  </tr>
-                ))
+                Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} cols={7} />)
               ) : rows.length === 0 ? (
                 <tr><td colSpan={7}><EmptyState title="No leave requests" message="Requests from employees will appear here." /></td></tr>
-              ) : rows.map((l) => (
+              ) : rows.map((l) => {
+                const name = [l.employee.firstName, l.employee.middleName, l.employee.lastName].filter(Boolean).join(' ');
+                return (
                 <tr key={l._id} className="border-b transition last:border-0 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50">
                   <td className="td">
                     <div className="flex items-center gap-2">
-                      <Avatar name={`${[l.employee.firstName, l.employee.middleName, l.employee.lastName].filter(Boolean).join(" ")}`} src={resolveAsset(l.employee?.profilePhoto)} size="sm" />
-                      <div>
-                        <p className="font-semibold text-slate-800 dark:text-slate-100">{l.employee.firstName} {l.employee.lastName}</p>
+                      <Avatar name={name} src={resolveAsset(l.employee?.profilePhoto)} size="sm" />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-800 dark:text-slate-100">{name}</p>
                         <p className="text-xs text-slate-400">{l.employeeId}</p>
                       </div>
                     </div>
@@ -111,7 +119,7 @@ export default function Leaves() {
                   <td className="td">{l.leaveType}</td>
                   <td className="td">{formatDate(l.startDate)} → {formatDate(l.endDate)}</td>
                   <td className="td">{l.days}</td>
-                  <td className="td max-w-[220px]"><p className="truncate text-sm text-slate-500" title={l.reason}>{l.reason || '—'}</p></td>
+                  <td className="td max-w-[220px]"><p className="truncate text-sm text-slate-500" title={l.reason}>{l.reason || '-'}</p></td>
                   <td className="td"><Badge tone={STATUS_TONES[l.status]}>{l.status}</Badge></td>
                   <td className="td">
                     <div className="flex justify-end gap-2">
@@ -126,33 +134,34 @@ export default function Leaves() {
                         </>
                       ) : (
                         <span className="text-xs text-slate-400">
-                          {l.reviewedBy?.name ? `Reviewed by ${l.reviewedBy.name}` : '—'}
+                          {l.reviewedBy?.name ? `Reviewed by ${l.reviewedBy.name}` : '-'}
                           {l.adminNote ? ` · ${l.adminNote}` : ''}
                         </span>
                       )}
                     </div>
                   </td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
         </div>
         {rows.length > 0 && <Pagination page={meta.page} pageSize={pageSize} total={meta.total} onPageChange={setPage} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} />}
       </Card>
 
-      {/* Mobile */}
       <div className="space-y-3 md:hidden">
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => <Card key={i} className="h-28 animate-pulse" />)
         ) : rows.length === 0 ? (
           <Card><EmptyState title="No leave requests" /></Card>
-        ) : rows.map((l) => (
+        ) : rows.map((l) => {
+          const name = [l.employee.firstName, l.employee.middleName, l.employee.lastName].filter(Boolean).join(' ');
+          return (
           <Card key={l._id} className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Avatar name={`${[l.employee.firstName, l.employee.middleName, l.employee.lastName].filter(Boolean).join(" ")}`} src={resolveAsset(l.employee?.profilePhoto)} size="sm" />
-                <div>
-                  <p className="font-semibold text-slate-800 dark:text-slate-100">{l.employee.firstName} {l.employee.lastName}</p>
+                <Avatar name={name} src={resolveAsset(l.employee?.profilePhoto)} size="sm" />
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-800 dark:text-slate-100">{name}</p>
                   <p className="text-xs text-slate-400">{l.employeeId}</p>
                 </div>
               </div>
@@ -170,7 +179,7 @@ export default function Leaves() {
               </div>
             )}
           </Card>
-        ))}
+        );})}
         {rows.length > 0 && <Pagination page={meta.page} pageSize={pageSize} total={meta.total} onPageChange={setPage} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} />}
       </div>
 
@@ -183,7 +192,7 @@ export default function Leaves() {
         {review && (
           <div className="space-y-4">
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              {review.leave.employee.firstName} {review.leave.employee.lastName} · <span className="font-semibold">{review.leave.leaveType}</span> · {review.leave.days} day(s) · {formatDate(review.leave.startDate)} → {formatDate(review.leave.endDate)}
+              {[review.leave.employee.firstName, review.leave.employee.middleName, review.leave.employee.lastName].filter(Boolean).join(' ')} · <span className="font-semibold">{review.leave.leaveType}</span> · {review.leave.days} day(s) · {formatDate(review.leave.startDate)} → {formatDate(review.leave.endDate)}
             </p>
             <div>
               <label className="label">Admin note {review.action === 'reject' && '(recommended)'}</label>

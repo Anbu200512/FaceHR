@@ -76,11 +76,11 @@ export default function Attendance() {
     const payload = rows.map((r) => ({
       employeeId: r.employee.employeeId,
       employeeName: `${[r.employee.firstName, r.employee.middleName, r.employee.lastName].filter(Boolean).join(" ")}`,
-      department: r.employee.department?.name || '—',
+      department: r.employee.department?.name || '-',
       date: formatDate(r.date),
-      checkIn: r.checkInTime ? formatTime(r.checkInTime) : '—',
-      checkOut: r.checkOutTime ? formatTime(r.checkOutTime) : '—',
-      hours: r.workingHoursMinutes ? formatDuration(r.workingHoursMinutes) : '—',
+      checkIn: r.checkInTime ? formatTime(r.checkInTime) : '-',
+      checkOut: r.checkOutTime ? formatTime(r.checkOutTime) : '-',
+      hours: r.workingHoursMinutes ? formatDuration(r.workingHoursMinutes) : '-',
       status: r.status,
     }));
     exportAttendanceToCsv(payload, `attendance-${date || 'export'}`);
@@ -127,7 +127,7 @@ export default function Attendance() {
 
       <Card className="hidden overflow-hidden md:block">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[900px]">
             <thead className="border-b bg-slate-50 dark:bg-slate-800/60">
               <tr>
                 <th className="th">Employee</th>
@@ -149,13 +149,13 @@ export default function Attendance() {
                 rows.map((r) => (
                   <tr key={r._id || `${r.employee._id}-${r.date}`} className="border-b transition last:border-0 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50">
                     <td className="td">
-                      <p className="font-semibold text-slate-800 dark:text-slate-100">{r.employee.firstName} {r.employee.lastName}</p>
+                      <p className="font-semibold text-slate-800 dark:text-slate-100">{[r.employee.firstName, r.employee.middleName, r.employee.lastName].filter(Boolean).join(" ")}</p>
                       <p className="text-xs text-slate-400">{r.employeeId || r.employee.employeeId}</p>
                     </td>
                     <td className="td">{formatDate(r.date)}</td>
-                    <td className="td">{r.checkInTime ? formatTime(r.checkInTime) : '—'}</td>
-                    <td className="td">{r.checkOutTime ? formatTime(r.checkOutTime) : '—'}</td>
-                    <td className="td">{r.workingHoursMinutes ? formatDuration(r.workingHoursMinutes) : '—'}</td>
+                    <td className="td">{r.checkInTime ? formatTime(r.checkInTime) : '-'}</td>
+                    <td className="td">{r.checkOutTime ? formatTime(r.checkOutTime) : '-'}</td>
+                    <td className="td">{r.workingHoursMinutes ? formatDuration(r.workingHoursMinutes) : '-'}</td>
                     <td className="td"><Badge>{r.status}</Badge></td>
                     <td className="td">
                       {r.faceVerified ? (
@@ -168,7 +168,7 @@ export default function Attendance() {
                       <div className="flex justify-end gap-1.5">
                         {r.checkInPhoto && <PhotoThumb src={resolveAsset(r.checkInPhoto)} label={`Check-in · ${formatTime(r.checkInTime)}`} onView={() => setView({ src: resolveAsset(r.checkInPhoto), label: `Check-in · ${formatTime(r.checkInTime)}` })} />}
                         {r.checkOutPhoto && <PhotoThumb src={resolveAsset(r.checkOutPhoto)} label={`Check-out · ${formatTime(r.checkOutTime)}`} onView={() => setView({ src: resolveAsset(r.checkOutPhoto), label: `Check-out · ${formatTime(r.checkOutTime)}` })} />}
-                        {!r.checkInPhoto && !r.checkOutPhoto && <span className="text-xs text-slate-300">—</span>}
+                        {!r.checkInPhoto && !r.checkOutPhoto && <span className="text-xs text-slate-300">-</span>}
                       </div>
                     </td>
                   </tr>
@@ -193,15 +193,15 @@ export default function Attendance() {
             <Card key={r._id || `${r.employee._id}-${r.date}`} className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-semibold text-slate-800 dark:text-slate-100">{r.employee.firstName} {r.employee.lastName}</p>
+                  <p className="font-semibold text-slate-800 dark:text-slate-100">{[r.employee.firstName, r.employee.middleName, r.employee.lastName].filter(Boolean).join(" ")}</p>
                   <p className="text-xs text-slate-400">{formatDate(r.date)} · {r.employeeId}</p>
                 </div>
                 <Badge>{r.status}</Badge>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
-                <div>In: <span className="font-semibold text-slate-700 dark:text-slate-200">{r.checkInTime ? formatTime(r.checkInTime) : '—'}</span></div>
-                <div>Out: <span className="font-semibold text-slate-700 dark:text-slate-200">{r.checkOutTime ? formatTime(r.checkOutTime) : '—'}</span></div>
-                <div className="col-span-2">Hours: <span className="font-semibold text-slate-700 dark:text-slate-200">{r.workingHoursMinutes ? formatDuration(r.workingHoursMinutes) : '—'}</span></div>
+                <div>In: <span className="font-semibold text-slate-700 dark:text-slate-200">{r.checkInTime ? formatTime(r.checkInTime) : '-'}</span></div>
+                <div>Out: <span className="font-semibold text-slate-700 dark:text-slate-200">{r.checkOutTime ? formatTime(r.checkOutTime) : '-'}</span></div>
+                <div className="col-span-2">Hours: <span className="font-semibold text-slate-700 dark:text-slate-200">{r.workingHoursMinutes ? formatDuration(r.workingHoursMinutes) : '-'}</span></div>
               </div>
               {(r.checkInPhoto || r.checkOutPhoto) && (
                 <div className="mt-3 flex gap-2">

@@ -46,7 +46,7 @@ export function BasicStep({ values, errors, set, isEdit, depts, designations, su
           hint={
             isEdit
               ? 'Only set when resetting the password.'
-              : 'Optional — if blank, a temporary password is generated and included in the welcome email.'
+              : 'Optional - if blank, a temporary password is generated and included in the welcome email.'
           }
         />
         <Select

@@ -12,6 +12,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import { Input, Select, Textarea } from '../../components/ui/Form';
 import Modal from '../../components/ui/Modal';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import { SkeletonRow } from '../../components/ui/Skeleton';
 
 const monthName = (m) => MONTH_OPTIONS[(m || 1) - 1];
 const money = (value, currency = 'INR') => {
@@ -111,14 +112,17 @@ export default function Payroll() {
 
       <Card className="overflow-hidden">
         {runs.loading ? (
-          <div className="space-y-3 p-5">
-            {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-12 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />)}
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[860px]">
+              <thead className="border-b bg-slate-50 dark:bg-slate-800/60"><tr><th className="th">Period</th><th className="th">Employees</th><th className="th">Gross</th><th className="th">Deductions</th><th className="th">Net</th><th className="th">Status</th><th className="th text-right">Actions</th></tr></thead>
+              <tbody>{Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={7} />)}</tbody>
+            </table>
           </div>
         ) : rows.length === 0 ? (
           <EmptyState icon={Wallet} title="No payroll runs yet" message="Generate payroll for a month to create payslips." />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[860px]">
               <thead className="border-b bg-slate-50 dark:bg-slate-800/60">
                 <tr>
                   <th className="th">Period</th>
@@ -134,7 +138,7 @@ export default function Payroll() {
                 {rows.map((r) => (
                   <tr key={r._id} className="border-b last:border-0 dark:border-slate-700">
                     <td className="td font-semibold text-slate-800 dark:text-slate-100">{monthName(r.month)} {r.year}</td>
-                    <td className="td">{r._count?.payslips ?? '—'}</td>
+                    <td className="td">{r._count?.payslips ?? '-'}</td>
                     <td className="td">{money(r.totalGross)}</td>
                     <td className="td">{money(r.totalDeductions)}</td>
                     <td className="td font-semibold">{money(r.totalNet)}</td>
@@ -188,8 +192,11 @@ export default function Payroll() {
         size="xl"
       >
         {detailLoading || !detail?.id ? (
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-10 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />)}
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[780px]">
+              <thead className="border-b bg-slate-50 dark:bg-slate-800/60"><tr><th className="th">Employee</th><th className="th">Gross</th><th className="th">Deductions</th><th className="th">Net</th><th className="th">Days</th><th className="th">Status</th></tr></thead>
+              <tbody>{Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} cols={6} />)}</tbody>
+            </table>
           </div>
         ) : (
           <>

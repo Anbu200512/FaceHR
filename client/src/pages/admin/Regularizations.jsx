@@ -12,6 +12,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import Pagination from '../../components/ui/Pagination';
 import Modal from '../../components/ui/Modal';
 import Avatar from '../../components/Avatar';
+import { SkeletonRow } from '../../components/ui/Skeleton';
 
 const STATUS_TONES = { Pending: 'amber', Approved: 'emerald', Rejected: 'rose' };
 
@@ -39,8 +40,8 @@ export default function Regularizations() {
       <PageHeader title="Attendance Regularizations" description="Review employee requests to correct missed check-in or check-out times." />
 
       <Card className="mb-5 p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="relative sm:col-span-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="relative sm:col-span-2 lg:col-span-2">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               value={search}
@@ -64,7 +65,7 @@ export default function Regularizations() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[720px]">
             <thead className="border-b bg-slate-50 dark:bg-slate-800/60">
               <tr>
                 <th className="th">Employee</th>
@@ -76,28 +77,26 @@ export default function Regularizations() {
             </thead>
             <tbody>
               {loading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i} className="border-b dark:border-slate-700">
-                    <td colSpan={5} className="h-12 animate-pulse bg-slate-100 dark:bg-slate-800" />
-                  </tr>
-                ))
+                Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} cols={5} />)
               ) : rows.length === 0 ? (
-                <tr>                  <td colSpan={5}><EmptyState title="No regularization requests" message="Employee requests will appear here." /></td></tr>
-              ) : rows.map((r) => (
+                <tr><td colSpan={5}><EmptyState title="No regularization requests" message="Employee requests will appear here." /></td></tr>
+              ) : rows.map((r) => {
+                const name = [r.employee?.firstName, r.employee?.middleName, r.employee?.lastName].filter(Boolean).join(' ') || 'Employee';
+                return (
                 <tr key={r._id} className="border-b last:border-0 dark:border-slate-700">
                   <td className="td">
                     <div className="flex items-center gap-2">
-                      <Avatar name={`${r.employee?.firstName || ''} ${r.employee?.lastName || ''}`} src={resolveAsset(r.employee?.profilePhoto)} size="sm" />
-                      <div>
-                        <p className="font-semibold text-slate-800 dark:text-slate-100">{r.employee?.firstName} {r.employee?.lastName}</p>
-                        <p className="text-xs text-slate-400">{r.employeeId || r.employee?.employeeId || '—'}</p>
+                      <Avatar name={name} src={resolveAsset(r.employee?.profilePhoto)} size="sm" />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-800 dark:text-slate-100">{name}</p>
+                        <p className="text-xs text-slate-400">{r.employeeId || r.employee?.employeeId || ''}</p>
                       </div>
                     </div>
                   </td>
                   <td className="td">{formatDate(r.date)}</td>
                   <td className="td text-xs">
-                    <div>In: <span className="font-medium text-slate-700 dark:text-slate-200">{r.requestedCheckIn ? formatTime(r.requestedCheckIn) : '—'}</span></div>
-                    <div>Out: <span className="font-medium text-slate-700 dark:text-slate-200">{r.requestedCheckOut ? formatTime(r.requestedCheckOut) : '—'}</span></div>
+                    <div>In: <span className="font-medium text-slate-700 dark:text-slate-200">{r.requestedCheckIn ? formatTime(r.requestedCheckIn) : ''}</span></div>
+                    <div>Out: <span className="font-medium text-slate-700 dark:text-slate-200">{r.requestedCheckOut ? formatTime(r.requestedCheckOut) : ''}</span></div>
                   </td>
                   <td className="td max-w-[220px]">
                     {r.reason ? (
@@ -105,12 +104,12 @@ export default function Regularizations() {
                         <Eye className="h-4 w-4" /> View
                       </Button>
                     ) : (
-                      <span className="text-sm text-slate-400">—</span>
+                      <span className="text-sm text-slate-400"></span>
                     )}
                   </td>
                   <td className="td"><Badge tone={STATUS_TONES[r.status] || 'slate'}>{r.status}</Badge></td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
         </div>
@@ -125,22 +124,22 @@ export default function Regularizations() {
         )}
       </Card>
 
-
-
       <Modal
         open={!!viewRow}
         onClose={() => setViewRow(null)}
         title="Regularization Details"
         size="sm"
       >
-        {viewRow && (
+        {viewRow && (() => {
+          const name = [viewRow.employee?.firstName, viewRow.employee?.middleName, viewRow.employee?.lastName].filter(Boolean).join(' ') || 'Employee';
+          return (
           <div className="space-y-3 text-sm">
-            <p><span className="font-medium text-slate-700 dark:text-slate-200">Employee:</span> {viewRow.employee?.firstName} {viewRow.employee?.lastName} ({viewRow.employeeId || viewRow.employee?.employeeId || '—'})</p>
+            <p><span className="font-medium text-slate-700 dark:text-slate-200">Employee:</span> {name} ({viewRow.employeeId || viewRow.employee?.employeeId || ''})</p>
             <p><span className="font-medium text-slate-700 dark:text-slate-200">Date:</span> {formatDate(viewRow.date)}</p>
-            <p><span className="font-medium text-slate-700 dark:text-slate-200">Requested:</span> In {viewRow.requestedCheckIn ? formatTime(viewRow.requestedCheckIn) : '—'} / Out {viewRow.requestedCheckOut ? formatTime(viewRow.requestedCheckOut) : '—'}</p>
+            <p><span className="font-medium text-slate-700 dark:text-slate-200">Requested:</span> In {viewRow.requestedCheckIn ? formatTime(viewRow.requestedCheckIn) : ''} / Out {viewRow.requestedCheckOut ? formatTime(viewRow.requestedCheckOut) : ''}</p>
             <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
               <p className="mb-1 text-xs font-semibold uppercase text-slate-400">Reason</p>
-              <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-200">{viewRow.reason || '—'}</p>
+              <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-200">{viewRow.reason || ''}</p>
             </div>
             {viewRow.adminNote && (
               <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
@@ -149,12 +148,8 @@ export default function Regularizations() {
               </div>
             )}
           </div>
-        )}
+        );})()}
       </Modal>
     </div>
   );
 }
-
-
-
-

@@ -119,15 +119,15 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
             </span>
             <span className="text-[11px] uppercase tracking-wide text-slate-400">In</span>
             <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-              {selected.record?.checkInTime ? new Date(selected.record.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+              {selected.record?.checkInTime ? new Date(selected.record.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
             </span>
             <span className="text-[11px] uppercase tracking-wide text-slate-400">Out</span>
             <span className="font-mono text-xs font-bold text-rose-600 dark:text-rose-400">
-              {selected.record?.checkOutTime ? new Date(selected.record.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+              {selected.record?.checkOutTime ? new Date(selected.record.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
             </span>
             <span className="text-[11px] uppercase tracking-wide text-slate-400">Hours</span>
             <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-200">
-              {selected.record?.workingHoursMinutes ? formatDuration(selected.record.workingHoursMinutes) : '—'}
+              {selected.record?.workingHoursMinutes ? formatDuration(selected.record.workingHoursMinutes) : '-'}
             </span>
             <Badge tone={TONES[selected.status]} className="ml-auto">{selected.status}</Badge>
           </div>
@@ -162,13 +162,13 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
                     </span>
                   </td>
                   <td className="py-1.5 pr-3 font-mono text-slate-600 dark:text-slate-300">
-                    {d.record?.checkInTime ? new Date(d.record.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                    {d.record?.checkInTime ? new Date(d.record.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
                   </td>
                   <td className="py-1.5 pr-3 font-mono text-slate-600 dark:text-slate-300">
-                    {d.record?.checkOutTime ? new Date(d.record.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                    {d.record?.checkOutTime ? new Date(d.record.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
                   </td>
                   <td className="py-1.5 text-right font-mono font-semibold text-slate-700 dark:text-slate-200">
-                    {d.record?.workingHoursMinutes ? formatDuration(d.record.workingHoursMinutes) : '—'}
+                    {d.record?.workingHoursMinutes ? formatDuration(d.record.workingHoursMinutes) : '-'}
                   </td>
                 </tr>
               ))}

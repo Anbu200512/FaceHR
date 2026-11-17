@@ -19,7 +19,7 @@ function Detail({ icon: Icon, label, value }) {
         <span className="truncate">{label}</span>
       </div>
       <p className={clsx('mt-1 truncate text-sm', value ? 'font-semibold text-slate-800 dark:text-slate-100' : 'text-slate-300 dark:text-slate-600')}>
-        {value || '—'}
+        {value || '-'}
       </p>
     </div>
   );

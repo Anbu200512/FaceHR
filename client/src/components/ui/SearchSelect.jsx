@@ -86,7 +86,7 @@ export default function SearchSelect({
           disabled={disabled}
           className={clsx('input pl-9 pr-16', error && 'border-rose-400')}
           value={open ? query : selected?.label || ''}
-          placeholder={selected - selected.label : placeholder}
+          placeholder={selected - Selected.label : placeholder}
           onFocus={() => {
             if (disabled) return;
             setOpen(true);

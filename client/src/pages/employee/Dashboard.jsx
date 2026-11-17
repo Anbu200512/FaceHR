@@ -66,7 +66,7 @@ export default function EmployeeHome() {
               <div className="min-w-0 flex-1">
                 <p className="truncate font-bold text-slate-900 dark:text-slate-100">{[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}</p>
                 <p className="break-words text-xs text-slate-400">
-                  {emp.designation?.name || '—'} · {emp.department?.name || '—'}
+                  {emp.designation?.name || '-'} · {emp.department?.name || '-'}
                   {emp.employmentType ? ` · ${emp.employmentType}` : ''}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -81,7 +81,7 @@ export default function EmployeeHome() {
                   <Clock3 className="h-3.5 w-3.5" /> Check-in
                 </p>
                 <p className="mt-1 font-mono text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                  {rec?.checkInTime ? formatTime(rec.checkInTime) : '—'}
+                  {rec?.checkInTime ? formatTime(rec.checkInTime) : '-'}
                 </p>
               </div>
               <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
@@ -89,7 +89,7 @@ export default function EmployeeHome() {
                   <Clock3 className="h-3.5 w-3.5" /> Duration
                 </p>
                 <p className="mt-1 font-mono text-lg font-bold text-slate-700 dark:text-slate-200">
-                  {rec?.checkOutTime ? formatDuration(rec.workingHoursMinutes) : (rec?.checkInTime ? 'In office' : '—')}
+                  {rec?.checkOutTime ? formatDuration(rec.workingHoursMinutes) : (rec?.checkInTime ? 'In office' : '-')}
                 </p>
               </div>
             </div>

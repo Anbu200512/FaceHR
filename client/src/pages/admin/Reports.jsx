@@ -197,7 +197,7 @@ export default function Reports() {
                         <td className="td">{r.department}</td>
                         <td className="td">{r.date}</td>
                         <td className="td">{new Date(r.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                        <td className="td">{r.checkOut ? new Date(r.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+                        <td className="td">{r.checkOut ? new Date(r.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                         <td className="td">{formatDuration(r.workingHoursMinutes)}</td>
                         <td className="td"><Badge tone={STATUS_TONES[r.status]}>{r.status}</Badge></td>
                       </tr>

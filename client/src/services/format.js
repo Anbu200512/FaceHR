@@ -25,28 +25,28 @@ export function resolveAsset(url) {
 }
 
 export function formatDate(iso, opts = {}) {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return String(iso);
   return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric', ...opts });
 }
 
 export function formatDateTime(iso) {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
+  if (Number.isNaN(d.getTime())) return '-';
   return `${d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' })} · ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 }
 
 export function formatTime(iso) {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
+  if (Number.isNaN(d.getTime())) return '-';
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 export function formatDuration(minutes) {
-  if (minutes === null || minutes === undefined || minutes < 0) return '—';
+  if (minutes === null || minutes === undefined || minutes < 0) return '-';
   const total = Math.round(minutes);
   const h = Math.floor(total / 60);
   const m = total % 60;

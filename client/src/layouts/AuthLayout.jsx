@@ -1,67 +1,57 @@
 import { Outlet } from 'react-router-dom';
-import { ScanFace, ShieldCheck, Camera, BarChart3, Users } from 'lucide-react';
+import { ScanFace, ShieldCheck, Camera, Users } from 'lucide-react';
 import Logo from '../components/Logo';
 
 const FEATURES = [
-  { icon: ScanFace, title: 'Face Attendance', desc: 'Check in and out in seconds with privacy-friendly face recognition.' },
-  { icon: Users, title: 'Complete HR Suite', desc: 'Employees, departments, leaves and reports from one workspace.' },
-  { icon: ShieldCheck, title: 'Secure by Design', desc: 'JWT-protected APIs, hashed passwords and biometric privacy controls.' },
+  { icon: ScanFace, title: 'Face Attendance', desc: 'Secure check-in and check-out with face verification.' },
+  { icon: Users, title: 'HR Suite', desc: 'Manage employees, leaves, and records in one place.' },
+  { icon: ShieldCheck, title: 'Secure Access', desc: 'Protected accounts and privacy-focused attendance.' },
 ];
 
 export default function AuthLayout() {
   return (
-    <div className="grid min-h-screen bg-white dark:bg-slate-900 lg:grid-cols-2">
-      {/* Brand panel */}
-      <div className="relative hidden flex-col justify-between overflow-hidden bg-brand-700 p-12 text-white lg:flex">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: 'radial-gradient(circle at 20% 20%, white 1px, transparent 1px), radial-gradient(circle at 80% 60%, white 1px, transparent 1px)',
-            backgroundSize: '48px 48px',
-          }}
-        />
+    <div className="grid min-h-dvh bg-slate-50 dark:bg-slate-950 lg:grid-cols-[1.05fr_1fr]">
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-brand-700 p-10 text-white lg:flex xl:p-14">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_45%),radial-gradient(circle_at_bottom_right,rgba(96,139,250,0.35),transparent_40%)]" />
         <div className="relative">
           <Logo size="lg" className="[&_span]:!text-white" />
         </div>
-        <div className="relative max-w-md">
-          <h1 className="text-3xl font-extrabold leading-tight">
-            Smart HR Management with <span className="text-brand-200">Face-Based Attendance</span>
-          </h1>
-          <p className="mt-4 text-brand-100">
-            FaceHR brings your people operations and secure facial attendance together in one modern,
-            beautiful platform for HR teams and every employee.
+        <div className="relative max-w-lg">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-brand-100">FaceHR Platform</p>
+          <h1 className="text-4xl font-extrabold leading-tight xl:text-5xl">Smart HR and attendance, simplified.</h1>
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-brand-100/90">
+            Sign in to manage attendance, employees, and daily HR operations securely.
           </p>
-          <div className="mt-10 space-y-6">
+          <div className="mt-8 grid gap-3">
             {FEATURES.map((f) => (
-              <div key={f.title} className="flex items-start gap-4">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10">
-                  <f.icon className="h-5 w-5" />
+              <div key={f.title} className="flex items-start gap-3 rounded-xl border border-white/15 bg-white/10 p-3 backdrop-blur-sm">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15">
+                  <f.icon className="h-4 w-4" />
                 </div>
-                <div>
-                  <p className="font-semibold">{f.title}</p>
-                  <p className="mt-0.5 text-sm text-brand-100">{f.desc}</p>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{f.title}</p>
+                  <p className="text-xs text-brand-100/90">{f.desc}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
-        <div className="relative flex items-center gap-2 text-xs text-brand-200">
+        <div className="relative flex items-center gap-2 text-xs text-brand-100/80">
           <Camera className="h-4 w-4" />
-          Face data is used only for attendance verification. Retrieved only with the camera API, never stored as video.
+          Face data is used only for attendance verification.
         </div>
       </div>
 
-      {/* Form panel */}
-      <div className="flex flex-col items-center justify-center bg-surface-light px-4 py-10 dark:bg-surface-dark sm:px-8">
-        <div className="w-full max-w-md">
-          <div className="mb-8 lg:hidden">
-            <Logo size="lg" />
+      <div className="flex min-h-dvh flex-col justify-center px-4 py-8 sm:px-6 lg:px-10">
+        <div className="mx-auto w-full max-w-md">
+          <div className="mb-6 flex items-center justify-between lg:hidden">
+            <Logo size="md" />
           </div>
           <Outlet />
+          <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
+            © {new Date().getFullYear()} FaceHR
+          </p>
         </div>
-        <p className="mt-8 text-center text-xs text-slate-400">
-          © {new Date().getFullYear()} FaceHR • Privacy-respecting attendance for modern teams
-        </p>
       </div>
     </div>
   );

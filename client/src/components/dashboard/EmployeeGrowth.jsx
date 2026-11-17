@@ -26,7 +26,7 @@ export default function EmployeeGrowth({ trend, hr, loading }) {
     <div className="min-w-0">
       <div className="mb-3">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Employee Growth</h2>
-        <p className="text-xs text-slate-400">Joiners, resignations and net change — last 6 months</p>
+        <p className="text-xs text-slate-400">Joiners, resignations and net change - last 6 months</p>
       </div>
 
       <Card className="p-5">

@@ -65,7 +65,7 @@ export default function BasicInfoEditor({
                 {isEdit
                   ? 'Edit the unique employee identifier.'
                   : manualEmployeeId
-                    ? 'Manual entry enabled — enter a unique employee ID.'
+                    ? 'Manual entry enabled - enter a unique employee ID.'
                     : 'Auto-generated when the employee is saved.'}
               </p>
             </div>
@@ -207,7 +207,7 @@ export default function BasicInfoEditor({
         icon={KeyRound}
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input label="Login Email / Work Email" name="loginEmail" value={values.email} readOnly className="sm:col-span-2" hint="Derived from the work email — the employee signs in with this address." />
+          <Input label="Login Email / Work Email" name="loginEmail" value={values.email} readOnly className="sm:col-span-2" hint="Derived from the work email - the employee signs in with this address." />
           <Input
             label="Temporary Password"
             name="password"
@@ -219,7 +219,7 @@ export default function BasicInfoEditor({
             hint={
               isEdit
                 ? 'Only set when resetting the password.'
-                : 'Optional — a temporary password is auto-generated and included in the credential email.'
+                : 'Optional - a temporary password is auto-generated and included in the credential email.'
             }
           />
           <div className="flex items-start gap-2 rounded-lg bg-brand-50 px-3 py-2.5 text-xs text-brand-700 sm:self-end dark:bg-brand-500/10 dark:text-brand-400">

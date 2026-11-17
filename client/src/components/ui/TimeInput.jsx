@@ -78,7 +78,7 @@ export default function TimeInput({ value, onChange, className, placeholder, dis
         onChange={(e) => emit({ ap: e.target.value })}
         className={clsx('w-16 border-0 bg-transparent py-0.5 text-sm font-bold text-slate-700 outline-none dark:text-slate-200', empty && 'text-slate-400')}
       >
-        <option value="">—</option>
+        <option value="">-</option>
         <option value="AM">AM</option>
         <option value="PM">PM</option>
       </select>

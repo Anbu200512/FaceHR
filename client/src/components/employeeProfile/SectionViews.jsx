@@ -22,7 +22,7 @@ function Row({ icon: Icon, label, value }) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-        <p className="mt-0.5 break-words text-sm font-medium text-slate-800 dark:text-slate-100">{value || '—'}</p>
+        <p className="mt-0.5 break-words text-sm font-medium text-slate-800 dark:text-slate-100">{value || '-'}</p>
       </div>
     </div>
   );
@@ -118,9 +118,9 @@ export function ReportingManagerCard({ emp }) {
                 <div className="mt-2 flex items-center gap-3">
                   <Avatar name={employeeFullName(person)} src={resolveAsset(person.profilePhoto)} size="md" />
                   <div className="min-w-0 flex-1">
-                    <p className="break-words text-sm font-semibold text-slate-800 dark:text-slate-100">{employeeFullName(person) || '—'}</p>
+                    <p className="break-words text-sm font-semibold text-slate-800 dark:text-slate-100">{employeeFullName(person) || '-'}</p>
                     <p className="break-words text-xs text-slate-400">
-                      {[person.employeeId, person.designation?.name, person.department?.name].filter(Boolean).join(' · ') || '—'}
+                      {[person.employeeId, person.designation?.name, person.department?.name].filter(Boolean).join(' · ') || '-'}
                     </p>
                   </div>
                 </div>
@@ -226,7 +226,7 @@ export function ExperienceSectionView({ emp }) {
       <div className="space-y-4">
         {(emp.experience || []).length ? (
           emp.experience.map((x, i) => {
-            const period = x.currentlyWorking ? `${formatDate(x.startDate)} — Present` : [formatDate(x.startDate), formatDate(x.endDate)].filter((d) => d !== '—').join(' — ');
+            const period = x.currentlyWorking ? `${formatDate(x.startDate)} - Present` : [formatDate(x.startDate), formatDate(x.endDate)].filter((d) => d !== '-').join(' - ');
             return (
               <ListItem
                 key={i}
@@ -257,7 +257,7 @@ export function WeekOffSectionView({ emp }) {
         <Row icon={FileText} label="Weekly Off Day" value={w.weeklyOffDay} />
         <Row icon={FileText} label="Second Weekly Off" value={w.secondWeeklyOffDay} />
         <div className="sm:col-span-2">
-          <Row icon={FileText} label="Working Days" value={workingDays.length ? workingDays.join(', ') : '—'} />
+          <Row icon={FileText} label="Working Days" value={workingDays.length ? workingDays.join(', ') : '-'} />
         </div>
       </Grid>
     </SectionCard>
@@ -277,7 +277,7 @@ export function QualificationSectionView({ emp }) {
                 { icon: GraduationCap, label: 'Degree', value: q.degree },
                 { icon: Building2, label: 'Institution', value: q.institution },
                 { icon: FileText, label: 'Field of Study', value: q.fieldOfStudy },
-                { icon: CalendarDays, label: 'Years', value: [q.startYear, q.endYear].filter(Boolean).join(' — ') },
+                { icon: CalendarDays, label: 'Years', value: [q.startYear, q.endYear].filter(Boolean).join(' - ') },
                 { icon: FileText, label: 'Grade', value: q.grade },
                 { icon: FileText, label: 'Description', value: q.description },
               ]}

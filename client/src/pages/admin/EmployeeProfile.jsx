@@ -154,7 +154,7 @@ export default function EmployeeProfile({ faceMode }) {
       if (data.emailSent) {
         toast.success(`Login credentials sent to ${emp?.email}`);
       } else {
-        toast.success('Email service is not configured — temporary password generated below.');
+        toast.success('Email service is not configured - temporary password generated below.');
         if (data.generatedPassword) {
           toast.info(`Temporary password: ${data.generatedPassword}`, { duration: 0 });
         }
@@ -189,7 +189,7 @@ export default function EmployeeProfile({ faceMode }) {
   if (registerMode) {
     return (
       <div>
-        <PageHeader title={`Face Registration · ${[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}`} description="Help the employee position their face clearly. Only a single photo and a biometric descriptor are stored — never video.">
+        <PageHeader title={`Face Registration · ${[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}`} description="Help the employee position their face clearly. Only a single photo and a biometric descriptor are stored - never video.">
           <Button variant="ghost" onClick={() => setRegisterMode(false)}>
             <ArrowLeft className="h-4 w-4" /> Back to Profile
           </Button>
@@ -211,7 +211,7 @@ export default function EmployeeProfile({ faceMode }) {
   }
 
   const fullName = [emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(' ');
-  const mobile = emp.contact?.mobileNumber || emp.phone || '—';
+  const mobile = emp.contact?.mobileNumber || emp.phone || '-';
   const statusColor = emp.status === 'Active' ? 'emerald' : 'slate';
 
   return (
@@ -253,7 +253,7 @@ export default function EmployeeProfile({ faceMode }) {
             </p>
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
               <span className="inline-flex min-w-0 items-center gap-2 break-all text-slate-600 dark:text-slate-300">
-                <Mail className="h-4 w-4 shrink-0 text-slate-400" /> {emp.email || '—'}
+                <Mail className="h-4 w-4 shrink-0 text-slate-400" /> {emp.email || '-'}
               </span>
               <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
                 <Phone className="h-4 w-4 shrink-0 text-slate-400" /> {mobile}
@@ -361,7 +361,7 @@ export default function EmployeeProfile({ faceMode }) {
         open={!!actionMode}
         onClose={() => setActionMode(null)}
         title={actionMode === 'checkin' ? 'Face Check In' : 'Face Check Out'}
-        subtitle={`Mark ${fullName} (${emp.employeeId}) — the employee needs to face this camera so their identity is verified.`}
+        subtitle={`Mark ${fullName} (${emp.employeeId}) - the employee needs to face this camera so their identity is verified.`}
       >
         <FaceCapture
           key={`admin-${actionMode}-${todayTick}`}
@@ -379,7 +379,7 @@ export default function EmployeeProfile({ faceMode }) {
           )}
         />
         <p className="mt-3 text-center text-xs text-slate-400">
-          The server re-checks the company geofence and face record before attendance is accepted — a device outside the allowed radius is blocked.
+          The server re-checks the company geofence and face record before attendance is accepted - a device outside the allowed radius is blocked.
         </p>
       </Modal>
 
@@ -475,11 +475,11 @@ function AttendanceSummary({ emp }) {
           ['Late', s?.lateDays],
           ['Absent', s?.absentDays],
           ['Leave', s?.leaveDays],
-          ['Hours', s?.totalHours ? formatDuration(s.totalHours) : '—'],
+          ['Hours', s?.totalHours ? formatDuration(s.totalHours) : '-'],
         ].map(([label, val]) => (
           <div key={label} className="p-4">
             <p className="text-xs font-medium text-slate-400">{label}</p>
-            <p className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100 sm:text-xl">{val ?? (loading ? '…' : '—')}</p>
+            <p className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100 sm:text-xl">{val ?? (loading ? '…' : '-')}</p>
           </div>
         ))}
       </div>
@@ -513,8 +513,8 @@ function EmployeeActionsCard({ emp, reloadKey, busy, onCheckIn, onCheckOut }) {
       <div className="flex flex-col gap-5 p-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ActionDetail icon={LogIn} label="Check In Today" value={rec ? formatTime(rec.checkInTime) : 'Not checked in'} sub={checkInLoc || 'No GPS location captured'} />
-          <ActionDetail icon={LogOut} label="Check Out Today" value={rec?.checkOutTime ? formatTime(rec.checkOutTime) : '—'} sub={checkOutLoc || 'No GPS location captured'} />
-          <ActionDetail icon={Clock} label="Worked Today" value={rec?.workingHoursMinutes ? formatDuration(rec.workingHoursMinutes) : '—'} sub={rec?.faceVerified ? 'Face verified' : 'No record yet'} />
+          <ActionDetail icon={LogOut} label="Check Out Today" value={rec?.checkOutTime ? formatTime(rec.checkOutTime) : '-'} sub={checkOutLoc || 'No GPS location captured'} />
+          <ActionDetail icon={Clock} label="Worked Today" value={rec?.workingHoursMinutes ? formatDuration(rec.workingHoursMinutes) : '-'} sub={rec?.faceVerified ? 'Face verified' : 'No record yet'} />
         </div>
         <div className="flex flex-col gap-3 border-t pt-4 dark:border-slate-700 sm:flex-row sm:items-end sm:justify-between">
           <p className="max-w-md text-xs text-slate-400">

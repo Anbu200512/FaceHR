@@ -87,7 +87,7 @@ export default function MyRegularizations() {
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-slate-800 dark:text-slate-100">{formatDate(r.date)}</p>
                     <p className="text-xs text-slate-400">
-                      In: {r.requestedCheckIn ? formatTime(r.requestedCheckIn) : '—'} • Out: {r.requestedCheckOut ? formatTime(r.requestedCheckOut) : '—'}
+                      In: {r.requestedCheckIn ? formatTime(r.requestedCheckIn) : '-'} • Out: {r.requestedCheckOut ? formatTime(r.requestedCheckOut) : '-'}
                     </p>
                     {r.reason && <p className="mt-1 truncate text-xs text-slate-500">{r.reason}</p>}
                     {r.adminNote && <p className="mt-1 text-xs font-medium text-rose-500">Note: {r.adminNote}</p>}
