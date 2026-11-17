@@ -38,7 +38,7 @@ export default function NewJoinersList({ rows, loading }) {
                 <Avatar src={e.profilePhoto} name={`${e.firstName || ''} ${e.lastName || ''}`} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-slate-800 dark:text-slate-100">
-                    {e.firstName} {e.lastName}
+                    {[e.firstName, e.middleName, e.lastName].filter(Boolean).join(" ")}
                   </p>
                   <p className="flex items-center gap-1 truncate text-xs text-slate-400">
                     {e.department?.name || 'No department'}

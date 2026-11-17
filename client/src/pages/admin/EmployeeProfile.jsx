@@ -189,7 +189,7 @@ export default function EmployeeProfile({ faceMode }) {
   if (registerMode) {
     return (
       <div>
-        <PageHeader title={`Face Registration · ${emp.firstName} ${emp.lastName}`} description="Help the employee position their face clearly. Only a single photo and a biometric descriptor are stored — never video.">
+        <PageHeader title={`Face Registration · ${[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}`} description="Help the employee position their face clearly. Only a single photo and a biometric descriptor are stored — never video.">
           <Button variant="ghost" onClick={() => setRegisterMode(false)}>
             <ArrowLeft className="h-4 w-4" /> Back to Profile
           </Button>

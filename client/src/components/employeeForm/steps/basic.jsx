@@ -22,6 +22,7 @@ export function BasicStep({ values, errors, set, isEdit, depts, designations, su
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="First Name *" name="firstName" value={values.firstName} onChange={(e) => set('firstName', e.target.value)} error={errors.firstName} placeholder="Arul" />
+        <Input label="Middle Name" name="middleName" value={values.middleName || ''} onChange={(e) => set('middleName', e.target.value)} placeholder="Kumar" />
         <Input label="Last Name *" name="lastName" value={values.lastName} onChange={(e) => set('lastName', e.target.value)} error={errors.lastName} placeholder="Prakash" />
         <Input
           label="Work Email *"

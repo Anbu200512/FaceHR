@@ -64,7 +64,7 @@ export default function EmployeeHome() {
             <div className="flex min-w-0 items-center gap-4">
               <Avatar name={user?.name} src={resolveAsset(emp.profilePhoto)} size="lg" />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-bold text-slate-900 dark:text-slate-100">{emp.firstName} {emp.lastName}</p>
+                <p className="truncate font-bold text-slate-900 dark:text-slate-100">{[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}</p>
                 <p className="break-words text-xs text-slate-400">
                   {emp.designation?.name || '—'} · {emp.department?.name || '—'}
                   {emp.employmentType ? ` · ${emp.employmentType}` : ''}

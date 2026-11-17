@@ -87,7 +87,7 @@ export default function Reports() {
             <label className="label">Employee</label>
             <select value={employee} onChange={(e) => setEmployee(e.target.value)} className="input">
               <option value="">All</option>
-              {(emps.data || []).map((e) => <option key={e._id} value={e._id}>{e.firstName} {e.lastName}</option>)}
+              {(emps.data || []).map((e) => <option key={e._id} value={e._id}>{[e.firstName, e.middleName, e.lastName].filter(Boolean).join(" ")}</option>)}
             </select>
           </div>
           <div className="flex items-end sm:col-span-2 xl:col-span-1">

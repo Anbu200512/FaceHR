@@ -52,7 +52,7 @@ export default function FaceRegistrationList() {
               <Avatar name={`${emp.firstName} ${emp.lastName}`} src={resolveAsset(emp.profilePhoto)} size="md" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold text-slate-800 dark:text-slate-100">
-                  {emp.firstName} {emp.lastName}
+                  {[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}
                 </p>
                 <p className="text-xs text-slate-400">
                   {emp.employeeId} · {emp.department?.name || 'No dept'}

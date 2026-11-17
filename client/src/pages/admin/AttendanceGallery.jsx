@@ -22,8 +22,8 @@ export default function AttendanceGallery() {
 
   const photos = (data || []).flatMap((r) => {
     const items = [];
-    if (r.checkInPhoto) items.push({ src: resolveAsset(r.checkInPhoto), label: `${r.employee.firstName} ${r.employee.lastName} · Check-in · ${formatTime(r.checkInTime)}`, status: r.status });
-    if (r.checkOutPhoto) items.push({ src: resolveAsset(r.checkOutPhoto), label: `${r.employee.firstName} ${r.employee.lastName} · Check-out · ${formatTime(r.checkOutTime)}`, status: r.status });
+    if (r.checkInPhoto) items.push({ src: resolveAsset(r.checkInPhoto), label: `${[r.employee.firstName, r.employee.middleName, r.employee.lastName].filter(Boolean).join(" ")} · Check-in · ${formatTime(r.checkInTime)}`, status: r.status });
+    if (r.checkOutPhoto) items.push({ src: resolveAsset(r.checkOutPhoto), label: `${[r.employee.firstName, r.employee.middleName, r.employee.lastName].filter(Boolean).join(" ")} · Check-out · ${formatTime(r.checkOutTime)}`, status: r.status });
     return items;
   });
 

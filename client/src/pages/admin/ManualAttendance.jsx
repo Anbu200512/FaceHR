@@ -220,7 +220,7 @@ export default function ManualAttendance() {
                         >
                           <span className="min-w-0">
                             <span className="block truncate text-sm font-medium text-slate-700 dark:text-slate-200">
-                              {emp.firstName} {emp.lastName}
+                              {[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}
                             </span>
                             <span className="block truncate text-xs text-slate-400">
                               {emp.employeeId}

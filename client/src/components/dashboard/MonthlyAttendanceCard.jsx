@@ -17,7 +17,7 @@ function Metric({ icon: Icon, label, value }) {
 export default function MonthlyAttendanceCard({ row }) {
   const emp = row.employee;
   const m = row.month;
-  const name = `${emp.firstName} ${emp.lastName}`.trim();
+  const name = `${[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}`.trim();
   const dept = emp.department?.name || 'No department';
   const office = emp.office?.name;
 

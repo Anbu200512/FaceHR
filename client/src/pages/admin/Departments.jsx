@@ -142,7 +142,7 @@ function DepartmentsTab() {
             <select value={head} onChange={(e) => setHead(e.target.value)} className="input">
               <option value="">— None —</option>
               {(employees.data || []).map((e) => (
-                <option key={e._id} value={e._id}>{e.firstName} {e.lastName} ({e.employeeId})</option>
+                <option key={e._id} value={e._id}>{[e.firstName, e.middleName, e.lastName].filter(Boolean).join(" ")} ({e.employeeId})</option>
               ))}
             </select>
           </div>

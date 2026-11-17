@@ -39,7 +39,7 @@ function Photo({ src, label }) {
 export default function AttendanceCard({ row }) {
   const emp = row.employee;
   const rec = row.record;
-  const name = `${emp.firstName} ${emp.lastName}`.trim();
+  const name = `${[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}`.trim();
   const dept = emp.department?.name || emp.department || 'No department';
   const office = emp.office?.name;
 

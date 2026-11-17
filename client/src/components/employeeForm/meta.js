@@ -74,15 +74,17 @@ export function buildSections(v) {
 
 export function buildEmployeeFormData(values, { photo = null, sectionsOverride } = {}) {
   const fd = new FormData();
-  const append = (k, v) => {
-    if (v !== '' && v !== undefined && v !== null) fd.append(k, v);
+  const append = (k, v, allowEmpty = false) => {
+    if (v === undefined || v === null) return;
+    if (v === '' && !allowEmpty) return;
+    fd.append(k, v);
   };
   append('employeeId', values.employeeId);
   append('firstName', values.firstName);
-  append('middleName', values.middleName);
+  append('middleName', values.middleName, true);
   append('lastName', values.lastName);
   append('email', values.email);
-  append('phone', values.phone);
+  append('phone', values.phone, true);
   append('dateOfBirth', values.dateOfBirth);
   append('gender', values.gender);
   append('state', values.state);
@@ -91,21 +93,21 @@ export function buildEmployeeFormData(values, { photo = null, sectionsOverride }
   append('designation', values.designation);
   append('joiningDate', values.joiningDate);
   append('employmentType', values.employmentType);
-  append('internEndDate', values.internEndDate);
-  append('subDepartment', values.subDepartment);
-  append('subDepartment1', values.subDepartment1);
-  append('subDepartment2', values.subDepartment2);
+  append('internEndDate', values.internEndDate, true);
+  append('subDepartment', values.subDepartment, true);
+  append('subDepartment1', values.subDepartment1, true);
+  append('subDepartment2', values.subDepartment2, true);
   append('category', values.category);
-  append('subCategory', values.subCategory);
-  append('grade', values.grade);
+  append('subCategory', values.subCategory, true);
+  append('grade', values.grade, true);
   fd.append('reportingManagerId', values.manager1Id || '');
   fd.append('reportingManager2Id', values.manager2Id || '');
   fd.append('roles', JSON.stringify(values.roles || []));
-  append('probation', values.probation);
-  append('totalExperience', values.totalExperience);
+  append('probation', values.probation, true);
+  append('totalExperience', values.totalExperience, true);
   append('status', values.status);
   append('password', values.password);
-  append('address', values.address || composeAddress(values));
+  append('address', values.address || composeAddress(values), true);
   if (values.exEmployee) fd.append('exEmployee', 'true');
   if (values.probationManage) fd.append('probationManage', 'true');
   if (sectionsOverride !== false && sectionsOverride !== null) {

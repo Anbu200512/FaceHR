@@ -72,7 +72,7 @@ export function BasicDetailsSectionView({ emp }) {
     <SectionCard title="Basic Details" icon={IdCard}>
       <Grid>
         <Row icon={FileText} label="Employee ID" value={emp.employeeId} />
-        <Row icon={FileText} label="Full Name" value={`${emp.firstName || ''} ${emp.lastName || ''}`.trim()} />
+        <Row icon={FileText} label="Full Name" value={[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(' ')} />
         <Row icon={FileText} label="Work Email" value={emp.email} />
         <Row icon={FileText} label="Mobile Number" value={emp.phone} />
         <Row icon={FileText} label="Department" value={emp.department?.name} />

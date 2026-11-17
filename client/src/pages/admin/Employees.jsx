@@ -208,9 +208,9 @@ export default function Employees() {
                       <td className="td font-mono text-xs font-semibold text-brand-600 dark:text-brand-400">{emp.employeeId}</td>
                       <td className="td">
                         <div className="flex items-center gap-3">
-                          <Avatar name={`${emp.firstName} ${emp.lastName}`} src={resolveAsset(emp.profilePhoto)} size="sm" />
+                          <Avatar name={`${[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}`} src={resolveAsset(emp.profilePhoto)} size="sm" />
                           <button onClick={() => navigate(`/admin/employees/${emp._id}`)} className="min-w-0 truncate font-semibold text-slate-800 hover:text-brand-600 dark:text-slate-100 dark:hover:text-brand-400">
-                            {emp.firstName} {emp.lastName}
+                            {[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}
                           </button>
                         </div>
                       </td>
@@ -230,7 +230,7 @@ export default function Employees() {
                           {!emp.face && (
                             <IconBtn title="Register face" onClick={() => navigate(`/admin/employees/${emp._id}/face`)}><ScanFace className="h-4 w-4" /></IconBtn>
                           )}
-                          <IconBtn title="Send login details" onClick={() => { setSendId(emp._id); setSendName(`${emp.firstName} ${emp.lastName}`); }}><Send className="h-4 w-4" /></IconBtn>
+                          <IconBtn title="Send login details" onClick={() => { setSendId(emp._id); setSendName(`${[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}`); }}><Send className="h-4 w-4" /></IconBtn>
                           <IconBtn title="Deactivate" danger onClick={() => setDeactivateId(emp._id)}><Power className="h-4 w-4" /></IconBtn>
                         </div>
                       </td>
@@ -254,10 +254,10 @@ export default function Employees() {
           rows.map((emp) => (
             <Card key={emp._id} className="p-4" onClick={() => navigate(`/admin/employees/${emp._id}`)}>
               <div className="flex items-start gap-3">
-                <Avatar name={`${emp.firstName} ${emp.lastName}`} src={resolveAsset(emp.profilePhoto)} size="md" />
+                <Avatar name={`${[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}`} src={resolveAsset(emp.profilePhoto)} size="md" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-slate-800 dark:text-slate-100">
-                    {emp.firstName} {emp.lastName}
+                    {[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}
                   </p>
                   <p className="text-xs text-slate-400 break-words">{emp.employeeId} · {emp.department?.name || 'No dept'}</p>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 break-words">
@@ -272,7 +272,7 @@ export default function Employees() {
                 </div>
                 <div className="flex shrink-0 flex-wrap justify-end gap-0.5 max-w-[140px]" onClick={(e) => e.stopPropagation()}>
                   <IconBtn title="Edit" onClick={() => navigate(`/admin/employees/${emp._id}/edit`)}><Pencil className="h-4 w-4" /></IconBtn>
-                  <IconBtn title="Send login details" onClick={() => { setSendId(emp._id); setSendName(`${emp.firstName} ${emp.lastName}`); }}><Send className="h-4 w-4" /></IconBtn>
+                  <IconBtn title="Send login details" onClick={() => { setSendId(emp._id); setSendName(`${[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}`); }}><Send className="h-4 w-4" /></IconBtn>
                   <IconBtn title="Deactivate" danger onClick={() => setDeactivateId(emp._id)}><Power className="h-4 w-4" /></IconBtn>
                 </div>
               </div>

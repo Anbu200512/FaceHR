@@ -75,7 +75,7 @@ export default function Attendance() {
   const handleExport = async () => {
     const payload = rows.map((r) => ({
       employeeId: r.employee.employeeId,
-      employeeName: `${r.employee.firstName} ${r.employee.lastName}`,
+      employeeName: `${[r.employee.firstName, r.employee.middleName, r.employee.lastName].filter(Boolean).join(" ")}`,
       department: r.employee.department?.name || '—',
       date: formatDate(r.date),
       checkIn: r.checkInTime ? formatTime(r.checkInTime) : '—',
