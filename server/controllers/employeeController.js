@@ -880,7 +880,7 @@ const updateEmployeeSection = asyncHandler(async (req, res) => {
         return res.status(400).json({ success: false, message: 'Attendance settings must be an object' });
       }
       const attendanceSettings = {};
-      for (const key of ['faceEnabled', 'geoEnabled']) {
+      for (const key of ['faceEnabled', 'geoEnabled', 'lateEnabled']) {
         if (data[key] !== undefined) {
           if (typeof data[key] !== 'boolean') {
             return res.status(400).json({ success: false, message: `${key} must be true or false` });
@@ -894,6 +894,22 @@ const updateEmployeeSection = asyncHandler(async (req, res) => {
           return res.status(400).json({ success: false, message: 'Allowed radius must be between 1 and 10,000 meters' });
         }
         attendanceSettings.allowedRadius = Math.round(radius);
+      }
+      if (data.graceMinutes !== undefined && data.graceMinutes !== null && data.graceMinutes !== '') {
+        const grace = Number(data.graceMinutes);
+        if (!Number.isFinite(grace) || grace < 0 || grace > 240) {
+          return res.status(400).json({ success: false, message: 'Grace time must be between 0 and 240 minutes' });
+        }
+        attendanceSettings.graceMinutes = Math.round(grace);
+      }
+      for (const key of ['officeStartTime', 'officeEndTime']) {
+        if (data[key] !== undefined && data[key] !== null && data[key] !== '') {
+          if (typeof data[key] !== 'string' || !/^([01]?\d|2[0-3]):([0-5]\d)$/.test(data[key].trim())) {
+            return res.status(400).json({ success: false, message: `${key} must be a valid time (HH:mm)` });
+          }
+          const [h, m] = data[key].trim().split(':');
+          attendanceSettings[key] = `${String(Number(h)).padStart(2, '0')}:${m}`;
+        }
       }
       if (!Object.keys(attendanceSettings).length) {
         return res.status(400).json({ success: false, message: 'Select at least one attendance override or use company defaults' });

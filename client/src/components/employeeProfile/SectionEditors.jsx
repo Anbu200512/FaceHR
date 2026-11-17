@@ -116,19 +116,30 @@ function AttendanceEditor({ emp, ctx, onSaved }) {
   const toast = useToast();
   const [save, saving] = useSave(ctx);
   const [global, setGlobal] = useState(null);
+  const [globalOffice, setGlobalOffice] = useState(null);
   const overrides = emp.attendanceSettings || null;
   const [useDefaults, setUseDefaults] = useState(!overrides);
   const [faceEnabled, setFaceEnabled] = useState(overrides?.faceEnabled ?? true);
   const [geoEnabled, setGeoEnabled] = useState(overrides?.geoEnabled ?? true);
   const [allowedRadius, setAllowedRadius] = useState(overrides?.allowedRadius ?? 100);
+  const [officeStartTime, setOfficeStartTime] = useState(overrides?.officeStartTime ?? '09:30');
+  const [officeEndTime, setOfficeEndTime] = useState(overrides?.officeEndTime ?? '18:00');
+  const [graceMinutes, setGraceMinutes] = useState(overrides?.graceMinutes ?? 0);
+  const [lateEnabled, setLateEnabled] = useState(overrides?.lateEnabled ?? true);
 
   useEffect(() => {
-    fetchAttendanceSettings().then((settings) => {
+    Promise.all([fetchAttendanceSettings(), api.get('/settings')]).then(([settings, res]) => {
+      const gs = res.data?.data?.settings;
       setGlobal(settings);
+      setGlobalOffice(gs || null);
       if (!emp.attendanceSettings) {
         setFaceEnabled(settings.faceEnabled);
         setGeoEnabled(settings.geoEnabled);
         setAllowedRadius(settings.location.allowedRadius);
+        setOfficeStartTime(gs?.officeStartTime || '09:30');
+        setOfficeEndTime(gs?.officeEndTime || '18:00');
+        setGraceMinutes(Number(gs?.graceMinutes ?? 0));
+        setLateEnabled(gs?.lateEnabled !== false);
       }
     }).catch(() => toast.error('Could not load company attendance defaults'));
   }, []);
@@ -140,16 +151,27 @@ function AttendanceEditor({ emp, ctx, onSaved }) {
       setFaceEnabled(current.faceEnabled ?? global?.faceEnabled ?? true);
       setGeoEnabled(current.geoEnabled ?? global?.geoEnabled ?? true);
       setAllowedRadius(current.allowedRadius ?? global?.location?.allowedRadius ?? 100);
+      setOfficeStartTime(current.officeStartTime ?? globalOffice?.officeStartTime ?? '09:30');
+      setOfficeEndTime(current.officeEndTime ?? globalOffice?.officeEndTime ?? '18:00');
+      setGraceMinutes(Number(current.graceMinutes ?? globalOffice?.graceMinutes ?? 0));
+      setLateEnabled(current.lateEnabled ?? globalOffice?.lateEnabled ?? true);
     } else if (global) {
       setFaceEnabled(global.faceEnabled);
       setGeoEnabled(global.geoEnabled);
       setAllowedRadius(global.location.allowedRadius);
+      setOfficeStartTime(globalOffice?.officeStartTime || '09:30');
+      setOfficeEndTime(globalOffice?.officeEndTime || '18:00');
+      setGraceMinutes(Number(globalOffice?.graceMinutes ?? 0));
+      setLateEnabled(globalOffice?.lateEnabled !== false);
     }
-  }, [JSON.stringify(emp.attendanceSettings), global]);
+  }, [JSON.stringify(emp.attendanceSettings), global, globalOffice]);
 
   const onSave = () => save({
     section: 'attendance',
-    payload: useDefaults ? { useDefaults: true } : { faceEnabled, geoEnabled, allowedRadius: Number(allowedRadius) },
+    payload: useDefaults ? { useDefaults: true } : {
+      faceEnabled, geoEnabled, allowedRadius: Number(allowedRadius),
+      officeStartTime, officeEndTime, graceMinutes: Number(graceMinutes), lateEnabled,
+    },
     onSaved,
     message: useDefaults ? 'Employee now uses company attendance defaults' : 'Employee attendance settings saved',
   });
@@ -161,7 +183,7 @@ function AttendanceEditor({ emp, ctx, onSaved }) {
           label="Use company defaults"
           checked={useDefaults}
           onChange={setUseDefaults}
-          hint="When enabled, this employee inherits the global face and location rules."
+          hint="When enabled, this employee inherits global attendance, face, location, and office time rules."
         />
         {useDefaults ? (
           <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
@@ -170,13 +192,31 @@ function AttendanceEditor({ emp, ctx, onSaved }) {
                 <li>Face punch: {global.faceEnabled ? 'Mandatory' : 'Not required'}</li>
                 <li>Location verification: {global.geoEnabled ? 'Enabled' : 'Disabled'}</li>
                 <li>Allowed radius: {global.location.allowedRadius} m</li>
+                <li>Office time: {(globalOffice?.officeStartTime || '09:30')} - {(globalOffice?.officeEndTime || '18:00')}</li>
+                <li>Grace time: {Number(globalOffice?.graceMinutes ?? 0)} min</li>
+                <li>Late marking: {(globalOffice?.lateEnabled ?? true) ? 'Enabled' : 'Disabled'}</li>
               </ul>
-            ) : 'Loading company defaults…'}
+            ) : 'Loading company defaults.'}
           </div>
         ) : (
           <div className="space-y-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
             <CheckboxField label="Face punch is mandatory" checked={faceEnabled} onChange={setFaceEnabled} hint="When off, the employee can punch using a simple button without a camera." />
             <CheckboxField label="Require location verification" checked={geoEnabled} onChange={setGeoEnabled} hint="When on, the employee must be within the allowed radius of the company location." />
+            <CheckboxField label="Mark employee as Late" checked={lateEnabled} onChange={setLateEnabled} hint="When off, check-ins for this employee are treated as on time." />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <label className="label">Office start time</label>
+                <input type="time" value={officeStartTime} onChange={(e) => setOfficeStartTime(e.target.value)} className="input" />
+              </div>
+              <div>
+                <label className="label">Office end time</label>
+                <input type="time" value={officeEndTime} onChange={(e) => setOfficeEndTime(e.target.value)} className="input" />
+              </div>
+              <div>
+                <label className="label">Grace time (minutes)</label>
+                <input type="number" min="0" max="240" value={graceMinutes} onChange={(e) => setGraceMinutes(e.target.value)} className="input" />
+              </div>
+            </div>
             <div>
               <label className="label">Allowed radius (meters)</label>
               <input type="number" min="1" max="10000" value={allowedRadius} onChange={(e) => setAllowedRadius(e.target.value)} className="input max-w-xs" />
@@ -189,7 +229,6 @@ function AttendanceEditor({ emp, ctx, onSaved }) {
     </SectionCard>
   );
 }
-
 function ContactEditor({ emp, ctx, onSaved, readOnly = false }) {
   const c = emp.contact || {};
   const [form, setForm] = useSectionSync(() => ({

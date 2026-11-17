@@ -203,7 +203,7 @@ const checkIn = asyncHandler(async (req, res) => {
   const checkInPhoto = req.file ? saveBuffer(req.file.buffer, ext) : null;
   const checkInDistanceFromCompany = geofence.distance;
 
-  const { status, lateMinutes } = await evaluateCheckInStatus(today, now);
+    const { status, lateMinutes } = await evaluateCheckInStatus(today, now, empDoc);
 
   try {
     const record = await prisma.attendance.create({
@@ -301,7 +301,7 @@ const checkOut = asyncHandler(async (req, res) => {
   const checkOutPhoto = req.file ? saveBuffer(req.file.buffer, ext) : null;
 
   const workingHoursMinutes = Math.max(0, Math.round((now - record.checkInTime) / 60000));
-  const status = await computeFinalStatus(record.checkInTime, now, record.status);
+  const status = await computeFinalStatus(record.checkInTime, now, record.status, empDoc);
 
   const updated = await prisma.attendance.update({
     where: { id: record.id },
@@ -620,7 +620,7 @@ async function performMarkAttendance(employeeId, mode, req) {
   const deviceInfo = { ...summarizeDevice(req), source: isAdminActor ? 'admin' : 'employee' };
 
   if (mode === 'check-in') {
-    const { status, lateMinutes } = await evaluateCheckInStatus(today, now);
+  const { status, lateMinutes } = await evaluateCheckInStatus(today, now, empDoc);
     try {
       const record = await prisma.attendance.create({
         data: {
@@ -653,7 +653,7 @@ async function performMarkAttendance(employeeId, mode, req) {
   }
 
   const workingHoursMinutes = Math.max(0, Math.round((now - existing.checkInTime) / 60000));
-  const status = await computeFinalStatus(existing.checkInTime, now, existing.status);
+  const status = await computeFinalStatus(existing.checkInTime, now, existing.status, empDoc);
 
   const updated = await prisma.attendance.update({
     where: { id: existing.id },
@@ -759,7 +759,7 @@ const markAttendanceManual = asyncHandler(async (req, res) => {
     // comparison stays correct even if the server runs in another timezone.
     const wallIn = parseTimeToMinutes(checkInLocal || (String(checkIn || '').includes('T') ? '' : checkIn));
     const forLate = wallIn !== null ? combineDateWithMinutes(dayDate, wallIn) : checkInDate;
-    const evalResult = await evaluateCheckInStatus(dayDate, forLate);
+    const evalResult = await evaluateCheckInStatus(dayDate, forLate, employeeDoc);
     lateMinutes = evalResult.lateMinutes || 1;
   }
 

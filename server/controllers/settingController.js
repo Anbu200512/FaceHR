@@ -18,11 +18,7 @@ const updateAppSettings = asyncHandler(async (req, res) => {
   const { key, value } = req.body;
   if (!key) return res.status(400).json({ success: false, message: 'Setting key is required' });
 
-  let parsedValue = value;
-  if (key === 'halfDayThresholdHours') parsedValue = parseFloat(value);
-  if (key === 'lateEnabled') parsedValue = value === true || value === 'true';
-
-  await updateSetting(key, parsedValue);
+  await updateSetting(key, value);
   const settings = await getSettings();
   res.json({ success: true, message: 'Settings updated', data: { settings } });
 });

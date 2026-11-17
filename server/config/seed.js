@@ -78,7 +78,10 @@ async function seedSettings() {
     if (!existing) await prisma.setting.create({ data: { key, value } });
   };
   await ensure('officeStartTime', config.officeStartTime);
+  await ensure('officeEndTime', config.officeEndTime);
   await ensure('halfDayThresholdHours', config.halfDayThresholdHours);
+  await ensure('graceMinutes', 0);
+  await ensure('lateEnabled', true);
 }
 
 module.exports = { seedDefaultDepartments, seedDefaultLocations, seedDefaultDesignations, seedAdmin, seedSettings };

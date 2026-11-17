@@ -17,7 +17,9 @@ export default function Settings() {
   const s = data?.settings;
 
   const [officeStartTime, setOfficeStartTime] = useState('09:30');
+  const [officeEndTime, setOfficeEndTime] = useState('18:00');
   const [halfDay, setHalfDay] = useState(4);
+  const [graceMinutes, setGraceMinutes] = useState(0);
   const [lateEnabled, setLateEnabled] = useState(true);
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -25,7 +27,9 @@ export default function Settings() {
 
   if (s && !ready) {
     setOfficeStartTime(s.officeStartTime || '09:30');
+    setOfficeEndTime(s.officeEndTime || '18:00');
     setHalfDay(Number(s.halfDayThresholdHours ?? 4));
+    setGraceMinutes(Number(s.graceMinutes ?? 0));
     setLateEnabled(s.lateEnabled !== false);
     setReady(true);
   }
@@ -60,11 +64,36 @@ export default function Settings() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <label className="label flex items-center gap-1.5"><AlarmClock className="h-4 w-4 text-slate-400" /> Office start time</label>
-                <p className="mt-1 text-xs text-slate-400">Employees checking in after this are marked Late.</p>
+                <p className="mt-1 text-xs text-slate-400">Employees checking in after this (plus grace time) are marked Late.</p>
               </div>
               <div className="flex items-center gap-2">
                 <input type="time" value={officeStartTime} onChange={(e) => setOfficeStartTime(e.target.value)} className="input" />
                 <Button size="sm" onClick={() => save('officeStartTime', officeStartTime)} loading={saving && savedKey === 'officeStartTime'} disabled={saving}>Save</Button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <label className="label flex items-center gap-1.5"><Clock3 className="h-4 w-4 text-slate-400" /> Grace time</label>
+                <p className="mt-1 text-xs text-slate-400">Minutes after start time allowed before marking Late (e.g. 5).</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <input type="number" min="0" max="240" step="1" value={graceMinutes} onChange={(e) => setGraceMinutes(e.target.value)} className="input w-24 pr-9" />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">min</span>
+                </div>
+                <Button size="sm" onClick={() => save('graceMinutes', graceMinutes)} loading={saving && savedKey === 'graceMinutes'} disabled={saving}>Save</Button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <label className="label flex items-center gap-1.5"><Clock3 className="h-4 w-4 text-slate-400" /> Office end time</label>
+                <p className="mt-1 text-xs text-slate-400">Configured workday end time (global default; can be overridden per employee).</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="time" value={officeEndTime} onChange={(e) => setOfficeEndTime(e.target.value)} className="input" />
+                <Button size="sm" onClick={() => save('officeEndTime', officeEndTime)} loading={saving && savedKey === 'officeEndTime'} disabled={saving}>Save</Button>
               </div>
             </div>
 

@@ -159,14 +159,15 @@ async function reviewRegularization(req, res, status) {
     let lateMinutes = 0;
     let workingHoursMinutes = 0;
 
+    const empDoc = await prisma.employee.findUnique({ where: { id: row.employeeRefId } });
     if (row.requestedCheckIn) {
-      const evaluated = await evaluateCheckInStatus(row.date, row.requestedCheckIn);
+      const evaluated = await evaluateCheckInStatus(row.date, row.requestedCheckIn, empDoc);
       attendanceStatus = evaluated.status;
       lateMinutes = evaluated.lateMinutes;
     }
     if (row.requestedCheckIn && row.requestedCheckOut) {
       workingHoursMinutes = Math.max(0, Math.round((row.requestedCheckOut - row.requestedCheckIn) / 60000));
-      attendanceStatus = await computeFinalStatus(row.requestedCheckIn, row.requestedCheckOut, attendanceStatus);
+      attendanceStatus = await computeFinalStatus(row.requestedCheckIn, row.requestedCheckOut, attendanceStatus, empDoc);
     }
 
     const day = startOfDay(row.date);

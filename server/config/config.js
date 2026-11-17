@@ -53,6 +53,7 @@ const config = {
   // Number of reverse-proxy hops in front of the app (Render = 1, Cloudflare -> Render = 2).
   trustProxy: parseInt(process.env.TRUST_PROXY, 10),
   officeStartTime: process.env.OFFICE_START_TIME || '09:30',
+  officeEndTime: process.env.OFFICE_END_TIME || '18:00',
   halfDayThresholdHours: parseFloat(process.env.HALF_DAY_THRESHOLD_HOURS) || 4,
   adminEmail: process.env.ADMIN_EMAIL || 'admin@facehr.com',
   adminName: process.env.ADMIN_NAME || 'Super Admin',
