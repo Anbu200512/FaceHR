@@ -23,18 +23,29 @@ export default function Button({ variant = 'primary', size, className, loading, 
 
 export function Spinner({ className }) {
   return (
-    <svg className={clsx('animate-spin', className)} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-    </svg>
+    <span className={clsx('relative inline-flex shrink-0', className)} aria-hidden="true">
+      <span className="absolute inset-0 rounded-full border-2 border-current opacity-20" />
+      <span className="absolute inset-0 animate-spin rounded-full border-2 border-current border-t-transparent border-r-transparent" />
+    </span>
   );
 }
 
 export function FullScreenLoader({ label = 'Loading...' }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-20">
-      <Spinner className="h-8 w-8 text-brand-600" />
-      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
+    <div className="flex flex-col items-center justify-center gap-4 py-20 animate-fade-in">
+      <div className="relative flex h-14 w-14 items-center justify-center">
+        <span className="absolute h-full w-full animate-ping rounded-full bg-brand-500/15 dark:bg-brand-400/10" />
+        <span className="absolute h-11 w-11 animate-spin rounded-full border-[3px] border-slate-200 border-t-brand-600 border-r-brand-500 dark:border-slate-700 dark:border-t-brand-400 dark:border-r-brand-500" />
+        <span className="h-2.5 w-2.5 rounded-full bg-brand-600 shadow-sm dark:bg-brand-400" />
+      </div>
+      <div className="flex flex-col items-center gap-1">
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</p>
+        <div className="flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand-500 [animation-delay:-0.3s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand-500 [animation-delay:-0.15s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand-500" />
+        </div>
+      </div>
     </div>
   );
 }
