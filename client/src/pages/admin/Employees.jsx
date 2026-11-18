@@ -8,12 +8,15 @@ import {
   Power,
   ScanFace,
   Send,
+  Download,
+  FileText,
 } from 'lucide-react';
 import api, { extractError } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useToast } from '../../context/ToastContext';
 import { resolveAsset } from '../../services/format';
+import { exportEmployeesToCsv, exportEmployeesToPdf, exportEmployeeProfilePdf } from '../../services/export';
 import PageHeader from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -42,6 +45,8 @@ export default function Employees() {
   const [sendId, setSendId] = useState(null);
   const [sendName, setSendName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
+  const [profileExportId, setProfileExportId] = useState(null);
 
   const depts = useApi(async () => {
     const { data } = await api.get('/departments');
@@ -123,12 +128,49 @@ export default function Employees() {
   const rows = data?.data || [];
   const meta = data?.meta || {};
 
+  const handleExportAll = async (format) => {
+    setExportBusy(true);
+    try {
+      if (!rows.length) {
+        toast.error('No employees to export');
+        return;
+      }
+      if (format === 'csv') exportEmployeesToCsv(rows, 'filtered');
+      else exportEmployeesToPdf(rows, 'filtered');
+    } catch (err) {
+      toast.error(extractError(err, 'Could not export employees'));
+    } finally {
+      setExportBusy(false);
+    }
+  };
+
+  const handleExportProfile = async (emp, e) => {
+    e?.stopPropagation?.();
+    const empId = emp?._id || emp?.id;
+    if (!empId) return;
+    setProfileExportId(empId);
+    try {
+      const { data: res } = await api.get(`/employees/${empId}`);
+      await exportEmployeeProfilePdf(res?.data || res);
+    } catch (err) {
+      toast.error(extractError(err, 'Could not export employee profile'));
+    } finally {
+      setProfileExportId(null);
+    }
+  };
+
   return (
     <div>
       <PageHeader
         title="Employees"
         description="Manage your team, profiles and face registration."
       >
+        <Button variant="secondary" onClick={() => handleExportAll('csv')} loading={exportBusy} disabled={exportBusy}>
+          <Download className="h-4 w-4" /> Export CSV
+        </Button>
+        <Button variant="secondary" onClick={() => handleExportAll('pdf')} loading={exportBusy} disabled={exportBusy}>
+          <FileText className="h-4 w-4" /> Export PDF
+        </Button>
         <Link to="/admin/employees/new">
           <Button>
             <Plus className="h-4 w-4" /> Add Employee
@@ -227,6 +269,7 @@ export default function Employees() {
                         <div className="flex justify-end gap-1">
                           <IconBtn title="View profile" onClick={() => navigate(`/admin/employees/${emp._id}`)}><Eye className="h-4 w-4" /></IconBtn>
                           <IconBtn title="Edit" onClick={() => navigate(`/admin/employees/${emp._id}/edit`)}><Pencil className="h-4 w-4" /></IconBtn>
+                          <IconBtn title="Download profile (PDF)" onClick={(e) => handleExportProfile(emp, e)}><Download className={`h-4 w-4 ${profileExportId === (emp._id || emp.id) ? 'animate-pulse' : ''}`} /></IconBtn>
                           {!emp.face && (
                             <IconBtn title="Register face" onClick={() => navigate(`/admin/employees/${emp._id}/face`)}><ScanFace className="h-4 w-4" /></IconBtn>
                           )}
@@ -281,7 +324,8 @@ export default function Employees() {
                     <Badge>{emp.status}</Badge>
                   </div>
                 </div>
-                <div className="flex shrink-0 flex-wrap justify-end gap-0.5 max-w-[140px]" onClick={(e) => e.stopPropagation()}>
+                <div className="flex shrink-0 flex-wrap justify-end gap-0.5 max-w-[180px]" onClick={(e) => e.stopPropagation()}>
+                  <IconBtn title="Download profile (PDF)" onClick={(e) => handleExportProfile(emp, e)}><Download className={`h-4 w-4 ${profileExportId === (emp._id || emp.id) ? 'animate-pulse' : ''}`} /></IconBtn>
                   <IconBtn title="Edit" onClick={() => navigate(`/admin/employees/${emp._id}/edit`)}><Pencil className="h-4 w-4" /></IconBtn>
                   <IconBtn title="Send login details" onClick={() => { setSendId(emp._id); setSendName(`${[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}`); }}><Send className="h-4 w-4" /></IconBtn>
                   <IconBtn title="Deactivate" danger onClick={() => setDeactivateId(emp._id)}><Power className="h-4 w-4" /></IconBtn>

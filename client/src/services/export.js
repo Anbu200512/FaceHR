@@ -132,6 +132,53 @@ export function exportAttendanceToPdf(rows, summary) {
   exportPDF(`${fileBase}.pdf`, title, columns, (rows || []).map(normalizeAttendanceRow));
 }
 
+function buildEmployeesExportPayload(rows, scopeLabel) {
+  const nameOf = (e) => e?.name || [e?.firstName, e?.middleName, e?.lastName].filter(Boolean).join(' ') || '';
+  const normalized = (rows || []).map((e) => ({
+    employeeId: e?.employeeId || e?.id || '',
+    name: nameOf(e),
+    email: e?.email || '',
+    phone: e?.contact?.mobileNumber || e?.phone || '',
+    department: e?.department?.name || e?.department || '',
+    designation: e?.designation?.name || e?.designation || '',
+    branch: e?.office?.name || e?.branch || e?.officeLocation || '',
+    employmentType: e?.employmentType || e?.category || '',
+    status: e?.status || '',
+    joiningDate: e?.joiningDate ? formatDate(e.joiningDate) : '',
+    face: e?.face ? 'Yes' : 'No',
+  }));
+  const columns = [
+    { key: 'employeeId', label: 'Employee ID' },
+    { key: 'name', label: 'Name' },
+    { key: 'email', label: 'Email' },
+    { key: 'phone', label: 'Phone' },
+    { key: 'department', label: 'Department' },
+    { key: 'designation', label: 'Designation' },
+    { key: 'branch', label: 'Branch' },
+    { key: 'employmentType', label: 'Employment Type' },
+    { key: 'status', label: 'Status' },
+    { key: 'joiningDate', label: 'Joining Date' },
+    { key: 'face', label: 'Face Registered' },
+  ];
+  const suffix = scopeLabel ? ` (${scopeLabel})` : '';
+  return {
+    columns,
+    title: `Employees Report${suffix}`,
+    fileBase: `employees-${scopeLabel ? scopeLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'report' : 'report'}`,
+    rows: normalized,
+  };
+}
+
+export function exportEmployeesToCsv(rows, scopeLabel) {
+  const { columns, fileBase, rows: normalized } = buildEmployeesExportPayload(rows, scopeLabel);
+  exportCSV(`${fileBase}.csv`, columns, normalized);
+}
+
+export function exportEmployeesToPdf(rows, scopeLabel) {
+  const { columns, title, fileBase, rows: normalized } = buildEmployeesExportPayload(rows, scopeLabel);
+  exportPDF(`${fileBase}.pdf`, title, columns, normalized);
+}
+
 function val(v, fallback = '-') {
   if (v === null || v === undefined || v === '') return fallback;
   if (Array.isArray(v)) return v.length ? v.join(', ') : fallback;
