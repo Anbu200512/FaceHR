@@ -13,10 +13,13 @@ const {
 const getReport = asyncHandler(async (req, res) => {
   const { from, to, department, employee, status } = req.query;
 
-  const fromDate = from ? startOfDay(new Date(from)) : startOfDay(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-  const toDate = to ? endOfDay(new Date(to)) : endOfDay(new Date());
+  const fromDate = from
+    ? startOfDay(new Date(from))
+    : startOfDay(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const toDay = to ? startOfDay(new Date(to)) : startOfDay(new Date());
+  const toExclusive = endOfDay(toDay);
 
-  const rangeDays = diffDays(fromDate, toDate);
+  const rangeDays = diffDays(fromDate, toDay);
   if (rangeDays > 92) {
     return res.status(400).json({ success: false, message: 'Date range is limited to 92 days. Please narrow the range.' });
   }
@@ -32,71 +35,75 @@ const getReport = asyncHandler(async (req, res) => {
     orderBy: { firstName: 'asc' },
   });
 
-  // all calendar days in range (excluding weekends from "working days")
   const days = [];
   const cursor = new Date(fromDate);
-  while (cursor <= toDate) {
+  while (cursor <= toDay) {
     days.push(new Date(cursor));
     cursor.setDate(cursor.getDate() + 1);
   }
-  const workingDays = days.filter((d) => !isWeekend(d)).length;
+  const workingDaysInRange = days.filter((d) => !isWeekend(d)).length;
 
   const empIds = employees.map((e) => e.id);
   const [attendance, leaves] = await Promise.all([
-    prisma.attendance.findMany({
-      where: { date: { gte: fromDate, lt: toDate }, employeeRefId: { in: empIds } },
-    }),
-    prisma.leave.findMany({
-      where: {
-        status: 'Approved',
-        employeeRefId: { in: empIds },
-        startDate: { lt: toDate },
-        endDate: { gte: fromDate },
-      },
-    }),
+    empIds.length
+      ? prisma.attendance.findMany({
+          where: { date: { gte: fromDate, lt: toExclusive }, employeeRefId: { in: empIds } },
+        })
+      : [],
+    empIds.length
+      ? prisma.leave.findMany({
+          where: {
+            status: 'Approved',
+            employeeRefId: { in: empIds },
+            startDate: { lt: toExclusive },
+            endDate: { gte: fromDate },
+          },
+        })
+      : [],
   ]);
 
   const recKey = (eid, date) => `${eid}__${toDateKey(date)}`;
   const recMap = new Map();
   attendance.forEach((r) => recMap.set(recKey(r.employeeRefId, r.date), r));
 
-  const leaveKey = (eid) => String(eid);
   const leaveMap = new Map();
   leaves.forEach((l) => {
-    const d = diffDays(l.startDate, l.endDate);
-    for (let i = 0; i < d; i++) {
-      const day = new Date(l.startDate);
-      day.setDate(l.startDate.getDate() + i);
-      leaveMap.set(`${leaveKey(l.employeeRefId)}__${toDateKey(day)}`, l);
+    const lStart = startOfDay(l.startDate);
+    const lEnd = startOfDay(l.endDate);
+    const count = diffDays(lStart, lEnd);
+    for (let i = 0; i < count; i++) {
+      const day = new Date(lStart);
+      day.setDate(lStart.getDate() + i);
+      leaveMap.set(`${l.employeeRefId}__${toDateKey(day)}`, l);
     }
   });
 
-  // ---- rows (detail) ----
   const includeDetail = req.query.detail === 'true';
   const rows = [];
   if (includeDetail) {
     for (const emp of employees) {
+      const empName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || '-';
+      const deptName = emp.department ? emp.department.name : '-';
       for (const day of days) {
+        if (isWeekend(day)) continue;
         const key = recKey(emp.id, day);
         const rec = recMap.get(key);
         if (rec) {
           rows.push({
             employeeId: emp.employeeId,
-            employeeName: `${emp.firstName} ${emp.lastName}`,
-            department: emp.department ? emp.department.name : '—',
+            employeeName: empName,
+            department: deptName,
             date: toDateKey(day),
             checkIn: rec.checkInTime,
             checkOut: rec.checkOutTime,
-            workingHoursMinutes: rec.workingHoursMinutes,
+            workingHoursMinutes: rec.workingHoursMinutes || 0,
             status: rec.status,
           });
-        } else if (isWeekend(day)) {
-          // skip weekends in rows by default
-        } else if (leaveMap.has(recKey(emp.id, day))) {
+        } else if (leaveMap.has(key)) {
           rows.push({
             employeeId: emp.employeeId,
-            employeeName: `${emp.firstName} ${emp.lastName}`,
-            department: emp.department ? emp.department.name : '—',
+            employeeName: empName,
+            department: deptName,
             date: toDateKey(day),
             checkIn: null,
             checkOut: null,
@@ -106,8 +113,8 @@ const getReport = asyncHandler(async (req, res) => {
         } else {
           rows.push({
             employeeId: emp.employeeId,
-            employeeName: `${emp.firstName} ${emp.lastName}`,
-            department: emp.department ? emp.department.name : '—',
+            employeeName: empName,
+            department: deptName,
             date: toDateKey(day),
             checkIn: null,
             checkOut: null,
@@ -119,93 +126,71 @@ const getReport = asyncHandler(async (req, res) => {
     }
   }
 
-  const statusFilter = (s) => (status && status !== s ? false : true);
+  const filteredRows = status ? rows.filter((r) => r.status === status) : rows;
+  const limitedRows = filteredRows.length > 1000 ? filteredRows.slice(0, 1000) : filteredRows;
 
-  const filteredRows = status ? rows.filter((r) => statusFilter(r.status)) : rows;
-  if (filteredRows.length > 1000 && includeDetail) {
-    filteredRows.splice(1000);
-  }
-
-  // ---- metrics ----
   let presentDays = 0;
   let lateDays = 0;
   let absentDays = 0;
   let leaveDays = 0;
   let halfDays = 0;
   let totalMinutes = 0;
-  const trendMap = new Map(days.filter((d) => !isWeekend(d)).map((d) => [toDateKey(d), { date: toDateKey(d), present: 0, late: 0, absent: 0, leave: 0 }]));
+
+  const trendMap = new Map(
+    days.filter((d) => !isWeekend(d)).map((d) => [toDateKey(d), { date: toDateKey(d), present: 0, late: 0, absent: 0, leave: 0 }])
+  );
+  const deptStats = new Map();
 
   for (const emp of employees) {
+    const deptName = emp.department ? emp.department.name : 'Unassigned';
+    if (!deptStats.has(deptName)) deptStats.set(deptName, { name: deptName, present: 0, leave: 0, absent: 0 });
+    const ds = deptStats.get(deptName);
+
     for (const day of days) {
       if (isWeekend(day)) continue;
       const key = recKey(emp.id, day);
       const rec = recMap.get(key);
-      const trend = trendMap.get(toDateKey(day)) || { date: toDateKey(day), present: 0, late: 0, absent: 0, leave: 0 };
+      const trend = trendMap.get(toDateKey(day));
 
       if (rec) {
+        totalMinutes += rec.workingHoursMinutes || 0;
         if (rec.status === 'Absent') {
           absentDays += 1;
-          trend.absent += 1;
+          ds.absent += 1;
+          if (trend) trend.absent += 1;
         } else if (rec.status === 'On Leave') {
           leaveDays += 1;
-          trend.leave += 1;
+          ds.leave += 1;
+          if (trend) trend.leave += 1;
         } else if (rec.status === 'Late') {
           lateDays += 1;
-          trend.late += 1;
-          trend.present += 1;
+          ds.present += 1;
+          if (trend) { trend.late += 1; trend.present += 1; }
         } else if (rec.status === 'Half Day') {
           halfDays += 1;
-          trend.present += 1;
+          ds.present += 1;
+          if (trend) trend.present += 1;
         } else {
           presentDays += 1;
-          trend.present += 1;
+          ds.present += 1;
+          if (trend) trend.present += 1;
         }
-        totalMinutes += rec.workingHoursMinutes || 0;
       } else if (leaveMap.has(key)) {
         leaveDays += 1;
-        trend.leave += 1;
+        ds.leave += 1;
+        if (trend) trend.leave += 1;
       } else {
         absentDays += 1;
-        trend.absent += 1;
+        ds.absent += 1;
+        if (trend) trend.absent += 1;
       }
     }
   }
 
-  const trend = Array.from(trendMap.values());
-
-  const byDepartment = {};
-  const deptPresent = {};
-  const deptTotal = {};
-  for (const emp of employees) {
-    const dept = emp.department ? emp.department.name : 'Unassigned';
-    deptPresent[dept] = deptPresent[dept] || 0;
-    deptTotal[dept] = deptTotal[dept] || 0;
-  }
-  for (const emp of employees) {
-    const dept = emp.department ? emp.department.name : 'Unassigned';
-    deptTotal[dept] += days.filter((d) => !isWeekend(d)).length;
-  }
-  for (const key of trendMap.keys()) {
-    const dayRecs = attendance.filter((r) => toDateKey(r.date) === key);
-    dayRecs.forEach((r) => {
-      if (r.status === 'Absent' || r.status === 'On Leave') return;
-      const emp = employees.find((e) => String(e.id) === String(r.employeeRefId));
-      if (emp) {
-        const dept = emp.department ? emp.department.name : 'Unassigned';
-        deptPresent[dept] = (deptPresent[dept] || 0) + 1;
-      }
-    });
-  }
-  const deptChart = Object.keys(deptTotal).map((name) => ({
-    name,
-    present: deptPresent[name] || 0,
-    absent: Math.max(0, deptTotal[name] - (deptPresent[name] || 0)),
-  }));
-
   const employeeCount = employees.length;
   const summary = {
     employeesIncluded: employeeCount,
-    totalWorkingDays: workingDays,
+    totalWorkingDays: workingDaysInRange,
     presentDays,
     lateDays,
     absentDays,
@@ -213,10 +198,18 @@ const getReport = asyncHandler(async (req, res) => {
     leaveDays,
     averageWorkingHours: formatDuration(employeeCount ? totalMinutes / employeeCount : 0),
     totalHours: formatDuration(totalMinutes),
-    range: { from: toDateKey(fromDate), to: toDateKey(toDate) },
+    range: { from: toDateKey(fromDate), to: toDateKey(toDay) },
   };
 
-  res.json({ success: true, data: { summary, trend, byDepartment: deptChart, rows: filteredRows } });
+  res.json({
+    success: true,
+    data: {
+      summary,
+      trend: Array.from(trendMap.values()),
+      byDepartment: Array.from(deptStats.values()),
+      rows: limitedRows,
+    },
+  });
 });
 
 module.exports = { getReport };

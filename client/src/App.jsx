@@ -44,6 +44,8 @@ const EmployeeWeekOff = lazy(() => import('./pages/employee/WeekOff'));
 const Resignation = lazy(() => import('./pages/employee/Resignation'));
 const MyProfile = lazy(() => import('./pages/employee/MyProfile'));
 
+const NotificationsPage = lazy(() => import('./components/NotificationsPage'));
+
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function Landing() {
@@ -102,6 +104,7 @@ export default function App() {
           <Route path="resignations" element={<Resignations />} />
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="notifications" element={<NotificationsPage />} />
         </Route>
 
         <Route
@@ -123,6 +126,7 @@ export default function App() {
           <Route path="weekoff" element={<EmployeeWeekOff />} />
           <Route path="resignation" element={<Resignation />} />
           <Route path="profile" element={<MyProfile />} />
+          <Route path="notifications" element={<NotificationsPage />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />

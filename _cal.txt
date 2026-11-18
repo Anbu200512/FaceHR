@@ -1,0 +1,144 @@
+﻿4: import api from '../../services/api';
+9: import Badge from '../ui/Badge';
+11: 
+12: const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+14: const STATUS_LIST = ['Present', 'Late', 'Half Day', 'Absent', 'On Leave', 'Weekend'];
+15: 
+18:   return map[status] || 'bg-slate-200';
+20: 
+23:   const now = new Date();
+24:   const [year, setYear] = useState(now.getFullYear());
+25:   const [month, setMonth] = useState(now.getMonth());
+26:   const [selected, setSelected] = useState(null);
+27: 
+30:     return res.data.data;
+32: 
+34:     let m = month + d;
+35:     let y = year;
+38:     setMonth(m);
+39:     setYear(y);
+40:     setSelected(null);
+42: 
+43:   const firstWeekday = new Date(year, month, 1).getDay();
+44:   const s = data?.summary;
+45:   const todayKey = toDateKey(new Date());
+46: 
+47:   return (
+49:       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4 dark:border-slate-700">
+50:         <div className="flex items-center gap-2">
+51:           <CalendarCheck className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+52:           <h2 className="font-bold text-slate-900 dark:text-slate-100">My Attendance</h2>
+53:         </div>
+54:         <div className="flex items-center gap-1">
+56:             <ChevronLeft className="h-4 w-4" />
+57:           </button>
+58:           <span className="min-w-28 text-center text-sm font-bold text-slate-800 dark:text-slate-100">
+60:           </span>
+62:             <ChevronRight className="h-4 w-4" />
+63:           </button>
+64:         </div>
+65:       </div>
+66: 
+67:       <div className="px-5 pt-4">
+69:           <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+75:           </div>
+76:         ) : (
+77:           <div className="mb-4 h-4" />
+79: 
+81:           <div className="grid grid-cols-7 gap-1.5">
+85:           </div>
+86:         ) : (
+87:           <div className="grid grid-cols-7 gap-1">
+95:               const isToday = d.date === todayKey;
+96:               return (
+97:                 <button
+101:                     selected?.date === d.date
+102:                       ? 'bg-brand-600 text-white shadow'
+103:                       : isToday
+104:                         ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-300 hover:bg-brand-100 dark:bg-brand-500/15 dark:text-brand-300 dark:ring-brand-500/40 dark:hover:bg-brand-500/25'
+105:                         : d.isWeekend
+106:                           ? 'text-slate-300 hover:bg-slate-100 dark:text-slate-500 dark:hover:bg-slate-800'
+107:                           : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'
+109:                 >
+112:                 </button>
+113:               );
+115:           </div>
+117: 
+119:           const inLoc = formatLocation(selected.record?.checkInLocation);
+120:           const outLoc = formatLocation(selected.record?.checkOutLocation);
+121:           return (
+122:             <div className="mt-3 space-y-2 rounded-lg border border-slate-200 px-4 py-2.5 dark:border-slate-700">
+123:               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+124:                 <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+126:                   <b className="text-slate-700 dark:text-slate-200">
+128:                   </b>
+130:                 </span>
+131:                 <span className="text-[11px] uppercase tracking-wide text-slate-400">In</span>
+132:                 <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+134:                 </span>
+135:                 <span className="text-[11px] uppercase tracking-wide text-slate-400">Out</span>
+136:                 <span className="font-mono text-xs font-bold text-rose-600 dark:text-rose-400">
+138:                 </span>
+139:                 <span className="text-[11px] uppercase tracking-wide text-slate-400">Hours</span>
+140:                 <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-200">
+142:                 </span>
+144:               </div>
+146:                 <div className="flex flex-wrap items-start gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+148:                     <span className="inline-flex max-w-full items-start gap-1.5">
+149:                       <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
+151:                     </span>
+154:                     <span className="inline-flex max-w-full items-start gap-1.5">
+155:                       <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-500" />
+157:                     </span>
+159:                 </div>
+161:             </div>
+162:           );
+164: 
+165:         <div className="mt-3 overflow-x-auto">
+166:           <table className="w-full min-w-[520px] border-collapse text-xs">
+167:             <thead>
+168:               <tr className="border-b text-left text-[9px] font-bold uppercase tracking-wide text-slate-400 dark:border-slate-700">
+169:                 <th className="py-1.5 pr-3">Date</th>
+170:                 <th className="py-1.5 pr-3">Status</th>
+171:                 <th className="py-1.5 pr-3">Check-in</th>
+172:                 <th className="py-1.5 pr-3">Check-out</th>
+173:                 <th className="py-1.5 text-right">Total Hours</th>
+174:               </tr>
+175:             </thead>
+176:             <tbody>
+183:                   </tr>
+184:                 ))
+185:               ) : (data?.days || []).length === 0 ? (
+186:                 <tr>
+188:                 </tr>
+189:               ) : (data?.days || []).map((d) => (
+190:                 <tr
+194:                     selected?.date === d.date ? 'bg-brand-50 dark:bg-brand-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+196:                 >
+197:                   <td className="py-1.5 pr-3 font-semibold text-slate-700 dark:text-slate-200">
+199:                   </td>
+200:                   <td className="py-1.5 pr-3">
+203:                     </span>
+204:                   </td>
+205:                   <td className="py-1.5 pr-3 font-mono text-slate-600 dark:text-slate-300">
+207:                   </td>
+208:                   <td className="py-1.5 pr-3 font-mono text-slate-600 dark:text-slate-300">
+210:                   </td>
+211:                   <td className="py-1.5 text-right font-mono font-semibold text-slate-700 dark:text-slate-200">
+213:                   </td>
+214:                 </tr>
+216:             </tbody>
+217:           </table>
+218:         </div>
+219: 
+220:         <div className="flex flex-wrap items-center justify-between gap-3 border-t py-3 dark:border-slate-700">
+221:           <div className="flex flex-wrap gap-2.5">
+225:               </span>
+227:           </div>
+229:             <Link to="/employee/history" className="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">
+230:               Full history â†’
+231:             </Link>
+233:         </div>
+234:       </div>
+235:     </Card>
+236:   );

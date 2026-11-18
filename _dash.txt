@@ -1,0 +1,227 @@
+﻿11: import PageHeader from '../../components/PageHeader';
+13: import Badge from '../../components/ui/Badge';
+14: import Button from '../../components/ui/Button';
+15: import Avatar from '../../components/Avatar';
+17: import FaceCapture from '../../components/FaceCapture';
+18: 
+22:   const now = new Date();
+23: 
+26:     return data.data.rows?.[0]?.record || null;
+28: 
+31:     return data.data;
+33: 
+36:     return data.data;
+38: 
+39:   const [punchMode, setPunchMode] = useState(null);
+40:   const [punching, setPunching] = useState(false);
+41:   const [punchError, setPunchError] = useState(null);
+42:   const [punchStatus, setPunchStatus] = useState(null);
+43:   const [punchLocation, setPunchLocation] = useState(null);
+44:   const [inlineCapture, setInlineCapture] = useState(false);
+45:   const [captureKey, setCaptureKey] = useState(0);
+46:   const [liveNow, setLiveNow] = useState(Date.now());
+47: 
+48:   const rec = today.data;
+49:   const canCheckIn = !rec?.checkInTime;
+50:   const canCheckOut = Boolean(rec?.checkInTime && !rec?.checkOutTime);
+51: 
+53:     if (!rec?.checkInTime || rec?.checkOutTime) return undefined;
+54:     setLiveNow(Date.now());
+55:     const t = setInterval(() => setLiveNow(Date.now()), 30000);
+56:     return () => clearInterval(t);
+58: 
+59:   const liveMinutes = rec?.checkInTime && !rec?.checkOutTime
+60:     ? Math.max(0, Math.round((liveNow - new Date(rec.checkInTime).getTime()) / 60000))
+61:     : 0;
+62: 
+64:     if (punching) return;
+65:     const allowed = nextMode === 'checkin' ? canCheckIn : canCheckOut;
+66:     if (!allowed) return;
+67:     setPunchMode(nextMode);
+68:     setPunchError(null);
+69:     setPunchStatus(null);
+70:     setPunchLocation(null);
+71:     setInlineCapture(false);
+72:     setPunching(true);
+74:       const s = await fetchMyAttendanceSettings();
+76:       const geo = await resolveGeoGate(s);
+78:         setPunchStatus(null);
+79:         setPunchError(geo);
+80:         return;
+82:       setPunchLocation(geo.location);
+84:         const endpoint = nextMode === 'checkin' ? 'check-in' : 'check-out';
+86:         setPunchStatus(null);
+88:         await today.refetch();
+91:         setCaptureKey((k) => k + 1);
+92:         setInlineCapture(true);
+95:       setPunchStatus(null);
+97:         code: err?.response?.data?.code || 'UNKNOWN',
+98:         message: extractError(err, 'Could not verify your location. Please try again.'),
+101:       setPunching(false);
+104: 
+106:     const fd = new FormData();
+107:     fd.append('image', blob, 'face.jpg');
+108:     fd.append('descriptor', JSON.stringify(Array.from(descriptor)));
+113:       const endpoint = punchMode === 'checkin' ? 'check-in' : 'check-out';
+115:       await today.refetch();
+119:         ok: false,
+120:         message: err?.response?.data?.message || extractError(err, 'Verification failed. Please try again.'),
+121:         code: err?.response?.data?.code,
+125: 
+126:   const actions = [
+130:   ];
+131: 
+132:   const durationDisplay = rec?.checkOutTime
+133:     ? formatDuration(rec.workingHoursMinutes)
+134:     : rec?.checkInTime
+135:       ? formatDuration(liveMinutes)
+136:       : '-';
+137: 
+138:   return (
+139:     <div>
+140:       <PageHeader
+143:       />
+144: 
+146:         <Skeleton className="mb-6 h-56 rounded-2xl" />
+147:       ) : (
+148:         <Card className="mb-6 overflow-hidden">
+149:           <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
+150:             <div className="flex min-w-0 items-center gap-4">
+152:               <div className="min-w-0 flex-1">
+153:                 <p className="truncate font-bold text-slate-900 dark:text-slate-100">
+155:                 </p>
+156:                 <p className="break-words text-xs text-slate-400">
+159:                 </p>
+160:                 <div className="mt-2 flex flex-wrap gap-2">
+163:                 </div>
+164:               </div>
+165:             </div>
+166:             <div className="grid w-full grid-cols-1 gap-4 text-center sm:w-auto sm:min-w-[260px] sm:grid-cols-2">
+167:               <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+168:                 <p className="flex items-center justify-center gap-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+169:                   <Clock3 className="h-3.5 w-3.5" /> Check-in
+170:                 </p>
+171:                 <p className="mt-1 font-mono text-lg font-bold text-emerald-600 dark:text-emerald-400">
+173:                 </p>
+174:               </div>
+175:               <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+176:                 <p className="flex items-center justify-center gap-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+177:                   <Clock3 className="h-3.5 w-3.5" /> Duration
+178:                 </p>
+179:                 <p className="mt-1 font-mono text-lg font-bold text-slate-700 dark:text-slate-200">
+181:                 </p>
+183:                   <p className="mt-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">Live</p>
+185:               </div>
+186:             </div>
+187:           </div>
+188:         </Card>
+190: 
+191:       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+193:           <button
+194:             type="button"
+197:             className="card flex items-center gap-3 p-4 text-left transition hover:shadow-lift disabled:cursor-not-allowed disabled:opacity-60"
+198:           >
+199:             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-600 text-white">
+200:               <LogOut className="h-4.5 w-4.5" />
+201:             </div>
+202:             <span className="min-w-0 break-words text-xs font-semibold text-slate-700 dark:text-slate-200">
+204:             </span>
+205:           </button>
+206:         ) : (
+207:           <button
+208:             type="button"
+211:             className="card flex items-center gap-3 p-4 text-left transition hover:shadow-lift disabled:cursor-not-allowed disabled:opacity-60"
+212:           >
+213:             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
+214:               <LogIn className="h-4.5 w-4.5" />
+215:             </div>
+216:             <span className="min-w-0 break-words text-xs font-semibold text-slate-700 dark:text-slate-200">
+218:             </span>
+219:           </button>
+224:               <a.icon className="h-4.5 w-4.5" />
+225:             </div>
+227:           </Link>
+229:       </div>
+230: 
+232:         <div
+234:             punchStatus.stage === 'verified'
+235:               ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400'
+236:               : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300'
+238:         >
+240:             <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+243:         </div>
+245: 
+247:         <div
+249:             punchError.code === 'SUCCESS'
+250:               ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400'
+251:               : punchError.code === 'OUTSIDE_ALLOWED_AREA'
+252:               ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400'
+253:               : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'
+255:         >
+257:         </div>
+259: 
+261:         <div className="mt-4">
+262:           <FaceCapture
+264:             mode="attendance"
+267:               setInlineCapture(false);
+268:               setPunchStatus(null);
+269:               today.refetch();
+270:             }
+272:               <div className="mx-auto max-w-sm rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
+275:                 ) : (
+278:               </div>
+280:           />
+281:         </div>
+283: 
+284:       <div className="mt-6 grid gap-6 lg:grid-cols-3">
+285:         <Card className="lg:col-span-2">
+286:           <div className="border-b px-5 py-4 dark:border-slate-700">
+287:             <h2 className="font-bold text-slate-900 dark:text-slate-100">This Month</h2>
+288:           </div>
+290:             <div className="grid grid-cols-2 gap-px sm:grid-cols-4">
+295:             </div>
+296:           ) : (
+297:             <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
+300:                   <Skeleton className="h-3 w-16" />
+301:                   <Skeleton className="h-8 w-12" />
+302:                 </div>
+304:             </div>
+306:           <div className="flex justify-end border-t px-5 py-3 dark:border-slate-700">
+307:             <Link to="/employee/history" className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">View full history →</Link>
+308:           </div>
+309:         </Card>
+310: 
+311:         <Card>
+312:           <div className="border-b px-5 py-4 dark:border-slate-700">
+313:             <h2 className="font-bold text-slate-900 dark:text-slate-100">Leave Balance</h2>
+314:           </div>
+316:             <div className="p-5">
+317:               <div className="flex items-end justify-between">
+318:                 <div>
+321:                 </div>
+322:                 <CalendarDays className="h-8 w-8 text-sky-500" />
+323:               </div>
+324:               <div className="mt-4 space-y-2 text-sm">
+327:               </div>
+329:                 <div className="mt-4 border-t pt-3 dark:border-slate-700">
+333:                     </div>
+335:                 </div>
+337:             </div>
+338:           ) : (
+339:             <div className="space-y-4 p-5">
+340:               <div className="flex items-end justify-between">
+341:                 <div className="space-y-2">
+342:                   <Skeleton className="h-10 w-16" />
+343:                   <Skeleton className="h-3 w-32" />
+344:                 </div>
+345:                 <Skeleton className="h-8 w-8 rounded-lg" />
+346:               </div>
+347:               <div className="space-y-2">
+348:                 <Skeleton className="h-4 w-full" />
+349:                 <Skeleton className="h-4 w-5/6" />
+350:               </div>
+351:             </div>
+353:         </Card>
+354:       </div>
+355:     </div>
+356:   );

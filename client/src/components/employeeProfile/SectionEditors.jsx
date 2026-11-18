@@ -629,37 +629,48 @@ function PersonalEditor({ emp, ctx, onSaved, readOnly = false }) {
 }
 
 function RepeaterSection({ title, subtitle, icon, blank, entries, setEntries, renderEntry, addLabel, onSave, saving, dirty }) {
+  const [pendingRemove, setPendingRemove] = useState(null);
   const add = () => setEntries((e) => [...e, blank()]);
   const update = (i, patch) => setEntries((e) => e.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
   const remove = (i) => setEntries((e) => e.filter((_, idx) => idx !== i));
   return (
-    <SectionCard title={title} subtitle={subtitle} icon={icon}>
-      <div className="space-y-4">
-        {entries.length === 0 && <EmptyState title={`No ${title.toLowerCase()} entries`} message="Add your first entry below." compact />}
-        {entries.map((e, i) => (
-          <div key={i} className="rounded-xl border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center justify-between border-b px-4 py-3 dark:border-slate-700">
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                {title} {i + 1}
-              </p>
-              <button
-                type="button"
-                onClick={() => remove(i)}
-                className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10"
-                title={`Delete ${title.toLowerCase()} ${i + 1}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+    <>
+      <SectionCard title={title} subtitle={subtitle} icon={icon}>
+        <div className="space-y-4">
+          {entries.length === 0 && <EmptyState title={`No ${title.toLowerCase()} entries`} message="Add your first entry below." compact />}
+          {entries.map((e, i) => (
+            <div key={i} className="rounded-xl border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between border-b px-4 py-3 dark:border-slate-700">
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  {title} {i + 1}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPendingRemove({ title, index: i })}
+                  className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                  title={`Delete ${title.toLowerCase()} ${i + 1}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="grid gap-4 p-4 sm:grid-cols-2">{renderEntry(e, (patch) => update(i, patch))}</div>
             </div>
-            <div className="grid gap-4 p-4 sm:grid-cols-2">{renderEntry(e, (patch) => update(i, patch))}</div>
-          </div>
-        ))}
-        <Button type="button" variant="ghost" size="sm" onClick={add}>
-          <Plus className="h-4 w-4" /> {addLabel}
-        </Button>
-      </div>
-      <SaveBar onSave={onSave} saving={saving} dirty={dirty} />
-    </SectionCard>
+          ))}
+          <Button type="button" variant="ghost" size="sm" onClick={add}>
+            <Plus className="h-4 w-4" /> {addLabel}
+          </Button>
+        </div>
+        <SaveBar onSave={onSave} saving={saving} dirty={dirty} />
+      </SectionCard>
+      <ConfirmDialog
+        open={!!pendingRemove}
+        onClose={() => setPendingRemove(null)}
+        onConfirm={() => { if (pendingRemove) remove(pendingRemove.index); setPendingRemove(null); }}
+        title={`Remove ${pendingRemove?.title || 'entry'}?`}
+        message={`Remove ${pendingRemove?.title || 'this entry'} ${pendingRemove ? pendingRemove.index + 1 : ''}? You can still cancel saving to keep it.`}
+        confirmLabel="Remove"
+      />
+    </>
   );
 }
 

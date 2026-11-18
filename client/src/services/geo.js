@@ -66,12 +66,12 @@ export function getCurrentLocation() {
 function geolocationError(err) {
   switch (err && err.code) {
     case 1:
-      return { ok: false, code: 'LOCATION_DENIED', message: 'Location access was denied. Please allow location for the HR portal and try again.' };
+      return { ok: false, code: 'LOCATION_DENIED', message: 'Location permission is blocked. Please allow location access for this site in your browser/device settings, then try again.' };
     case 2:
-      return { ok: false, code: 'LOCATION_UNAVAILABLE', message: 'Your location could not be determined right now. Please try again.' };
+      return { ok: false, code: 'LOCATION_UNAVAILABLE', message: 'Your location could not be determined. Please enable GPS/location services and try again.' };
     case 3:
-      return { ok: false, code: 'LOCATION_TIMEOUT', message: 'Timed out while trying to get your location. Please try again.' };
+      return { ok: false, code: 'LOCATION_TIMEOUT', message: 'Location request timed out. Please ensure GPS is on and try again.' };
     default:
-      return { ok: false, code: 'LOCATION_ERROR', message: 'Could not get your location. Please try again.' };
+      return { ok: false, code: 'LOCATION_ERROR', message: 'Could not get your location. Please check location/GPS settings and try again.' };
   }
 }

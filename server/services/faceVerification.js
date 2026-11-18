@@ -55,7 +55,7 @@ async function verifyAgainstProfile({ employeeId, buffer, clientDescriptor }) {
     return {
       ok: false,
       code: 'NO_FACE',
-      message: 'Face not registered for this employee. Please contact HR to register your face.',
+      message: 'Face not registered for your account. Please contact HR/admin to register your face before marking attendance.',
     };
   }
 
@@ -64,7 +64,7 @@ async function verifyAgainstProfile({ employeeId, buffer, clientDescriptor }) {
     return {
       ok: false,
       code: 'NO_DESCRIPTOR',
-      message: 'Could not detect your face clearly. Please retake the photo with better lighting.',
+      message: 'Could not detect your face clearly. Please try again in good lighting, face the camera directly, keep only one person in frame, and remove masks or glare if possible.',
     };
   }
 
@@ -81,7 +81,7 @@ async function verifyAgainstProfile({ employeeId, buffer, clientDescriptor }) {
     faceCount: resolved.faceCount ?? null,
     message: matched
       ? 'Face verified'
-      : 'Face not recognized. Please try again or contact HR.',
+      : 'Face not recognized. Please try again with good lighting, face the camera directly, keep your face centered, and ensure only one person is in frame. If it still fails, contact HR/admin.',
   };
 }
 

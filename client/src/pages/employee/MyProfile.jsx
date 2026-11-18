@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Mail, Phone, CalendarDays, Briefcase, Lock, ScanFace, LockKeyhole } from 'lucide-react';
+import { Mail, Phone, CalendarDays, Briefcase, Lock, ScanFace, LockKeyhole, Download } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../hooks/useApi';
 import { resolveAsset, formatDate } from '../../services/format';
+import { exportEmployeeProfilePdf } from '../../services/export';
 import PageHeader from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import Button, { FullScreenLoader } from '../../components/ui/Button';
@@ -82,7 +83,10 @@ export default function MyProfile() {
   return (
     <div>
       <PageHeader title="My Profile" description="Your personal and employment details.">
-        <Button variant="secondary" onClick={() => setPwOpen(true)}><Lock className="h-4 w-4" /> Change Password</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={() => exportEmployeeProfilePdf(emp)}><Download className="h-4 w-4" /> Download Profile</Button>
+          <Button variant="secondary" onClick={() => setPwOpen(true)}><Lock className="h-4 w-4" /> Change Password</Button>
+        </div>
       </PageHeader>
 
       {/* Header summary */}

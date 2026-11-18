@@ -47,7 +47,7 @@ const getSummary = asyncHandler(async (req, res) => {
 // @route  PUT /api/notifications/:id/read
 const markRead = asyncHandler(async (req, res) => {
   await prisma.notification.updateMany({
-    where: { id: req.params.id, userId: req.user.id },
+    where: { id: req.params.id, ...notificationFilter(req.user) },
     data: { read: true },
   });
   res.json({ success: true });
@@ -62,4 +62,12 @@ const markAllRead = asyncHandler(async (req, res) => {
   res.json({ success: true });
 });
 
-module.exports = { getNotifications, unreadCount, getSummary, markRead, markAllRead };
+// @route  DELETE /api/notifications/:id
+const deleteNotification = asyncHandler(async (req, res) => {
+  await prisma.notification.deleteMany({
+    where: { id: req.params.id, ...notificationFilter(req.user) },
+  });
+  res.json({ success: true });
+});
+
+module.exports = { getNotifications, unreadCount, getSummary, markRead, markAllRead, deleteNotification };

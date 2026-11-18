@@ -17,6 +17,7 @@ const {
 } = require('./config/seed');
 const { seedDefaultPolicies } = require('./services/leavePolicyService');
 const { startAttendancePhotoCleanup } = require('./services/attendancePhotoCleanup');
+const { startAttendanceReminders } = require('./services/attendanceReminderService');
 
 const app = express();
 
@@ -134,6 +135,7 @@ const start = async () => {
     });
 
     startAttendancePhotoCleanup();
+    startAttendanceReminders();
 
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {

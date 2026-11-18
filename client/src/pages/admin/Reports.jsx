@@ -43,8 +43,9 @@ export default function Reports() {
     if (to) sp.set('to', to);
     if (department) sp.set('department', department);
     if (employee) sp.set('employee', employee);
+    if (detail) sp.set('detail', 'true');
     return api.get(`/attendance/report?${sp.toString()}`).then((r) => r.data.data);
-  }, [from, to, department, employee]);
+  }, [from, to, department, employee, detail]);
 
   const s = data?.summary;
 
@@ -80,14 +81,14 @@ export default function Reports() {
             <label className="label">Department</label>
             <select value={department} onChange={(e) => setDepartment(e.target.value)} className="input">
               <option value="">All</option>
-              {depts.data?.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
+              {(depts.data || []).map((d) => { const id = d.id || d._id; return <option key={id} value={id}>{d.name}</option>; })}
             </select>
           </div>
           <div>
             <label className="label">Employee</label>
             <select value={employee} onChange={(e) => setEmployee(e.target.value)} className="input">
               <option value="">All</option>
-              {(emps.data || []).map((e) => <option key={e._id} value={e._id}>{[e.firstName, e.middleName, e.lastName].filter(Boolean).join(" ")}</option>)}
+              {(emps.data || []).map((e) => { const id = e.id || e._id; return <option key={id} value={id}>{[e.firstName, e.middleName, e.lastName].filter(Boolean).join(' ')}</option>; })}
             </select>
           </div>
           <div className="flex items-end sm:col-span-2 xl:col-span-1">
@@ -196,7 +197,7 @@ export default function Reports() {
                         <td className="td"><p className="font-semibold text-slate-800 dark:text-slate-100">{r.employeeName}</p><p className="text-xs text-slate-400">{r.employeeId}</p></td>
                         <td className="td">{r.department}</td>
                         <td className="td">{r.date}</td>
-                        <td className="td">{new Date(r.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                        <td className="td">{r.checkIn ? new Date(r.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                         <td className="td">{r.checkOut ? new Date(r.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                         <td className="td">{formatDuration(r.workingHoursMinutes)}</td>
                         <td className="td"><Badge tone={STATUS_TONES[r.status]}>{r.status}</Badge></td>

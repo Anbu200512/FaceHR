@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarCheck, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../hooks/useApi';
+import { fetchMyAttendanceSettings } from '../../services/attendanceSettings';
 import { formatDuration, formatLocation, MONTH_NAMES, toDateKey } from '../../services/format';
 import { Card } from '../ui/Card';
 import Badge from '../ui/Badge';
@@ -18,12 +19,30 @@ function dot(status) {
   return map[status] || 'bg-slate-200';
 }
 
+function formatClock(hhmm) {
+  if (!hhmm || typeof hhmm !== 'string') return '-';
+  const [hStr, mStr] = hhmm.split(':');
+  const h = Number(hStr);
+  const m = Number(mStr || 0);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return hhmm;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
 export default function AttendanceCalendar({ className, showFooterLink = true }) {
   const { user } = useAuth();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [selected, setSelected] = useState(null);
+  const [office, setOffice] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    fetchMyAttendanceSettings().then((s) => { if (active) setOffice(s.office || null); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const { data, loading } = useApi(async () => {
     const res = await api.get(`/attendance/${user.employee}?year=${year}&month=${month}`);
@@ -65,6 +84,13 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
       </div>
 
       <div className="px-5 pt-4">
+        {office && (
+          <div className="mb-3 text-xs text-slate-500 dark:text-slate-400">
+            Shift: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatClock(office.officeStartTime)} – {formatClock(office.officeEndTime)}</span>
+            <span className="text-slate-400"> • </span>
+            {office.lateEnabled === false ? 'Late marking off' : `${Number(office.graceMinutes || 0)} min grace`}
+          </div>
+        )}
         {s ? (
           <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
             <span><b className="text-emerald-600">{s.presentDays}</b> present</span>

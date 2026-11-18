@@ -89,19 +89,23 @@ function evaluateGeofence(settings, location) {
     return {
       ok: false,
       code: 'LOCATION_REQUIRED',
-      message: 'Location access is required to mark attendance. Please enable location and try again.',
+      message: 'Location access is required to mark attendance. Please allow location permission for this site and try again.',
     };
   }
   const allowed = settings.location.allowedRadius;
   const distance = computeDistanceFromCompany(location, settings.location);
   if (distance === null) {
-    return { ok: false, code: 'LOCATION_INVALID', message: 'Could not compute your distance from the company location.' };
+    return {
+      ok: false,
+      code: 'LOCATION_INVALID',
+      message: 'Could not verify your distance from the attendance location. Please enable GPS and try again in an open area.',
+    };
   }
   if (distance > allowed) {
     return {
       ok: false,
       code: 'OUTSIDE_ALLOWED_AREA',
-      message: `You are outside the authorized attendance area. Current distance: ${distance} m · Allowed distance: ${allowed} m`,
+      message: `You are outside the authorized attendance area. Current distance: ${distance} m - Allowed distance: ${allowed} m. Please move within the allowed area and try again.`,
       distance,
       allowed,
     };

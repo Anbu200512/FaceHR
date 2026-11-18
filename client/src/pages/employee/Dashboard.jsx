@@ -1,12 +1,11 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { LogIn, LogOut, CalendarDays, History, Plane, Briefcase, Clock3 } from 'lucide-react';
+import { LogIn, LogOut, CalendarDays, History, Plane, Briefcase, Clock3, MapPin, CheckCircle2, AlertCircle } from 'lucide-react';
 import api, { extractError } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../hooks/useApi';
 import { usePolling } from '../../hooks/useDebounce';
-import { greeting, formatDate, formatTime, formatDuration } from '../../services/format';
-import { resolveAsset } from '../../services/format';
+import { greeting, formatDate, formatTime, formatDuration, resolveAsset } from '../../services/format';
 import { fetchMyAttendanceSettings, resolveGeoGate } from '../../services/attendanceSettings';
 import PageHeader from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
@@ -15,6 +14,17 @@ import Button from '../../components/ui/Button';
 import Avatar from '../../components/Avatar';
 import { Skeleton } from '../../components/ui/Skeleton';
 import FaceCapture from '../../components/FaceCapture';
+
+function formatClock(hhmm) {
+  if (!hhmm || typeof hhmm !== 'string') return '-';
+  const [hStr, mStr] = hhmm.split(':');
+  const h = Number(hStr);
+  const m = Number(mStr || 0);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return hhmm;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
 
 export default function EmployeeHome() {
   const { user } = useAuth();
@@ -41,13 +51,24 @@ export default function EmployeeHome() {
   const [punchError, setPunchError] = useState(null);
   const [punchStatus, setPunchStatus] = useState(null);
   const [punchLocation, setPunchLocation] = useState(null);
+  const [punchMeta, setPunchMeta] = useState(null);
+  const [punchResult, setPunchResult] = useState(null);
   const [inlineCapture, setInlineCapture] = useState(false);
   const [captureKey, setCaptureKey] = useState(0);
   const [liveNow, setLiveNow] = useState(Date.now());
+  const [office, setOffice] = useState(null);
 
   const rec = today.data;
   const canCheckIn = !rec?.checkInTime;
   const canCheckOut = Boolean(rec?.checkInTime && !rec?.checkOutTime);
+
+  useEffect(() => {
+    let active = true;
+    fetchMyAttendanceSettings()
+      .then((s) => { if (active) setOffice(s.office || null); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!rec?.checkInTime || rec?.checkOutTime) return undefined;
@@ -68,10 +89,13 @@ export default function EmployeeHome() {
     setPunchError(null);
     setPunchStatus(null);
     setPunchLocation(null);
+    setPunchMeta(null);
+    setPunchResult(null);
     setInlineCapture(false);
     setPunching(true);
     try {
       const s = await fetchMyAttendanceSettings();
+      setOffice(s.office || null);
       setPunchStatus({ stage: 'verifying', message: s.geoEnabled === false ? 'Preparing attendance…' : 'Verifying your location…' });
       const geo = await resolveGeoGate(s);
       if (!geo.ok) {
@@ -80,14 +104,16 @@ export default function EmployeeHome() {
         return;
       }
       setPunchLocation(geo.location);
+      const meta = { distance: geo.distance ?? null, allowed: geo.allowed ?? null, name: s.location?.name };
+      setPunchMeta(meta);
       if (s.faceEnabled === false) {
         const endpoint = nextMode === 'checkin' ? 'check-in' : 'check-out';
         const { data } = await api.post(`/attendance/${endpoint}`, { location: geo.location });
         setPunchStatus(null);
-        setPunchError({ code: 'SUCCESS', message: data.message || 'Attendance marked successfully.' });
+        setPunchResult({ ok: true, data: data.data, message: data.message, mode: nextMode, geo: meta });
         await today.refetch();
       } else {
-        setPunchStatus({ stage: 'verified', message: s.geoEnabled === false ? 'Opening camera…' : 'Location verified. Opening camera…' });
+        setPunchStatus({ stage: 'verified', message: s.geoEnabled === false ? 'Opening camera…' : `Location verified${geo.distance != null ? ` (${geo.distance} m from site)` : ''}. Opening camera…` });
         setCaptureKey((k) => k + 1);
         setInlineCapture(true);
       }
@@ -112,6 +138,7 @@ export default function EmployeeHome() {
     try {
       const endpoint = punchMode === 'checkin' ? 'check-in' : 'check-out';
       const { data } = await api.post(`/attendance/${endpoint}`, fd);
+      setPunchResult({ ok: true, data: data.data, message: data.message, mode: punchMode, geo: punchMeta });
       await today.refetch();
       return { ok: true, message: data.message, data: data.data, summary: data.summary };
     } catch (err) {
@@ -135,11 +162,14 @@ export default function EmployeeHome() {
       ? formatDuration(liveMinutes)
       : '-';
 
+  const shiftLabel = office ? `${formatClock(office.officeStartTime)} – ${formatClock(office.officeEndTime)}` : null;
+  const graceLabel = office ? (office.lateEnabled === false ? 'Late marking off' : `${Number(office.graceMinutes || 0)} min grace`) : null;
+
   return (
     <div>
       <PageHeader
         title={`${greeting()}, ${user?.name?.split(' ')[0] || 'there'}`}
-        description={`Today is ${formatDate(new Date())}.`}
+        description={`Today is ${formatDate(new Date())}.${shiftLabel ? ` Shift: ${shiftLabel}${graceLabel ? ` (${graceLabel})` : ''}.` : ''}`}
       />
 
       {today.loading && !rec ? (
@@ -154,12 +184,13 @@ export default function EmployeeHome() {
                   {[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(' ') || user?.name}
                 </p>
                 <p className="break-words text-xs text-slate-400">
-                  {emp.designation?.name || '-'} · {emp.department?.name || '-'}
-                  {emp.employmentType ? ` · ${emp.employmentType}` : ''}
+                  {emp.designation?.name || '-'} • {emp.department?.name || '-'}
+                  {emp.employmentType ? ` • ${emp.employmentType}` : ''}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {rec?.status ? <Badge>{rec.status}</Badge> : <Badge>Not Checked In</Badge>}
                   {rec?.faceVerified && <Badge>Face Verified</Badge>}
+                  {rec?.status === 'Late' && rec?.lateMinutes ? <Badge>Late by {rec.lateMinutes} min</Badge> : null}
                 </div>
               </div>
             </div>
@@ -245,15 +276,44 @@ export default function EmployeeHome() {
 
       {punchError && (
         <div
-          className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
-            punchError.code === 'SUCCESS'
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400'
-              : punchError.code === 'OUTSIDE_ALLOWED_AREA'
+          className={`mt-4 flex gap-2 rounded-xl border px-4 py-3 text-sm ${
+            punchError.code === 'OUTSIDE_ALLOWED_AREA'
               ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400'
               : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'
           }`}
         >
-          {punchError.message}
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="font-medium">Couldn’t mark attendance</p>
+            <p className="mt-0.5">{punchError.message}</p>
+          </div>
+        </div>
+      )}
+
+      {punchResult?.ok && (
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+          <div className="flex items-start gap-2">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">{punchResult.message || 'Attendance marked successfully.'}</p>
+              <div className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
+                {punchResult.mode === 'checkin' ? (
+                  <>
+                    <p>Check-in time: <span className="font-semibold">{formatTime(punchResult.data?.checkInTime)}</span></p>
+                    <p>Status: <span className="font-semibold">{punchResult.data?.status === 'Late' ? `Late${punchResult.data?.lateMinutes ? ` by ${punchResult.data.lateMinutes} min` : ''}` : 'On time'}</span></p>
+                  </>
+                ) : (
+                  <>
+                    <p>Check-out time: <span className="font-semibold">{formatTime(punchResult.data?.checkOutTime)}</span></p>
+                    <p>Total worked: <span className="font-semibold">{formatDuration(punchResult.data?.workingHoursMinutes)}</span></p>
+                  </>
+                )}
+                {punchResult.geo?.distance != null && punchResult.geo?.allowed != null ? (
+                  <p className="inline-flex items-start gap-1.5 sm:col-span-2"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>Location verified: {punchResult.geo.distance} m from site (allowed {punchResult.geo.allowed} m){punchResult.geo.name ? ` • ${punchResult.geo.name}` : ''}</span></p>
+                ) : null}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -269,11 +329,14 @@ export default function EmployeeHome() {
               today.refetch();
             }}
             successExtra={(data) => (
-              <div className="mx-auto max-w-sm rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
+              <div className="mx-auto max-w-sm space-y-1 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-left text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
                 {punchMode === 'checkin' ? (
-                  <>Checked in at <span className="font-mono font-bold">{formatTime(data?.checkInTime)}</span> · {data?.status === 'Late' ? 'Marked Late' : 'On time'}.</>
+                  <p>Check-in: <span className="font-semibold">{formatTime(data?.checkInTime)}</span> • <span className="font-semibold">{data?.status === 'Late' ? `Late${data?.lateMinutes ? ` by ${data.lateMinutes} min` : ''}` : 'On time'}</span></p>
                 ) : (
-                  <>Checked out at <span className="font-mono font-bold">{formatTime(data?.checkOutTime)}</span> · Total <span className="font-bold">{formatDuration(data?.workingHoursMinutes)}</span>.</>
+                  <p>Check-out: <span className="font-semibold">{formatTime(data?.checkOutTime)}</span> • Total <span className="font-semibold">{formatDuration(data?.workingHoursMinutes)}</span></p>
+                )}
+                {punchMeta?.distance != null && punchMeta?.allowed != null && (
+                  <p className="inline-flex items-start gap-1.5"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />Location verified: {punchMeta.distance} m (allowed {punchMeta.allowed} m)</p>
                 )}
               </div>
             )}

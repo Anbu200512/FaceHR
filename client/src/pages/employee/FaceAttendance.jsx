@@ -1,5 +1,5 @@
-﻿import { useState, useEffect, useCallback } from 'react';
-import { LogIn, LogOut, CalendarCheck2 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { LogIn, LogOut, Clock3, MapPin, CheckCircle2, AlertCircle } from 'lucide-react';
 import api, { extractError } from '../../services/api';
 import { usePolling } from '../../hooks/useDebounce';
 import { formatTime, formatDuration } from '../../services/format';
@@ -10,21 +10,37 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import FaceCapture from '../../components/FaceCapture';
 
+function formatClock(hhmm) {
+  if (!hhmm || typeof hhmm !== 'string') return '-';
+  const [hStr, mStr] = hhmm.split(':');
+  const h = Number(hStr);
+  const m = Number(mStr || 0);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return hhmm;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
 export default function FaceAttendance() {
-  const [mode, setMode] = useState(null); // 'checkin' | 'checkout'
+  const [mode, setMode] = useState(null);
   const [record, setRecord] = useState(null);
   const [dupHint, setDupHint] = useState(null);
   const [settings, setSettings] = useState(null);
+  const [office, setOffice] = useState(null);
   const [inlineCapture, setInlineCapture] = useState(false);
   const [gating, setGating] = useState(false);
   const [gateError, setGateError] = useState(null);
   const [gateStatus, setGateStatus] = useState(null);
   const [capturedLocation, setCapturedLocation] = useState(null);
+  const [gateMeta, setGateMeta] = useState(null);
+  const [punchResult, setPunchResult] = useState(null);
   const [captureKey, setCaptureKey] = useState(0);
 
   const loadSettings = useCallback(async () => {
     try {
-      setSettings(await fetchMyAttendanceSettings());
+      const s = await fetchMyAttendanceSettings();
+      setSettings(s);
+      setOffice(s.office || null);
     } catch (_e) {
       // keep last known settings
     }
@@ -53,14 +69,16 @@ export default function FaceAttendance() {
     setGateError(null);
     setGateStatus(null);
     setCapturedLocation(null);
+    setGateMeta(null);
+    setPunchResult(null);
     setInlineCapture(false);
     setGating(true);
     try {
       const s = await fetchMyAttendanceSettings();
       setSettings(s);
+      setOffice(s.office || null);
       setGateStatus({ stage: 'verifying', message: s.geoEnabled === false ? 'Preparing attendance…' : 'Verifying your location…' });
 
-      // Automatically calculate/verify location (no manual "check location" step)
       const geo = await resolveGeoGate(s);
       if (!geo.ok) {
         setGateStatus(null);
@@ -69,16 +87,17 @@ export default function FaceAttendance() {
       }
 
       setCapturedLocation(geo.location);
+      const meta = { distance: geo.distance ?? null, allowed: geo.allowed ?? null, location: geo.location || null, name: s.location?.name };
+      setGateMeta(meta);
       if (s.faceEnabled === false) {
         const endpoint = nextMode === 'checkin' ? 'check-in' : 'check-out';
         const { data } = await api.post(`/attendance/${endpoint}`, { location: geo.location });
         setRecord(data.data || null);
         setGateStatus(null);
-        setGateError({ code: 'SUCCESS', message: data.message || 'Attendance marked successfully.' });
-        today.refresh?.();
+        setPunchResult({ ok: true, data: data.data, message: data.message, mode: nextMode, geo: meta });
+        today.refetch?.();
       } else {
-        setGateStatus({ stage: 'verified', message: s.geoEnabled === false ? 'Opening camera…' : 'Location verified. Opening camera…' });
-        // Open camera inline on this page (no modal/new panel)
+        setGateStatus({ stage: 'verified', message: s.geoEnabled === false ? 'Opening camera…' : `Location verified${geo.distance != null ? ` (${geo.distance} m from site)` : ''}. Opening camera…` });
         setCaptureKey((k) => k + 1);
         setInlineCapture(true);
       }
@@ -104,7 +123,8 @@ export default function FaceAttendance() {
       const endpoint = mode === 'checkin' ? 'check-in' : 'check-out';
       const { data } = await api.post(`/attendance/${endpoint}`, fd);
       setRecord(data.data || null);
-      today.refresh?.();
+      setPunchResult({ ok: true, data: data.data, message: data.message, summary: data.summary, mode, geo: gateMeta });
+      today.refetch?.();
       return { ok: true, message: data.message, data: data.data, summary: data.summary };
     } catch (err) {
       const code = err?.response?.data?.code;
@@ -116,12 +136,36 @@ export default function FaceAttendance() {
     }
   };
 
+  const shiftLabel = office
+    ? `${formatClock(office.officeStartTime)} – ${formatClock(office.officeEndTime)}`
+    : '—';
+  const graceLabel = office
+    ? (office.lateEnabled === false ? 'Late marking off' : `${Number(office.graceMinutes || 0)} min grace`)
+    : null;
+
   return (
     <div>
       <PageHeader
         title="Face Attendance"
         description={`${new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}`}
       />
+
+      {office && (
+        <Card className="mb-4 max-w-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+              <Clock3 className="h-4.5 w-4.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Today’s shift window</p>
+              <p className="mt-0.5 font-semibold text-slate-800 dark:text-slate-100">{shiftLabel}</p>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                {graceLabel}{office.lateEnabled !== false ? ' • Check in after start + grace is marked late' : ''}
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card className="mb-6 max-w-lg">
         <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -147,7 +191,7 @@ export default function FaceAttendance() {
             <div className="text-sm text-slate-500 dark:text-slate-400">
               In: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatTime(rec.checkInTime)}</span>
               {rec.checkOutTime && (
-                <> · Out: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatTime(rec.checkOutTime)}</span></>
+                <> • Out: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatTime(rec.checkOutTime)}</span></>
               )}
             </div>
           )}
@@ -155,28 +199,21 @@ export default function FaceAttendance() {
         <div className="border-t px-5 py-3 dark:border-slate-700">
           {rec?.status ? (
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-              Today's status: <Badge>{rec.status}</Badge>
+              Today&apos;s status: <Badge>{rec.status}</Badge>
               {rec.faceVerified && <Badge>Face Verified</Badge>}
+              {rec.status === 'Late' && rec.lateMinutes ? <Badge>Late by {rec.lateMinutes} min</Badge> : null}
               {rec.workingHoursMinutes ? <Badge>Worked {formatDuration(rec.workingHoursMinutes)}</Badge> : null}
             </div>
           ) : (
-            <p className="text-xs text-slate-400">You haven't checked in today yet.</p>
+            <p className="text-xs text-slate-400">You haven&apos;t checked in today yet.</p>
           )}
         </div>
       </Card>
 
       {gateStatus && !gateError && (
         <div className="mx-auto mb-4 max-w-lg">
-          <div
-            className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${
-              gateStatus.stage === 'verified'
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400'
-                : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300'
-            }`}
-          >
-            {gateStatus.stage === 'verifying' && (
-              <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            )}
+          <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${gateStatus.stage === 'verified' ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400' : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300'}`}>
+            {gateStatus.stage === 'verifying' && <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />}
             <span>{gateStatus.message}</span>
           </div>
         </div>
@@ -184,24 +221,43 @@ export default function FaceAttendance() {
 
       {gateError && (
         <div className="mx-auto mb-4 max-w-lg">
-          <div
-            className={`rounded-xl border px-4 py-3 text-sm ${
-              gateError.code === 'SUCCESS'
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400'
-                : gateError.code === 'OUTSIDE_ALLOWED_AREA'
-                ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400'
-                : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'
-            }`}
-          >
-            {gateError.message}
+          <div className={`flex gap-2 rounded-xl border px-4 py-3 text-sm ${gateError.code === 'OUTSIDE_ALLOWED_AREA' ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400' : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'}`}>
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-medium">Couldn’t mark attendance</p>
+              <p className="mt-0.5">{gateError.message}</p>
+            </div>
           </div>
         </div>
       )}
 
-      {settings && settings.faceEnabled === false && !gateError && !inlineCapture && !gateStatus && (
-        <div className="mx-auto mb-6 max-w-lg">
-          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300">
-            <CalendarCheck2 className="h-4 w-4" /> Tap Check In or Check Out - your location is verified automatically if required.
+      {punchResult?.ok && (
+        <div className="mx-auto mb-4 max-w-lg">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">{punchResult.message || 'Attendance marked successfully.'}</p>
+                <div className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
+                  {punchResult.mode === 'checkin' ? (
+                    <>
+                      <p>Check-in time: <span className="font-semibold">{formatTime(punchResult.data?.checkInTime)}</span></p>
+                      <p>Status: <span className="font-semibold">{punchResult.data?.status === 'Late' ? `Late${punchResult.data?.lateMinutes ? ` by ${punchResult.data.lateMinutes} min` : ''}` : 'On time'}</span></p>
+                    </>
+                  ) : (
+                    <>
+                      <p>Check-out time: <span className="font-semibold">{formatTime(punchResult.data?.checkOutTime)}</span></p>
+                      <p>Total worked: <span className="font-semibold">{formatDuration(punchResult.data?.workingHoursMinutes)}</span></p>
+                    </>
+                  )}
+                  {punchResult.geo?.distance != null && punchResult.geo?.allowed != null ? (
+                    <p className="inline-flex items-start gap-1.5 sm:col-span-2"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>Location verified: {punchResult.geo.distance} m from site (allowed {punchResult.geo.allowed} m){punchResult.geo.name ? ` • ${punchResult.geo.name}` : ''}</span></p>
+                  ) : settings?.geoEnabled === false ? (
+                    <p className="text-emerald-700/80 dark:text-emerald-300/80 sm:col-span-2">Location verification not required.</p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -215,17 +271,23 @@ export default function FaceAttendance() {
             onClose={() => {
               setInlineCapture(false);
               setGateStatus(null);
-              today.refresh?.();
+              today.refetch?.();
             }}
-            successExtra={(data) => (
-              <div className="mx-auto max-w-sm rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
-                {mode === 'checkin' ? (
-                  <>Checked in at <span className="font-mono font-bold">{formatTime(data?.checkInTime)}</span> · {data?.status === 'Late' ? 'Marked Late' : 'On time'}.</>
-                ) : (
-                  <>Checked out at <span className="font-mono font-bold">{formatTime(data?.checkOutTime)}</span> · Total <span className="font-bold">{formatDuration(data?.workingHoursMinutes)}</span>.</>
-                )}
-              </div>
-            )}
+            successExtra={(data) => {
+              const geo = gateMeta;
+              return (
+                <div className="mx-auto max-w-sm space-y-1 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-left text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
+                  {mode === 'checkin' ? (
+                    <p>Check-in: <span className="font-semibold">{formatTime(data?.checkInTime)}</span> • <span className="font-semibold">{data?.status === 'Late' ? `Late${data?.lateMinutes ? ` by ${data.lateMinutes} min` : ''}` : 'On time'}</span></p>
+                  ) : (
+                    <p>Check-out: <span className="font-semibold">{formatTime(data?.checkOutTime)}</span> • Total <span className="font-semibold">{formatDuration(data?.workingHoursMinutes)}</span></p>
+                  )}
+                  {geo?.distance != null && geo?.allowed != null && (
+                    <p className="inline-flex items-start gap-1.5"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />Location verified: {geo.distance} m (allowed {geo.allowed} m)</p>
+                  )}
+                </div>
+              );
+            }}
             failureExtra={({ code }) =>
               dupHint && code === dupHint.code ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-500/10 dark:text-amber-400">

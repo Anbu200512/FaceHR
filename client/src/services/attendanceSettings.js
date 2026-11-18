@@ -37,7 +37,8 @@ export async function fetchAttendanceSettings() {
 export async function fetchMyAttendanceSettings(employeeId) {
   const params = employeeId ? `?employeeId=${encodeURIComponent(employeeId)}` : '';
   const { data } = await api.get(`/settings/attendance/me${params}`);
-  return normalizeAttendanceSettings(data?.data?.attendance);
+  const attendance = normalizeAttendanceSettings(data?.data?.attendance);
+  return { ...attendance, office: data?.data?.office || null, overrides: data?.data?.overrides || null };
 }
 
 export async function saveAttendanceSettings(payload) {
@@ -47,29 +48,34 @@ export async function saveAttendanceSettings(payload) {
 
 /**
  * Resolve the geofence gate for a set of global settings.
- * Returns { ok: true, location } when GPS is (not required or) within the allowed radius,
+ * Returns { ok: true, location, distance?, allowed? } when GPS is (not required or) within the allowed radius,
  * or { ok: false, code, message, distance?, allowed? } when blocked.
  */
 export async function resolveGeoGate(settings) {
   const config = normalizeAttendanceSettings(settings);
-  if (!config.geoEnabled) return { ok: true, location: null };
+  if (!config.geoEnabled) return { ok: true, location: null, distance: null, allowed: null };
 
   const res = await getCurrentLocation();
   if (!res.ok) return { ok: false, code: res.code, message: res.message };
 
   const check = isWithinRadiusMeters(res.location.latitude, res.location.longitude, config.location.allowedRadius, config.location);
+  const allowed = Math.round(config.location.allowedRadius);
+  const distance = check ? check.distance : null;
+
   if (!check || !check.within) {
     return {
       ok: false,
       code: 'OUTSIDE_ALLOWED_AREA',
-      message: `You are outside the authorized attendance area. Current distance: ${check ? `${check.distance} m` : 'unknown'} · Allowed distance: ${Math.round(config.location.allowedRadius)} m`,
-      distance: check ? check.distance : null,
-      allowed: Math.round(config.location.allowedRadius),
+      message: `You are outside the authorized attendance area. Current distance: ${distance ?? 'unknown'} m - Allowed: ${allowed} m. Please move within the allowed area and try again.`,
+      distance,
+      allowed,
     };
   }
 
   return {
     ok: true,
     location: { latitude: res.location.latitude, longitude: res.location.longitude, accuracy: res.location.accuracy ?? null },
+    distance,
+    allowed,
   };
 }

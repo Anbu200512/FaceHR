@@ -16,9 +16,9 @@ const GUIDE = { cx: 0, cy: 0, width: 280, height: 350 };
 
 const CAMERA_MESSAGES = {
   requesting: { title: 'Starting camera…', desc: 'Please allow camera access when your browser asks.', tone: 'info' },
-  denied: { title: 'Camera Permission Required', desc: 'Please allow camera access from your browser settings to use face attendance.', tone: 'error' },
-  unavailable: { title: 'Camera Not Available', desc: 'Please check your device camera and try again.', tone: 'error' },
-  modelsError: { title: 'Face Models Failed to Load', desc: 'The face recognition models could not be downloaded. Check your connection and retry.', tone: 'error' },
+  denied: { title: 'Camera permission blocked', desc: 'Camera access is required for face attendance. Please allow camera permission for this site in your browser settings, then retry.', tone: 'error' },
+  unavailable: { title: 'Camera not available', desc: 'No usable camera was found. Please check that your camera is connected/enabled, close other apps using it, and try again.', tone: 'error' },
+  modelsError: { title: 'Face recognition could not start', desc: 'Face recognition models could not be loaded. Check your internet connection and retry.', tone: 'error' },
 };
 
 export default function FaceCapture({ mode, onCaptured, onClose, successExtra, failureExtra }) {

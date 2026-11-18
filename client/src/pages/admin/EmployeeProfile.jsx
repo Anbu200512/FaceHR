@@ -17,11 +17,13 @@ import {
   MapPin,
   Clock,
   Lock,
+  Download,
 } from 'lucide-react';
 import api, { extractError } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import { useToast } from '../../context/ToastContext';
 import { resolveAsset, formatDate, formatDuration, formatTime, formatLocation, toDateKey } from '../../services/format';
+import { exportEmployeeProfilePdf } from '../../services/export';
 import PageHeader from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -220,6 +222,9 @@ export default function EmployeeProfile({ faceMode }) {
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <Button variant="ghost" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" /> Back
+          </Button>
+          <Button variant="secondary" onClick={() => exportEmployeeProfilePdf(emp)}>
+            <Download className="h-4 w-4" /> Download Profile
           </Button>
           <Button variant="secondary" onClick={() => setSendOpen(true)}>
             <Send className="h-4 w-4" /> Send Login Details
