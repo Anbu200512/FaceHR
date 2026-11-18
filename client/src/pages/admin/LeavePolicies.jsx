@@ -88,8 +88,22 @@ export default function LeavePolicies() {
 
       <Card className="overflow-hidden">
         {loading ? (
-          <div className="space-y-3 p-5">
-            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-12 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />)}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b bg-slate-50 dark:bg-slate-800/60">
+                <tr>
+                  <th className="th">Leave Type</th>
+                  <th className="th">Annual Allowance</th>
+                  <th className="th">Accrual</th>
+                  <th className="th">Carry Forward</th>
+                  <th className="th">Status</th>
+                  <th className="th text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} cols={6} />)}
+              </tbody>
+            </table>
           </div>
         ) : !data?.length ? (
           <EmptyState icon={SlidersHorizontal} title="No leave policies" message="Create policies to drive leave balances." />

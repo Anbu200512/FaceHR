@@ -111,9 +111,17 @@ export default function AdminLayout() {
   const [pwOpen, setPwOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [openGroups, setOpenGroups] = useState({});
-  const pendingResignations = usePolling(async () => {
-    const { data } = await api.get('/resignations?page=1&pageSize=1&status=Pending');
-    return data.meta?.total || 0;
+  const pendingCounts = usePolling(async () => {
+    const [leavesRes, regRes, resigRes] = await Promise.all([
+      api.get('/leaves?page=1&pageSize=1&status=Pending'),
+      api.get('/regularizations?page=1&pageSize=1&status=Pending'),
+      api.get('/resignations?page=1&pageSize=1&status=Pending'),
+    ]);
+    return {
+      '/admin/leaves': leavesRes.data.meta?.total || 0,
+      '/admin/regularizations': regRes.data.meta?.total || 0,
+      '/admin/resignations': resigRes.data.meta?.total || 0,
+    };
   }, { interval: 120000 });
 
   const isChildActive = (item) =>
@@ -221,39 +229,44 @@ export default function AdminLayout() {
                     )}
                   </div>
                 ) : (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    onClick={() => setDrawer(false)}
-                    title={desktopSidebarCollapsed && !drawer ? item.label : undefined}
-                    className={({ isActive }) =>
-                      clsx(
-                        'group flex items-center rounded-xl py-2.5 text-sm font-medium transition',
-                        desktopSidebarCollapsed && !drawer ? 'justify-center px-2' : 'gap-3 px-3',
-                        isActive
-                          ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400'
-                          : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-                      )
-                    }
-                  >
-                    <span className="relative flex shrink-0">
-                      <item.icon className="h-5 w-5" />
-                      {item.to === '/admin/resignations' && pendingResignations.data > 0 && desktopSidebarCollapsed && !drawer && (
-                        <span className="absolute -right-2 -top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-rose-500 dark:border-slate-900" />
-                      )}
-                    </span>
-                    {(!desktopSidebarCollapsed || drawer) && (
-                      <>
-                        <span className="min-w-0 flex-1">{item.label}</span>
-                        {item.to === '/admin/resignations' && pendingResignations.data > 0 && (
-                          <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold leading-none text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
-                            {pendingResignations.data > 99 ? '99+' : pendingResignations.data}
-                          </span>
+                  (() => {
+                    const pending = pendingCounts.data?.[item.to] || 0;
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        end={item.end}
+                        onClick={() => setDrawer(false)}
+                        title={desktopSidebarCollapsed && !drawer ? item.label : undefined}
+                        className={({ isActive }) =>
+                          clsx(
+                            'group flex items-center rounded-xl py-2.5 text-sm font-medium transition',
+                            desktopSidebarCollapsed && !drawer ? 'justify-center px-2' : 'gap-3 px-3',
+                            isActive
+                              ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400'
+                              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                          )
+                        }
+                      >
+                        <span className="relative flex shrink-0">
+                          <item.icon className="h-5 w-5" />
+                          {pending > 0 && desktopSidebarCollapsed && !drawer && (
+                            <span className="absolute -right-2 -top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-rose-500 dark:border-slate-900" />
+                          )}
+                        </span>
+                        {(!desktopSidebarCollapsed || drawer) && (
+                          <>
+                            <span className="min-w-0 flex-1">{item.label}</span>
+                            {pending > 0 && (
+                              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold leading-none text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                                {pending > 99 ? '99+' : pending}
+                              </span>
+                            )}
+                          </>
                         )}
-                      </>
-                    )}
-                  </NavLink>
+                      </NavLink>
+                    );
+                  })()
                 )
               )}
             </div>

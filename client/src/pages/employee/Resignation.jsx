@@ -10,6 +10,7 @@ import { Card } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import EmptyState from '../../components/ui/EmptyState';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 const STATUS_TONES = { Pending: 'amber', Approved: 'emerald', Rejected: 'rose' };
 
@@ -103,7 +104,17 @@ export default function Resignation() {
           </div>
           {mine.loading && !mine.data ? (
             <div className="space-y-3 p-5">
-              {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />)}
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-start gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                  <Skeleton className="h-11 w-11 rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-56" />
+                    <Skeleton className="h-3 w-full max-w-sm" />
+                  </div>
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                </div>
+              ))}
             </div>
           ) : mine.data?.length === 0 ? (
             <EmptyState icon={FileSignature} title="No resignation requests yet" message="Your requests will appear here." />

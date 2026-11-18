@@ -16,7 +16,7 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import EmptyState from '../../components/ui/EmptyState';
 import Pagination from '../../components/ui/Pagination';
-import { SkeletonRow } from '../../components/ui/Skeleton';
+import { Skeleton, SkeletonRow } from '../../components/ui/Skeleton';
 import Modal from '../../components/ui/Modal';
 
 const STATUS = ['Present', 'Late', 'Half Day', 'Absent', 'On Leave'];
@@ -185,7 +185,16 @@ export default function Attendance() {
       {/* Mobile */}
       <div className="space-y-3 md:hidden">
         {loading ? (
-          Array.from({ length: 4 }).map((_, i) => <Card key={i} className="h-24 animate-pulse" />)
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="space-y-3 p-4">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </div>
+              <Skeleton className="h-3 w-40" />
+              <Skeleton className="h-3 w-full" />
+            </Card>
+          ))
         ) : rows.length === 0 ? (
           <Card><EmptyState title="No records found" /></Card>
         ) : (

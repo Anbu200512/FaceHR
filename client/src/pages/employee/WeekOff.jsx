@@ -3,9 +3,8 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../hooks/useApi';
 import PageHeader from '../../components/PageHeader';
-import { FullScreenLoader } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
-import Badge from '../../components/ui/Badge';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -16,7 +15,6 @@ export default function EmployeeWeekOff() {
     return res.data.data;
   }, [user.employee]);
 
-  if (loading && !data) return <FullScreenLoader label="Loading week off..." />;
   const emp = data || user?.employeeData || {};
   const w = emp.weekOff || {};
   const weeklyOffDay = w.weeklyOffDay || '';
@@ -41,30 +39,53 @@ export default function EmployeeWeekOff() {
           </div>
         </div>
         <div className="p-5 sm:p-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/40">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Primary week off</p>
-              <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">{weeklyOffDay || 'Not set'}</p>
+          {loading && !data ? (
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                  <Skeleton className="h-3 w-28" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
+                <div className="space-y-2 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                  <Skeleton className="h-3 w-28" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <Skeleton className="h-3 w-24" />
+                <div className="flex flex-wrap gap-2">
+                  {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-7 w-20 rounded-full" />)}
+                </div>
+              </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/40">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Second week off</p>
-              <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">{secondWeeklyOffDay || 'None'}</p>
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/40">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Primary week off</p>
+                  <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">{weeklyOffDay || 'Not set'}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/40">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Second week off</p>
+                  <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">{secondWeeklyOffDay || 'None'}</p>
+                </div>
+              </div>
 
-          <div className="mt-6">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Working days</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {workingDays.length ? workingDays.map((d) => (
-                <span key={d} className="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-500/10 dark:text-brand-300 dark:ring-brand-500/30">{d}</span>
-              )) : <span className="text-sm text-slate-500 dark:text-slate-400">No working days set.</span>}
-            </div>
-          </div>
+              <div className="mt-6">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Working days</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {workingDays.length ? workingDays.map((d) => (
+                    <span key={d} className="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-500/10 dark:text-brand-300 dark:ring-brand-500/30">{d}</span>
+                  )) : <span className="text-sm text-slate-500 dark:text-slate-400">No working days set.</span>}
+                </div>
+              </div>
 
-          <div className="mt-6 flex items-start gap-2 rounded-xl border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">
-            <Coffee className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-            <span>Week off is managed by your admin. Contact HR/admin for changes.</span>
-          </div>
+              <div className="mt-6 flex items-start gap-2 rounded-xl border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                <Coffee className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                <span>Week off is managed by your admin. Contact HR/admin for changes.</span>
+              </div>
+            </>
+          )}
         </div>
       </Card>
     </div>

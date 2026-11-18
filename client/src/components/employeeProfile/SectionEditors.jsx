@@ -1100,7 +1100,7 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
   const [deleting, setDeleting] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [preview, setPreview] = useState(null);
-  const [replacing, setReplacing] = useState(null);
+  const [replaceBusyId, setReplaceBusyId] = useState(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [removePhotoOpen, setRemovePhotoOpen] = useState(false);
   const [removePhotoBusy, setRemovePhotoBusy] = useState(false);
@@ -1126,7 +1126,7 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
   };
 
   const onReplace = async (doc, file) => {
-    setReplacing(null);
+    setReplaceBusyId(doc._id);
     try {
       const fd = new FormData();
       fd.append('file', file);
@@ -1135,6 +1135,8 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
       await refresh();
     } catch (err) {
       toast.error(extractError(err, 'Could not replace document'));
+    } finally {
+      setReplaceBusyId(null);
     }
   };
 
@@ -1154,6 +1156,11 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
   };
 
   const onPhoto = async (file) => {
+    if (!file) return;
+    if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) {
+      toast.error('Profile photo must be a JPG, PNG, or WebP image');
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) { toast.error('Profile photo must be under 5 MB'); return; }
     setPhotoBusy(true);
     try {
@@ -1203,18 +1210,25 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
               {emp.profilePhoto ? 'Profile photo uploaded' : 'No profile photo yet'}
             </p>
-            <p className="mt-0.5 text-xs text-slate-400">JPG, PNG or WebP up to 5 MB.</p>
-            <div className="mt-3 flex justify-center gap-2 sm:justify-start">
-              <label className="btn-secondary cursor-pointer text-xs">
+            <p className="mt-0.5 text-xs text-slate-400">Allowed: JPG, PNG, WebP • Max 5 MB</p>
+            <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
+              <label className={`btn-secondary text-xs ${photoBusy || removePhotoBusy ? 'pointer-events-none cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
                 <Camera className="h-4 w-4" /> {emp.profilePhoto ? 'Replace photo' : 'Upload photo'}
-                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPhoto(f); e.target.value = ''; }} />
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  disabled={photoBusy || removePhotoBusy}
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) onPhoto(f); e.target.value = ''; }}
+                />
               </label>
               {emp.profilePhoto && (
                 <Button type="button" variant="ghost" size="sm" onClick={() => setRemovePhotoOpen(true)} disabled={photoBusy || removePhotoBusy}>
-                  <Trash2 className="h-4 w-4" /> Remove photo
+                  <Trash2 className="h-4 w-4" /> {removePhotoBusy ? 'Removing…' : 'Remove photo'}
                 </Button>
               )}
-              {photoBusy && <Button type="button" variant="ghost" size="sm" loading disabled>Uploading…</Button>}
+              {photoBusy && <Button type="button" variant="ghost" size="sm" loading disabled>Uploading photo…</Button>}
+              {removePhotoBusy && <Button type="button" variant="ghost" size="sm" loading disabled>Removing photo…</Button>}
             </div>
           </div>
         </div>
@@ -1230,19 +1244,21 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
               value={form.kind}
               onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value }))}
               options={DOCUMENT_KINDS}
+              disabled={uploading}
             />
-            <Input label="Document Name" name="name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Optional - defaults to type" />
+            <Input label="Document Name" name="name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Optional - defaults to type" disabled={uploading} />
             <div className="sm:pt-6">
-              <label className="btn-secondary block cursor-pointer text-center text-xs">
+              <label className={`btn-secondary block text-center text-xs ${uploading ? 'pointer-events-none cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
                 <FileUp className="h-4 w-4" /> {form.file ? form.file.name : 'Choose file'}
-                <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) setForm((s) => ({ ...s, file: f })); e.target.value = ''; }} />
+                <input type="file" className="hidden" disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) setForm((s) => ({ ...s, file: f })); e.target.value = ''; }} />
               </label>
             </div>
           </div>
-          <div className="mt-3 flex items-center justify-end gap-2">
-            {form.file && <p className="truncate text-xs text-slate-400">{form.file.name}</p>}
-            <Button type="button" size="sm" onClick={onUpload} loading={uploading}>
-              <FileUp className="h-4 w-4" /> Upload
+          <p className="mt-3 text-xs text-slate-400">Any file type supported by the server • Max 10 MB</p>
+          <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+            {form.file && <p className="min-w-0 flex-1 truncate text-xs text-slate-400">{form.file.name}</p>}
+            <Button type="button" size="sm" onClick={onUpload} loading={uploading} disabled={uploading || !form.file}>
+              <FileUp className="h-4 w-4" /> {uploading ? 'Uploading…' : 'Upload'}
             </Button>
           </div>
         </div>
@@ -1282,11 +1298,11 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
                             </a>
                           </>
                         )}
-                        <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-slate-500 hover:underline dark:text-slate-300">
-                          <RefreshCw className="h-3.5 w-3.5" /> Replace
-                          <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onReplace(d, f); e.target.value = ''; }} />
+                        <label className={`inline-flex items-center gap-1 text-xs font-semibold text-slate-500 dark:text-slate-300 ${uploading || deleteBusy || replaceBusyId ? 'pointer-events-none cursor-not-allowed opacity-50' : 'cursor-pointer hover:underline'}`}>
+                          <RefreshCw className={`h-3.5 w-3.5 ${replaceBusyId === d._id ? 'animate-spin' : ''}`} /> {replaceBusyId === d._id ? 'Replacing…' : 'Replace'}
+                          <input type="file" className="hidden" disabled={uploading || deleteBusy || !!replaceBusyId} onChange={(e) => { const f = e.target.files?.[0]; if (f) onReplace(d, f); e.target.value = ''; }} />
                         </label>
-                        <button type="button" onClick={() => setDeleting(d)} className="inline-flex items-center gap-1 text-xs font-semibold text-rose-500 hover:underline dark:text-rose-400">
+                        <button type="button" onClick={() => setDeleting(d)} disabled={uploading || deleteBusy || !!replaceBusyId} className="inline-flex items-center gap-1 text-xs font-semibold text-rose-500 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-400">
                           <Trash2 className="h-3.5 w-3.5" /> Delete
                         </button>
                       </div>

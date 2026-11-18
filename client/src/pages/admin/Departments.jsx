@@ -12,6 +12,7 @@ import { Input } from '../../components/ui/Form';
 import Modal from '../../components/ui/Modal';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import Avatar from '../../components/Avatar';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 export default function Departments() {
   const [tab, setTab] = useState('departments');
@@ -99,7 +100,17 @@ function DepartmentsTab() {
         <Button size="sm" onClick={openNew}><Plus className="h-4 w-4" /> New Department</Button>
       </Card>
 
-      {!loading && data?.length === 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="space-y-3 p-5">
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-4 w-24" />
+            </Card>
+          ))}
+        </div>
+      ) : data?.length === 0 ? (
         <Card><EmptyState icon={Users} title="No departments yet" message="Create your first department." /></Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -215,7 +226,16 @@ function DesignationsTab() {
         <Button size="sm" onClick={openNew}><Plus className="h-4 w-4" /> New Designation</Button>
       </Card>
 
-      {!loading && data?.length === 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="flex items-center justify-between p-4">
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-8 w-16 rounded-lg" />
+            </Card>
+          ))}
+        </div>
+      ) : data?.length === 0 ? (
         <Card><EmptyState icon={Users} title="No designations yet" message="Create your first designation." /></Card>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

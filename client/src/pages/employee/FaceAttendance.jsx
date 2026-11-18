@@ -18,6 +18,7 @@ export default function FaceAttendance() {
   const [inlineCapture, setInlineCapture] = useState(false);
   const [gating, setGating] = useState(false);
   const [gateError, setGateError] = useState(null);
+  const [gateStatus, setGateStatus] = useState(null);
   const [capturedLocation, setCapturedLocation] = useState(null);
   const [captureKey, setCaptureKey] = useState(0);
 
@@ -50,16 +51,19 @@ export default function FaceAttendance() {
     setMode(nextMode);
     setDupHint(null);
     setGateError(null);
+    setGateStatus(null);
     setCapturedLocation(null);
     setInlineCapture(false);
     setGating(true);
     try {
       const s = await fetchMyAttendanceSettings();
       setSettings(s);
+      setGateStatus({ stage: 'verifying', message: s.geoEnabled === false ? 'Preparing attendance…' : 'Verifying your location…' });
 
       // Automatically calculate/verify location (no manual "check location" step)
       const geo = await resolveGeoGate(s);
       if (!geo.ok) {
+        setGateStatus(null);
         setGateError(geo);
         return;
       }
@@ -69,14 +73,17 @@ export default function FaceAttendance() {
         const endpoint = nextMode === 'checkin' ? 'check-in' : 'check-out';
         const { data } = await api.post(`/attendance/${endpoint}`, { location: geo.location });
         setRecord(data.data || null);
+        setGateStatus(null);
         setGateError({ code: 'SUCCESS', message: data.message || 'Attendance marked successfully.' });
         today.refresh?.();
       } else {
+        setGateStatus({ stage: 'verified', message: s.geoEnabled === false ? 'Opening camera…' : 'Location verified. Opening camera…' });
         // Open camera inline on this page (no modal/new panel)
         setCaptureKey((k) => k + 1);
         setInlineCapture(true);
       }
     } catch (err) {
+      setGateStatus(null);
       setGateError({
         code: err?.response?.data?.code || 'UNKNOWN',
         message: extractError(err, 'Could not verify your location. Please try again.'),
@@ -158,8 +165,25 @@ export default function FaceAttendance() {
         </div>
       </Card>
 
+      {gateStatus && !gateError && (
+        <div className="mx-auto mb-4 max-w-lg">
+          <div
+            className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${
+              gateStatus.stage === 'verified'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400'
+                : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300'
+            }`}
+          >
+            {gateStatus.stage === 'verifying' && (
+              <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            )}
+            <span>{gateStatus.message}</span>
+          </div>
+        </div>
+      )}
+
       {gateError && (
-        <div className="mx-auto mb-6 max-w-lg">
+        <div className="mx-auto mb-4 max-w-lg">
           <div
             className={`rounded-xl border px-4 py-3 text-sm ${
               gateError.code === 'SUCCESS'
@@ -174,10 +198,10 @@ export default function FaceAttendance() {
         </div>
       )}
 
-      {settings && settings.faceEnabled === false && !gateError && !inlineCapture && (
+      {settings && settings.faceEnabled === false && !gateError && !inlineCapture && !gateStatus && (
         <div className="mx-auto mb-6 max-w-lg">
           <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300">
-            <CalendarCheck2 className="h-4 w-4" /> Tap Check In or Check Out — your location is verified automatically if required.
+            <CalendarCheck2 className="h-4 w-4" /> Tap Check In or Check Out - your location is verified automatically if required.
           </div>
         </div>
       )}
@@ -190,6 +214,7 @@ export default function FaceAttendance() {
             onCaptured={submit}
             onClose={() => {
               setInlineCapture(false);
+              setGateStatus(null);
               today.refresh?.();
             }}
             successExtra={(data) => (

@@ -1,18 +1,20 @@
-import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LogIn, LogOut, CalendarDays, History, Plane, Briefcase, Clock3 } from 'lucide-react';
-import api from '../../services/api';
+import api, { extractError } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../hooks/useApi';
 import { usePolling } from '../../hooks/useDebounce';
 import { greeting, formatDate, formatTime, formatDuration } from '../../services/format';
 import { resolveAsset } from '../../services/format';
+import { fetchMyAttendanceSettings, resolveGeoGate } from '../../services/attendanceSettings';
 import PageHeader from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Avatar from '../../components/Avatar';
 import { Skeleton } from '../../components/ui/Skeleton';
+import FaceCapture from '../../components/FaceCapture';
 
 export default function EmployeeHome() {
   const { user } = useAuth();
@@ -34,38 +36,123 @@ export default function EmployeeHome() {
     return data.data;
   }, []);
 
-  const rec = today.data;
+  const [punchMode, setPunchMode] = useState(null);
+  const [punching, setPunching] = useState(false);
+  const [punchError, setPunchError] = useState(null);
+  const [punchStatus, setPunchStatus] = useState(null);
+  const [punchLocation, setPunchLocation] = useState(null);
+  const [inlineCapture, setInlineCapture] = useState(false);
+  const [captureKey, setCaptureKey] = useState(0);
+  const [liveNow, setLiveNow] = useState(Date.now());
 
+  const rec = today.data;
+  const canCheckIn = !rec?.checkInTime;
   const canCheckOut = Boolean(rec?.checkInTime && !rec?.checkOutTime);
+
+  useEffect(() => {
+    if (!rec?.checkInTime || rec?.checkOutTime) return undefined;
+    setLiveNow(Date.now());
+    const t = setInterval(() => setLiveNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, [rec?.checkInTime, rec?.checkOutTime]);
+
+  const liveMinutes = rec?.checkInTime && !rec?.checkOutTime
+    ? Math.max(0, Math.round((liveNow - new Date(rec.checkInTime).getTime()) / 60000))
+    : 0;
+
+  const startPunch = async (nextMode) => {
+    if (punching) return;
+    const allowed = nextMode === 'checkin' ? canCheckIn : canCheckOut;
+    if (!allowed) return;
+    setPunchMode(nextMode);
+    setPunchError(null);
+    setPunchStatus(null);
+    setPunchLocation(null);
+    setInlineCapture(false);
+    setPunching(true);
+    try {
+      const s = await fetchMyAttendanceSettings();
+      setPunchStatus({ stage: 'verifying', message: s.geoEnabled === false ? 'Preparing attendance…' : 'Verifying your location…' });
+      const geo = await resolveGeoGate(s);
+      if (!geo.ok) {
+        setPunchStatus(null);
+        setPunchError(geo);
+        return;
+      }
+      setPunchLocation(geo.location);
+      if (s.faceEnabled === false) {
+        const endpoint = nextMode === 'checkin' ? 'check-in' : 'check-out';
+        const { data } = await api.post(`/attendance/${endpoint}`, { location: geo.location });
+        setPunchStatus(null);
+        setPunchError({ code: 'SUCCESS', message: data.message || 'Attendance marked successfully.' });
+        await today.refetch();
+      } else {
+        setPunchStatus({ stage: 'verified', message: s.geoEnabled === false ? 'Opening camera…' : 'Location verified. Opening camera…' });
+        setCaptureKey((k) => k + 1);
+        setInlineCapture(true);
+      }
+    } catch (err) {
+      setPunchStatus(null);
+      setPunchError({
+        code: err?.response?.data?.code || 'UNKNOWN',
+        message: extractError(err, 'Could not verify your location. Please try again.'),
+      });
+    } finally {
+      setPunching(false);
+    }
+  };
+
+  const submitPunch = async ({ blob, descriptor }) => {
+    const fd = new FormData();
+    fd.append('image', blob, 'face.jpg');
+    fd.append('descriptor', JSON.stringify(Array.from(descriptor)));
+    if (punchLocation) {
+      fd.append('location', JSON.stringify({ latitude: punchLocation.latitude, longitude: punchLocation.longitude }));
+    }
+    try {
+      const endpoint = punchMode === 'checkin' ? 'check-in' : 'check-out';
+      const { data } = await api.post(`/attendance/${endpoint}`, fd);
+      await today.refetch();
+      return { ok: true, message: data.message, data: data.data, summary: data.summary };
+    } catch (err) {
+      return {
+        ok: false,
+        message: err?.response?.data?.message || extractError(err, 'Verification failed. Please try again.'),
+        code: err?.response?.data?.code,
+      };
+    }
+  };
+
   const actions = [
-    {
-      to: '/employee/attendance',
-      label: canCheckOut ? 'Check Out' : 'Check In',
-      icon: canCheckOut ? LogOut : LogIn,
-      tone: canCheckOut ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white',
-    },
     { to: '/employee/history', label: 'My History', icon: History, tone: 'bg-brand-600 text-white' },
     { to: '/employee/leave', label: 'Apply Leave', icon: Plane, tone: 'bg-sky-600 text-white' },
     { to: '/employee/profile', label: 'My Profile', icon: Briefcase, tone: 'bg-violet-600 text-white' },
   ];
 
+  const durationDisplay = rec?.checkOutTime
+    ? formatDuration(rec.workingHoursMinutes)
+    : rec?.checkInTime
+      ? formatDuration(liveMinutes)
+      : '-';
+
   return (
     <div>
       <PageHeader
-        title={`${greeting()}, ${user?.name?.split(' ')[0]} 👋`}
+        title={`${greeting()}, ${user?.name?.split(' ')[0] || 'there'}`}
         description={`Today is ${formatDate(new Date())}.`}
       />
 
-      {/* Today status */}
       {today.loading && !rec ? (
-        <Skeleton className="mb-6 h-44 rounded-2xl" />
+        <Skeleton className="mb-6 h-56 rounded-2xl" />
       ) : (
         <Card className="mb-6 overflow-hidden">
           <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-4">
               <Avatar name={user?.name} src={resolveAsset(emp.profilePhoto)} size="lg" />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-bold text-slate-900 dark:text-slate-100">{[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}</p>
+                <p className="truncate font-bold text-slate-900 dark:text-slate-100">
+                  {[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(' ') || user?.name}
+                </p>
                 <p className="break-words text-xs text-slate-400">
                   {emp.designation?.name || '-'} · {emp.department?.name || '-'}
                   {emp.employmentType ? ` · ${emp.employmentType}` : ''}
@@ -90,35 +177,132 @@ export default function EmployeeHome() {
                   <Clock3 className="h-3.5 w-3.5" /> Duration
                 </p>
                 <p className="mt-1 font-mono text-lg font-bold text-slate-700 dark:text-slate-200">
-                  {rec?.checkOutTime ? formatDuration(rec.workingHoursMinutes) : (rec?.checkInTime ? 'In office' : '-')}
+                  {durationDisplay}
                 </p>
+                {rec?.checkInTime && !rec?.checkOutTime && (
+                  <p className="mt-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">Live</p>
+                )}
               </div>
             </div>
           </div>
         </Card>
       )}
 
-      {/* Quick actions */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {canCheckOut ? (
+          <button
+            type="button"
+            onClick={() => startPunch('checkout')}
+            disabled={punching}
+            className="card flex items-center gap-3 p-4 text-left transition hover:shadow-lift disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-600 text-white">
+              <LogOut className="h-4.5 w-4.5" />
+            </div>
+            <span className="min-w-0 break-words text-xs font-semibold text-slate-700 dark:text-slate-200">
+              {punching && punchMode === 'checkout' ? 'Checking out…' : 'Check Out'}
+            </span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => startPunch('checkin')}
+            disabled={punching || (!canCheckIn && !canCheckOut)}
+            className="card flex items-center gap-3 p-4 text-left transition hover:shadow-lift disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
+              <LogIn className="h-4.5 w-4.5" />
+            </div>
+            <span className="min-w-0 break-words text-xs font-semibold text-slate-700 dark:text-slate-200">
+              {punching && punchMode === 'checkin' ? 'Checking in…' : !canCheckIn && !canCheckOut ? 'Attendance Completed' : 'Check In'}
+            </span>
+          </button>
+        )}
         {actions.map((a) => (
           <Link key={a.to} to={a.to} className="card flex items-center gap-3 p-4 transition hover:shadow-lift">
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${a.tone}`}><a.icon className="h-4.5 w-4.5" /></div>
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${a.tone}`}>
+              <a.icon className="h-4.5 w-4.5" />
+            </div>
             <span className="min-w-0 break-words text-xs font-semibold text-slate-700 dark:text-slate-200">{a.label}</span>
           </Link>
         ))}
       </div>
+
+      {punchStatus && !punchError && (
+        <div
+          className={`mt-4 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${
+            punchStatus.stage === 'verified'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400'
+              : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300'
+          }`}
+        >
+          {punchStatus.stage === 'verifying' && (
+            <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          )}
+          <span>{punchStatus.message}</span>
+        </div>
+      )}
+
+      {punchError && (
+        <div
+          className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
+            punchError.code === 'SUCCESS'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400'
+              : punchError.code === 'OUTSIDE_ALLOWED_AREA'
+              ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400'
+              : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'
+          }`}
+        >
+          {punchError.message}
+        </div>
+      )}
+
+      {inlineCapture && (
+        <div className="mt-4">
+          <FaceCapture
+            key={`${punchMode}-${captureKey}`}
+            mode="attendance"
+            onCaptured={submitPunch}
+            onClose={() => {
+              setInlineCapture(false);
+              setPunchStatus(null);
+              today.refetch();
+            }}
+            successExtra={(data) => (
+              <div className="mx-auto max-w-sm rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
+                {punchMode === 'checkin' ? (
+                  <>Checked in at <span className="font-mono font-bold">{formatTime(data?.checkInTime)}</span> · {data?.status === 'Late' ? 'Marked Late' : 'On time'}.</>
+                ) : (
+                  <>Checked out at <span className="font-mono font-bold">{formatTime(data?.checkOutTime)}</span> · Total <span className="font-bold">{formatDuration(data?.workingHoursMinutes)}</span>.</>
+                )}
+              </div>
+            )}
+          />
+        </div>
+      )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <div className="border-b px-5 py-4 dark:border-slate-700">
             <h2 className="font-bold text-slate-900 dark:text-slate-100">This Month</h2>
           </div>
-          <div className="grid grid-cols-2 gap-px sm:grid-cols-4">
-            <div className="p-5"><p className="text-xs font-medium text-slate-400">Present</p><p className="mt-1 text-2xl font-bold text-emerald-600">{monthly.data?.summary?.presentDays ?? '…'}</p></div>
-            <div className="p-5"><p className="text-xs font-medium text-slate-400">Late</p><p className="mt-1 text-2xl font-bold text-amber-600">{monthly.data?.summary?.lateDays ?? '…'}</p></div>
-            <div className="p-5"><p className="text-xs font-medium text-slate-400">Absent</p><p className="mt-1 text-2xl font-bold text-rose-600">{monthly.data?.summary?.absentDays ?? '…'}</p></div>
-            <div className="p-5"><p className="text-xs font-medium text-slate-400">Hours</p><p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">{monthly.data?.summary ? formatDuration(monthly.data.summary.totalHours) : '…'}</p></div>
-          </div>
+          {monthly.data ? (
+            <div className="grid grid-cols-2 gap-px sm:grid-cols-4">
+              <div className="p-5"><p className="text-xs font-medium text-slate-400">Present</p><p className="mt-1 text-2xl font-bold text-emerald-600">{monthly.data.summary?.presentDays ?? 0}</p></div>
+              <div className="p-5"><p className="text-xs font-medium text-slate-400">Late</p><p className="mt-1 text-2xl font-bold text-amber-600">{monthly.data.summary?.lateDays ?? 0}</p></div>
+              <div className="p-5"><p className="text-xs font-medium text-slate-400">Absent</p><p className="mt-1 text-2xl font-bold text-rose-600">{monthly.data.summary?.absentDays ?? 0}</p></div>
+              <div className="p-5"><p className="text-xs font-medium text-slate-400">Hours</p><p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">{formatDuration(monthly.data.summary?.totalHours || 0)}</p></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-8 w-12" />
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex justify-end border-t px-5 py-3 dark:border-slate-700">
             <Link to="/employee/history" className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">View full history →</Link>
           </div>
@@ -152,7 +336,19 @@ export default function EmployeeHome() {
               )}
             </div>
           ) : (
-            <div className="p-5 text-sm text-slate-400">Loading…</div>
+            <div className="space-y-4 p-5">
+              <div className="flex items-end justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-16" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+                <Skeleton className="h-8 w-8 rounded-lg" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+              </div>
+            </div>
           )}
         </Card>
       </div>

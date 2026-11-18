@@ -6,6 +6,7 @@ import PageHeader from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import EmptyState from '../../components/ui/EmptyState';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 export default function Announcements() {
   const list = useApi(async () => {
@@ -19,7 +20,17 @@ export default function Announcements() {
 
       {list.loading ? (
         <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => <Card key={i} className="h-28 animate-pulse" />)}
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="space-y-3 p-5">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-3 w-40" />
+            </Card>
+          ))}
         </div>
       ) : !list.data?.length ? (
         <Card><EmptyState icon={Megaphone} title="No announcements" message="Notices from HR will appear here." /></Card>

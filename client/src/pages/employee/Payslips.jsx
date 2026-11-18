@@ -9,6 +9,7 @@ import { Card } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import EmptyState from '../../components/ui/EmptyState';
+import { Skeleton } from '../../components/ui/Skeleton';
 import Modal from '../../components/ui/Modal';
 
 const monthName = (m) => MONTH_OPTIONS[(m || 1) - 1];
@@ -50,7 +51,24 @@ export default function Payslips() {
 
       {list.loading ? (
         <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => <Card key={i} className="h-20 animate-pulse" />)}
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
+              <div className="flex min-w-0 flex-1 items-center gap-4">
+                <Skeleton className="h-12 w-12 rounded-xl" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-48" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="space-y-2 text-right">
+                  <Skeleton className="ml-auto h-4 w-20" />
+                  <Skeleton className="ml-auto h-5 w-14 rounded-full" />
+                </div>
+                <Skeleton className="h-8 w-16 rounded-lg" />
+              </div>
+            </Card>
+          ))}
         </div>
       ) : rows.length === 0 ? (
         <Card><EmptyState icon={Wallet} title="No payslips yet" message="Payslips appear here once payroll is processed." /></Card>

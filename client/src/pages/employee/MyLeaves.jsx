@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { CalendarDays, CalendarPlus } from 'lucide-react';
 import api, { extractError } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
@@ -10,6 +10,7 @@ import { Card } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import EmptyState from '../../components/ui/EmptyState';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 const TONES = { Pending: 'amber', Approved: 'emerald', Rejected: 'rose' };
 
@@ -82,14 +83,20 @@ export default function MyLeaves() {
                 <p className="mt-3 text-[11px] text-slate-400">Weekends and public holidays are not counted as leave days.</p>
               </div>
             ) : (
-              <div className="p-5 text-sm text-slate-400">Loading…</div>
+              <div className="space-y-4 p-5">
+                <div className="flex items-end justify-between">
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-16" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                  <Skeleton className="h-8 w-8 rounded-lg" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                </div>
+              </div>
             )}
-          </Card>
-
-          <Card>
-            <div className="border-b px-5 py-4 dark:border-slate-700">
-              <h2 className="font-bold text-slate-900 dark:text-slate-100">Request Leave</h2>
-            </div>
             <div className="space-y-4 p-5">
               <div>
                 <label className="label">Leave type</label>
@@ -109,7 +116,7 @@ export default function MyLeaves() {
               </div>
               <div>
                 <label className="label">Reason</label>
-                <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={3} className="input" placeholder="Brief reason for the request…" />
+                <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={3} className="input" placeholder="Brief reason for the requestâ€¦" />
               </div>
               <Button className="w-full" onClick={apply} loading={submitting}>
                 <CalendarPlus className="h-4 w-4" /> Submit Request
@@ -124,7 +131,16 @@ export default function MyLeaves() {
           </div>
           {mine.loading && !mine.data ? (
             <div className="space-y-3 p-5">
-              {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />)}
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                  <Skeleton className="h-11 w-11 rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-48" />
+                  </div>
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                </div>
+              ))}
             </div>
           ) : mine.data?.length === 0 ? (
             <EmptyState title="No leave requests yet" message="Your requests will appear here." />
@@ -137,7 +153,7 @@ export default function MyLeaves() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-slate-800 dark:text-slate-100">{l.leaveType}</p>
-                    <p className="text-xs text-slate-400">{formatDate(l.startDate)} → {formatDate(l.endDate)} · {l.days} day(s)</p>
+                    <p className="text-xs text-slate-400">{formatDate(l.startDate)} â†’ {formatDate(l.endDate)} Â· {l.days} day(s)</p>
                     {l.reason && <p className="mt-1 truncate text-xs text-slate-500">{l.reason}</p>}
                     {l.adminNote && <p className="mt-1 text-xs text-rose-500">{l.adminNote}</p>}
                   </div>

@@ -20,6 +20,7 @@ import {
   CalendarCheck,
   CalendarDays,
 } from 'lucide-react';
+import api from '../services/api';
 import Logo from '../components/Logo';
 import Avatar from '../components/Avatar';
 import NotificationBell from '../components/NotificationBell';
@@ -28,6 +29,7 @@ import { FullScreenLoader } from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
+import { usePolling } from '../hooks/useDebounce';
 import clsx from 'clsx';
 
 const NAV = [
@@ -54,6 +56,20 @@ export default function EmployeeLayout() {
   const [pwOpen, setPwOpen] = useState(false);
   const isIntern = user?.employeeData?.employmentType === 'Intern' || user?.employeeData?.category === 'Intern';
 
+  const pendingCounts = usePolling(async () => {
+    const [leaves, regs, resigs] = await Promise.all([
+      api.get('/leaves/mine'),
+      api.get('/regularizations/mine'),
+      api.get('/resignations/mine'),
+    ]);
+    const countPending = (arr) => (Array.isArray(arr) ? arr.filter((x) => x.status === 'Pending').length : 0);
+    return {
+      '/employee/leave': countPending(leaves.data?.data),
+      '/employee/regularization': countPending(regs.data?.data),
+      '/employee/resignation': countPending(resigs.data?.data),
+    };
+  }, { interval: 120000 });
+
   const doLogout = () => {
     logout();
     toast.info('Signed out successfully');
@@ -76,25 +92,43 @@ export default function EmployeeLayout() {
         </button>
       </div>
       <nav className={clsx('flex-1 space-y-1 overflow-y-auto py-4', desktopSidebarCollapsed && !drawer ? 'px-2' : 'px-3')}>
-        {NAV.filter((item) => !(item.internHidden && isIntern)).map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            onClick={() => setDrawer(false)}
-            className={({ isActive }) =>
-              clsx(
-                clsx('group flex items-center rounded-xl py-2.5 text-sm font-medium transition', desktopSidebarCollapsed && !drawer ? 'justify-center px-2' : 'gap-3 px-3'),
-                isActive
-                  ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400'
-                  : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-              )
-            }
-          >
-            <item.icon className="h-5 w-5 shrink-0" />
-            {(!desktopSidebarCollapsed || drawer) && item.label}
-          </NavLink>
-        ))}
+        {NAV.filter((item) => !(item.internHidden && isIntern)).map((item) => {
+          const pending = pendingCounts.data?.[item.to] || 0;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              onClick={() => setDrawer(false)}
+              title={desktopSidebarCollapsed && !drawer ? item.label : undefined}
+              className={({ isActive }) =>
+                clsx(
+                  clsx('group flex items-center rounded-xl py-2.5 text-sm font-medium transition', desktopSidebarCollapsed && !drawer ? 'justify-center px-2' : 'gap-3 px-3'),
+                  isActive
+                    ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400'
+                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                )
+              }
+            >
+              <span className="relative flex shrink-0">
+                <item.icon className="h-5 w-5" />
+                {pending > 0 && desktopSidebarCollapsed && !drawer && (
+                  <span className="absolute -right-2 -top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-rose-500 dark:border-slate-900" />
+                )}
+              </span>
+              {(!desktopSidebarCollapsed || drawer) && (
+                <>
+                  <span className="min-w-0 flex-1">{item.label}</span>
+                  {pending > 0 && (
+                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold leading-none text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                      {pending > 99 ? '99+' : pending}
+                    </span>
+                  )}
+                </>
+              )}
+            </NavLink>
+          );
+        })}
       </nav>
       {(!desktopSidebarCollapsed || drawer) && <div className="border-t p-4 dark:border-slate-700">
         <p className="text-xs font-semibold text-slate-400">{user?.employeeData?.employeeId}</p>

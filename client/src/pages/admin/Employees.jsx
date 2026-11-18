@@ -21,7 +21,7 @@ import Button from '../../components/ui/Button';
 import EmptyState from '../../components/ui/EmptyState';
 import Pagination from '../../components/ui/Pagination';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
-import { SkeletonRow } from '../../components/ui/Skeleton';
+import { Skeleton, SkeletonRow } from '../../components/ui/Skeleton';
 import Avatar from '../../components/Avatar';
 
 export default function Employees() {
@@ -247,7 +247,18 @@ export default function Employees() {
       {/* Mobile cards */}
       <div className="space-y-3 md:hidden">
         {loading ? (
-          Array.from({ length: 4 }).map((_, i) => <Card key={i} className="h-32 animate-pulse" />)
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="space-y-3 p-4">
+              <div className="flex items-start gap-3">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-3 w-28" />
+                  <Skeleton className="h-3 w-40" />
+                </div>
+              </div>
+            </Card>
+          ))
         ) : rows.length === 0 ? (
           <Card><EmptyState title="No employees found" /></Card>
         ) : (

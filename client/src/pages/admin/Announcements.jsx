@@ -10,6 +10,7 @@ import { Card } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import EmptyState from '../../components/ui/EmptyState';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { Input, Select, Textarea } from '../../components/ui/Form';
 import Modal from '../../components/ui/Modal';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
@@ -106,7 +107,13 @@ export default function Announcements() {
 
       {list.loading ? (
         <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => <Card key={i} className="h-28 animate-pulse" />)}
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="space-y-3 p-5">
+              <Skeleton className="h-5 w-1/3" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3" />
+            </Card>
+          ))}
         </div>
       ) : !list.data?.length ? (
         <Card><EmptyState icon={Megaphone} title="No announcements yet" message="Publish a notice for your team." /></Card>

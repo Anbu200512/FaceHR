@@ -12,7 +12,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import Pagination from '../../components/ui/Pagination';
 import Modal from '../../components/ui/Modal';
 import Avatar from '../../components/Avatar';
-import { SkeletonRow } from '../../components/ui/Skeleton';
+import { Skeleton, SkeletonRow } from '../../components/ui/Skeleton';
 
 const STATUS_TONES = { Pending: 'amber', Approved: 'emerald', Rejected: 'rose' };
 
@@ -150,7 +150,19 @@ export default function Leaves() {
 
       <div className="space-y-3 md:hidden">
         {loading ? (
-          Array.from({ length: 4 }).map((_, i) => <Card key={i} className="h-28 animate-pulse" />)
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="space-y-3 p-4">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </div>
+              <Skeleton className="h-3 w-40" />
+            </Card>
+          ))
         ) : rows.length === 0 ? (
           <Card><EmptyState title="No leave requests" /></Card>
         ) : rows.map((l) => {

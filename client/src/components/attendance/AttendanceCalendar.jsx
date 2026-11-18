@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarCheck, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../hooks/useApi';
-import { formatDuration, MONTH_NAMES } from '../../services/format';
+import { formatDuration, formatLocation, MONTH_NAMES, toDateKey } from '../../services/format';
 import { Card } from '../ui/Card';
 import Badge from '../ui/Badge';
 import { Skeleton } from '../ui/Skeleton';
@@ -42,6 +42,7 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
 
   const firstWeekday = new Date(year, month, 1).getDay();
   const s = data?.summary;
+  const todayKey = toDateKey(new Date());
 
   return (
     <Card className={className}>
@@ -90,48 +91,76 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
             {Array.from({ length: firstWeekday }).map((_, i) => (
               <div key={`pad-${i}`} />
             ))}
-            {data?.days?.map((d) => (
-              <button
-                key={d.date}
-                onClick={() => setSelected(selected?.date === d.date ? null : d)}
-                className={`relative flex h-7 items-center justify-center rounded-md text-xs font-semibold transition ${
-                  selected?.date === d.date
-                    ? 'bg-brand-600 text-white shadow'
-                    : d.isWeekend
-                      ? 'text-slate-300 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
-                      : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'
-                }`}
-              >
-                {d.day}
-                <span className={`absolute bottom-0.5 h-1 w-1 rounded-full ${dot(d.status)}`} />
-              </button>
-            ))}
+            {data?.days?.map((d) => {
+              const isToday = d.date === todayKey;
+              return (
+                <button
+                  key={d.date}
+                  onClick={() => setSelected(selected?.date === d.date ? null : d)}
+                  className={`relative flex h-7 items-center justify-center rounded-md text-xs font-semibold transition ${
+                    selected?.date === d.date
+                      ? 'bg-brand-600 text-white shadow'
+                      : isToday
+                        ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-300 hover:bg-brand-100 dark:bg-brand-500/15 dark:text-brand-300 dark:ring-brand-500/40 dark:hover:bg-brand-500/25'
+                        : d.isWeekend
+                          ? 'text-slate-300 hover:bg-slate-100 dark:text-slate-500 dark:hover:bg-slate-800'
+                          : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  {d.day}
+                  <span className={`absolute bottom-0.5 h-1 w-1 rounded-full ${dot(d.status)}`} />
+                </button>
+              );
+            })}
           </div>
         )}
 
-        {selected && (
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-slate-200 px-4 py-2.5 dark:border-slate-700">
-            <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <span className={`h-2 w-2 rounded-full ${dot(selected.status)}`} />
-              <b className="text-slate-700 dark:text-slate-200">
-                {new Date(selected.date).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}
-              </b>
-            </span>
-            <span className="text-[11px] uppercase tracking-wide text-slate-400">In</span>
-            <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-              {selected.record?.checkInTime ? new Date(selected.record.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
-            </span>
-            <span className="text-[11px] uppercase tracking-wide text-slate-400">Out</span>
-            <span className="font-mono text-xs font-bold text-rose-600 dark:text-rose-400">
-              {selected.record?.checkOutTime ? new Date(selected.record.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
-            </span>
-            <span className="text-[11px] uppercase tracking-wide text-slate-400">Hours</span>
-            <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-200">
-              {selected.record?.workingHoursMinutes ? formatDuration(selected.record.workingHoursMinutes) : '-'}
-            </span>
-            <Badge tone={TONES[selected.status]} className="ml-auto">{selected.status}</Badge>
-          </div>
-        )}
+        {selected && (() => {
+          const inLoc = formatLocation(selected.record?.checkInLocation);
+          const outLoc = formatLocation(selected.record?.checkOutLocation);
+          return (
+            <div className="mt-3 space-y-2 rounded-lg border border-slate-200 px-4 py-2.5 dark:border-slate-700">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  <span className={`h-2 w-2 rounded-full ${dot(selected.status)}`} />
+                  <b className="text-slate-700 dark:text-slate-200">
+                    {new Date(selected.date).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}
+                  </b>
+                  {selected.date === todayKey && <span className="rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">Today</span>}
+                </span>
+                <span className="text-[11px] uppercase tracking-wide text-slate-400">In</span>
+                <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  {selected.record?.checkInTime ? new Date(selected.record.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                </span>
+                <span className="text-[11px] uppercase tracking-wide text-slate-400">Out</span>
+                <span className="font-mono text-xs font-bold text-rose-600 dark:text-rose-400">
+                  {selected.record?.checkOutTime ? new Date(selected.record.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                </span>
+                <span className="text-[11px] uppercase tracking-wide text-slate-400">Hours</span>
+                <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-200">
+                  {selected.record?.workingHoursMinutes ? formatDuration(selected.record.workingHoursMinutes) : '-'}
+                </span>
+                <Badge tone={TONES[selected.status]} className="ml-auto">{selected.status}</Badge>
+              </div>
+              {(inLoc || outLoc) && (
+                <div className="flex flex-wrap items-start gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                  {inLoc && (
+                    <span className="inline-flex max-w-full items-start gap-1.5">
+                      <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                      <span className="break-words"><span className="font-medium text-slate-600 dark:text-slate-300">In:</span> {inLoc}</span>
+                    </span>
+                  )}
+                  {outLoc && (
+                    <span className="inline-flex max-w-full items-start gap-1.5">
+                      <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-500" />
+                      <span className="break-words"><span className="font-medium text-slate-600 dark:text-slate-300">Out:</span> {outLoc}</span>
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[520px] border-collapse text-xs">
@@ -145,7 +174,19 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
               </tr>
             </thead>
             <tbody>
-              {(data?.days || []).map((d) => (
+              {loading && !data ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="border-b last:border-0 dark:border-slate-700/60">
+                    {Array.from({ length: 5 }).map((__, j) => (
+                      <td key={j} className="py-2 pr-3"><Skeleton className="h-4 w-full max-w-[80px]" /></td>
+                    ))}
+                  </tr>
+                ))
+              ) : (data?.days || []).length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-sm text-slate-400">No attendance records for this month.</td>
+                </tr>
+              ) : (data?.days || []).map((d) => (
                 <tr
                   key={d.date}
                   onClick={() => setSelected(selected?.date === d.date ? null : d)}
