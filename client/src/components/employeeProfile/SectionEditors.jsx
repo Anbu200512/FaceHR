@@ -1102,6 +1102,8 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
   const [preview, setPreview] = useState(null);
   const [replacing, setReplacing] = useState(null);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [removePhotoOpen, setRemovePhotoOpen] = useState(false);
+  const [removePhotoBusy, setRemovePhotoBusy] = useState(false);
 
   const refresh = async () => { await onSaved?.(); };
 
@@ -1167,6 +1169,20 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
     }
   };
 
+  const onRemovePhoto = async () => {
+    setRemovePhotoBusy(true);
+    try {
+      await api.delete(`/employees/${ctx.employeeId}/photo`);
+      toast.success('Profile photo removed');
+      setRemovePhotoOpen(false);
+      await refresh();
+    } catch (err) {
+      toast.error(extractError(err, 'Could not remove profile photo'));
+    } finally {
+      setRemovePhotoBusy(false);
+    }
+  };
+
   const onView = (d) => {
     const src = resolveAsset(d.path);
     if (/^image\//.test(d.mimeType || '') || /\.(png|jpe?g|webp|gif)$/i.test(d.originalName || '')) setPreview({ src, label: d.originalName });
@@ -1193,6 +1209,11 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
                 <Camera className="h-4 w-4" /> {emp.profilePhoto ? 'Replace photo' : 'Upload photo'}
                 <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPhoto(f); e.target.value = ''; }} />
               </label>
+              {emp.profilePhoto && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => setRemovePhotoOpen(true)} disabled={photoBusy || removePhotoBusy}>
+                  <Trash2 className="h-4 w-4" /> Remove photo
+                </Button>
+              )}
               {photoBusy && <Button type="button" variant="ghost" size="sm" loading disabled>Uploading…</Button>}
             </div>
           </div>
@@ -1286,6 +1307,16 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
         title="Delete document?"
         message={`"${deleting?.originalName || 'This document'}" will be permanently removed from the employee file.`}
         confirmLabel="Delete"
+      />
+
+      <ConfirmDialog
+        open={removePhotoOpen}
+        onClose={() => setRemovePhotoOpen(false)}
+        onConfirm={onRemovePhoto}
+        loading={removePhotoBusy}
+        title="Remove profile photo?"
+        message="The profile photo will be removed. You can upload a new one anytime."
+        confirmLabel="Remove Photo"
       />
 
       <Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.label} size="md">

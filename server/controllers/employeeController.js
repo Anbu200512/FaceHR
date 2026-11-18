@@ -1025,6 +1025,16 @@ const sendEmployeeLoginDetails = asyncHandler(async (req, res) => {
 const uploadEmployeePhoto = asyncHandler(async (req, res) => {
   const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
+  if (req.user?.role === 'employee') {
+    if (String(req.user.employee) !== String(employee.id)) {
+      return res.status(403).json({ success: false, message: 'You can only edit your own profile' });
+    }
+    const accessKey = 'documents';
+    const map = employee.sectionEditAccess && typeof employee.sectionEditAccess === 'object' ? employee.sectionEditAccess : null;
+    const allowedByDefault = defaultSectionEditAccess(employee.employmentType || 'Full-time');
+    const allowed = map && Object.prototype.hasOwnProperty.call(map, accessKey) ? map[accessKey] !== false : allowedByDefault[accessKey] !== false;
+    if (!allowed) return res.status(403).json({ success: false, message: 'Editing this section is locked by admin' });
+  }
   if (!req.file || !req.file.buffer) return res.status(400).json({ success: false, message: 'No image file provided' });
 
   const ext = req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg';
@@ -1035,6 +1045,27 @@ const uploadEmployeePhoto = asyncHandler(async (req, res) => {
   });
 
   res.json({ success: true, message: 'Profile photo updated', data: updated });
+});
+
+// @route  DELETE /api/employees/:id/photo  (remove profile photo)
+const removeEmployeePhoto = asyncHandler(async (req, res) => {
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
+  if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
+  if (req.user?.role === 'employee') {
+    if (String(req.user.employee) !== String(employee.id)) {
+      return res.status(403).json({ success: false, message: 'You can only edit your own profile' });
+    }
+    const accessKey = 'documents';
+    const map = employee.sectionEditAccess && typeof employee.sectionEditAccess === 'object' ? employee.sectionEditAccess : null;
+    const allowedByDefault = defaultSectionEditAccess(employee.employmentType || 'Full-time');
+    const allowed = map && Object.prototype.hasOwnProperty.call(map, accessKey) ? map[accessKey] !== false : allowedByDefault[accessKey] !== false;
+    if (!allowed) return res.status(403).json({ success: false, message: 'Editing this section is locked by admin' });
+  }
+
+  if (employee.profilePhoto) removeUploadFile(employee.profilePhoto);
+  await prisma.employee.update({ where: { id: employee.id }, data: { profilePhoto: null } });
+
+  res.json({ success: true, message: 'Profile photo removed' });
 });
 
 const docRecord = (file, kind) => ({
@@ -1050,6 +1081,16 @@ const docRecord = (file, kind) => ({
 const uploadEmployeeDocument = asyncHandler(async (req, res) => {
   const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
+  if (req.user?.role === 'employee') {
+    if (String(req.user.employee) !== String(employee.id)) {
+      return res.status(403).json({ success: false, message: 'You can only edit your own profile' });
+    }
+    const accessKey = 'documents';
+    const map = employee.sectionEditAccess && typeof employee.sectionEditAccess === 'object' ? employee.sectionEditAccess : null;
+    const allowedByDefault = defaultSectionEditAccess(employee.employmentType || 'Full-time');
+    const allowed = map && Object.prototype.hasOwnProperty.call(map, accessKey) ? map[accessKey] !== false : allowedByDefault[accessKey] !== false;
+    if (!allowed) return res.status(403).json({ success: false, message: 'Editing this section is locked by admin' });
+  }
   if (!req.file || !req.file.buffer) return res.status(400).json({ success: false, message: 'No file provided' });
 
   const ext = extFromName(req.file.originalname);
@@ -1072,6 +1113,16 @@ const uploadEmployeeDocument = asyncHandler(async (req, res) => {
 const replaceEmployeeDocument = asyncHandler(async (req, res) => {
   const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
+  if (req.user?.role === 'employee') {
+    if (String(req.user.employee) !== String(employee.id)) {
+      return res.status(403).json({ success: false, message: 'You can only edit your own profile' });
+    }
+    const accessKey = 'documents';
+    const map = employee.sectionEditAccess && typeof employee.sectionEditAccess === 'object' ? employee.sectionEditAccess : null;
+    const allowedByDefault = defaultSectionEditAccess(employee.employmentType || 'Full-time');
+    const allowed = map && Object.prototype.hasOwnProperty.call(map, accessKey) ? map[accessKey] !== false : allowedByDefault[accessKey] !== false;
+    if (!allowed) return res.status(403).json({ success: false, message: 'Editing this section is locked by admin' });
+  }
   if (!req.file || !req.file.buffer) return res.status(400).json({ success: false, message: 'No file provided' });
 
   const existing = await prisma.employeeDocument.findFirst({
@@ -1101,6 +1152,16 @@ const replaceEmployeeDocument = asyncHandler(async (req, res) => {
 const deleteEmployeeDocument = asyncHandler(async (req, res) => {
   const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
   if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
+  if (req.user?.role === 'employee') {
+    if (String(req.user.employee) !== String(employee.id)) {
+      return res.status(403).json({ success: false, message: 'You can only edit your own profile' });
+    }
+    const accessKey = 'documents';
+    const map = employee.sectionEditAccess && typeof employee.sectionEditAccess === 'object' ? employee.sectionEditAccess : null;
+    const allowedByDefault = defaultSectionEditAccess(employee.employmentType || 'Full-time');
+    const allowed = map && Object.prototype.hasOwnProperty.call(map, accessKey) ? map[accessKey] !== false : allowedByDefault[accessKey] !== false;
+    if (!allowed) return res.status(403).json({ success: false, message: 'Editing this section is locked by admin' });
+  }
 
   const existing = await prisma.employeeDocument.findFirst({
     where: { id: req.params.docId, employeeRefId: employee.id },
@@ -1151,5 +1212,6 @@ module.exports = {
   updateEmployeeSectionAccess,
   sendEmployeeLoginDetails,
   uploadEmployeePhoto,
+  removeEmployeePhoto,
   normalizeFaceDescriptor,
 };

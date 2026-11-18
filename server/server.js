@@ -16,6 +16,7 @@ const {
   seedSettings,
 } = require('./config/seed');
 const { seedDefaultPolicies } = require('./services/leavePolicyService');
+const { startAttendancePhotoCleanup } = require('./services/attendancePhotoCleanup');
 
 const app = express();
 
@@ -131,6 +132,8 @@ const start = async () => {
     const server = app.listen(config.port, () => {
       console.log(`[FaceHR] API running on http://localhost:${config.port}`);
     });
+
+    startAttendancePhotoCleanup();
 
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {

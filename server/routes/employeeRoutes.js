@@ -17,6 +17,7 @@ const {
   updateEmployeeSectionAccess,
   sendEmployeeLoginDetails,
   uploadEmployeePhoto,
+  removeEmployeePhoto,
 } = require('../controllers/employeeController');
 
 router.use(protect, apiLimiter);
@@ -29,11 +30,12 @@ router.put('/:id', authorize('admin'), uploadProfilePhoto, updateEmployee);
 router.patch('/:id/status', authorize('admin'), setEmployeeStatus);
 router.delete('/:id', authorize('admin'), deleteEmployee);
 router.post('/:id/send-login', authorize('admin'), sendEmployeeLoginDetails);
-router.post('/:id/photo', authorize('admin'), uploadProfilePhoto, uploadEmployeePhoto);
+router.post('/:id/photo', authorize('admin', 'employee'), uploadProfilePhoto, uploadEmployeePhoto);
+router.delete('/:id/photo', authorize('admin', 'employee'), removeEmployeePhoto);
 router.patch('/:id/sections/:section', authorize('admin', 'employee'), updateEmployeeSection);
 router.patch('/:id/section-access', authorize('admin'), updateEmployeeSectionAccess);
-router.post('/:id/documents', authorize('admin'), uploadDocument, uploadEmployeeDocument);
-router.put('/:id/documents/:docId', authorize('admin'), uploadDocument, replaceEmployeeDocument);
-router.delete('/:id/documents/:docId', authorize('admin'), deleteEmployeeDocument);
+router.post('/:id/documents', authorize('admin', 'employee'), uploadDocument, uploadEmployeeDocument);
+router.put('/:id/documents/:docId', authorize('admin', 'employee'), uploadDocument, replaceEmployeeDocument);
+router.delete('/:id/documents/:docId', authorize('admin', 'employee'), deleteEmployeeDocument);
 
 module.exports = router;
