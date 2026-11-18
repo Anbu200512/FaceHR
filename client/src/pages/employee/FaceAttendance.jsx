@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LogIn, LogOut, CalendarCheck2, ScanFace } from 'lucide-react';
+﻿import { useState, useEffect, useCallback } from 'react';
+import { LogIn, LogOut, CalendarCheck2 } from 'lucide-react';
 import api, { extractError } from '../../services/api';
 import { usePolling } from '../../hooks/useDebounce';
 import { formatTime, formatDuration } from '../../services/format';
@@ -9,26 +8,24 @@ import PageHeader from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
-import Modal from '../../components/ui/Modal';
 import FaceCapture from '../../components/FaceCapture';
 
 export default function FaceAttendance() {
-  const navigate = useNavigate();
-  const [mode, setMode] = useState('checkin');
+  const [mode, setMode] = useState(null); // 'checkin' | 'checkout'
   const [record, setRecord] = useState(null);
   const [dupHint, setDupHint] = useState(null);
-  const [forceStart, setForceStart] = useState(0);
   const [settings, setSettings] = useState(null);
-  const [cameraOpen, setCameraOpen] = useState(false);
+  const [inlineCapture, setInlineCapture] = useState(false);
   const [gating, setGating] = useState(false);
   const [gateError, setGateError] = useState(null);
   const [capturedLocation, setCapturedLocation] = useState(null);
+  const [captureKey, setCaptureKey] = useState(0);
 
   const loadSettings = useCallback(async () => {
     try {
       setSettings(await fetchMyAttendanceSettings());
     } catch (_e) {
-      // keep the last known settings if the fetch fails
+      // keep last known settings
     }
   }, []);
 
@@ -42,24 +39,65 @@ export default function FaceAttendance() {
   }, { interval: 30000 });
 
   const rec = today.data || record;
+  const canCheckIn = !rec?.checkInTime;
+  const canCheckOut = Boolean(rec?.checkInTime && !rec?.checkOutTime);
 
-  const switchMode = (next) => {
-    setMode(next);
+  const startAction = async (nextMode) => {
+    if (gating) return;
+    const allowed = nextMode === 'checkin' ? canCheckIn : canCheckOut;
+    if (!allowed) return;
+
+    setMode(nextMode);
     setDupHint(null);
     setGateError(null);
     setCapturedLocation(null);
-    setForceStart((n) => n + 1);
+    setInlineCapture(false);
+    setGating(true);
+    try {
+      const s = await fetchMyAttendanceSettings();
+      setSettings(s);
+
+      // Automatically calculate/verify location (no manual "check location" step)
+      const geo = await resolveGeoGate(s);
+      if (!geo.ok) {
+        setGateError(geo);
+        return;
+      }
+
+      setCapturedLocation(geo.location);
+      if (s.faceEnabled === false) {
+        const endpoint = nextMode === 'checkin' ? 'check-in' : 'check-out';
+        const { data } = await api.post(`/attendance/${endpoint}`, { location: geo.location });
+        setRecord(data.data || null);
+        setGateError({ code: 'SUCCESS', message: data.message || 'Attendance marked successfully.' });
+        today.refresh?.();
+      } else {
+        // Open camera inline on this page (no modal/new panel)
+        setCaptureKey((k) => k + 1);
+        setInlineCapture(true);
+      }
+    } catch (err) {
+      setGateError({
+        code: err?.response?.data?.code || 'UNKNOWN',
+        message: extractError(err, 'Could not verify your location. Please try again.'),
+      });
+    } finally {
+      setGating(false);
+    }
   };
 
   const submit = async ({ blob, descriptor }) => {
     const fd = new FormData();
     fd.append('image', blob, 'face.jpg');
     fd.append('descriptor', JSON.stringify(Array.from(descriptor)));
-    if (capturedLocation) fd.append('location', JSON.stringify({ latitude: capturedLocation.latitude, longitude: capturedLocation.longitude }));
+    if (capturedLocation) {
+      fd.append('location', JSON.stringify({ latitude: capturedLocation.latitude, longitude: capturedLocation.longitude }));
+    }
     try {
       const endpoint = mode === 'checkin' ? 'check-in' : 'check-out';
       const { data } = await api.post(`/attendance/${endpoint}`, fd);
       setRecord(data.data || null);
+      today.refresh?.();
       return { ok: true, message: data.message, data: data.data, summary: data.summary };
     } catch (err) {
       const code = err?.response?.data?.code;
@@ -71,41 +109,6 @@ export default function FaceAttendance() {
     }
   };
 
-  const handleStart = async () => {
-    setGateError(null);
-    setGating(true);
-    try {
-      const s = await fetchMyAttendanceSettings();
-      setSettings(s);
-
-      const geo = await resolveGeoGate(s);
-      if (!geo.ok) {
-        setGateError(geo);
-        return;
-      }
-
-      setCapturedLocation(geo.location);
-      if (s.faceEnabled === false) {
-        const endpoint = mode === 'checkin' ? 'check-in' : 'check-out';
-        const { data } = await api.post(`/attendance/${endpoint}`, { location: geo.location });
-        setRecord(data.data || null);
-        setGateError({ code: 'SUCCESS', message: data.message || 'Attendance marked successfully.' });
-      } else {
-        setCameraOpen(true);
-      }
-    } catch (err) {
-      setGateError({ code: err?.response?.data?.code || 'UNKNOWN', message: extractError(err, 'Could not verify your location. Please try again.') });
-    } finally {
-      setGating(false);
-    }
-  };
-
-  const otherMode = mode === 'checkin' ? 'checkout' : 'checkin';
-  const otherLabel = mode === 'checkin' ? 'Check Out Instead' : 'Check In Instead';
-  const canDo = mode === 'checkin' ? (!rec || !rec.checkInTime) : Boolean(rec?.checkInTime && !rec.checkOutTime);
-  const faceDisabled = settings ? settings.faceEnabled === false : null;
-  const actionLabel = mode === 'checkin' ? 'Verify My Location & Check In' : 'Verify My Location & Check Out';
-
   return (
     <div>
       <PageHeader
@@ -115,16 +118,20 @@ export default function FaceAttendance() {
 
       <Card className="mb-6 max-w-lg">
         <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
-              variant={mode === 'checkin' ? 'primary' : 'secondary'}
-              onClick={() => switchMode('checkin')}
+              onClick={() => startAction('checkin')}
+              loading={gating && mode === 'checkin'}
+              disabled={gating || !canCheckIn}
+              className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <LogIn className="h-4 w-4" /> Check In
             </Button>
             <Button
-              variant={mode === 'checkout' ? 'primary' : 'secondary'}
-              onClick={() => switchMode('checkout')}
+              onClick={() => startAction('checkout')}
+              loading={gating && mode === 'checkout'}
+              disabled={gating || !canCheckOut}
+              className="bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <LogOut className="h-4 w-4" /> Check Out
             </Button>
@@ -139,114 +146,52 @@ export default function FaceAttendance() {
           )}
         </div>
         <div className="border-t px-5 py-3 dark:border-slate-700">
-          {rec?.status && (
+          {rec?.status ? (
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
               Today's status: <Badge>{rec.status}</Badge>
               {rec.faceVerified && <Badge>Face Verified</Badge>}
               {rec.workingHoursMinutes ? <Badge>Worked {formatDuration(rec.workingHoursMinutes)}</Badge> : null}
             </div>
+          ) : (
+            <p className="text-xs text-slate-400">You haven't checked in today yet.</p>
           )}
-          {!rec?.checkInTime && <p className="text-xs text-slate-400">You haven't checked in today yet.</p>}
         </div>
       </Card>
 
-      {faceDisabled === true && canDo && (
-        <div className="card mx-auto max-w-lg">
-          <div className="flex flex-col items-center gap-3 p-8 text-center">
-            <CalendarCheck2 className="h-10 w-10 text-brand-600 dark:text-brand-400" />
-            <h3 className="font-bold text-slate-900 dark:text-slate-100">Face punch is not required</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Mark attendance with one tap. Location verification still applies if enabled for your account.
-            </p>
-            {gateError && <p className={`w-full rounded-xl border px-4 py-3 text-sm ${gateError.code === 'SUCCESS' ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400' : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'}`}>{gateError.message}</p>}
-            <Button onClick={handleStart} loading={gating} disabled={gating || settings === null}>
-              {mode === 'checkin' ? <LogIn className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
-              {mode === 'checkin' ? 'Check In' : 'Check Out'}
-            </Button>
-            <Button variant="ghost" onClick={() => navigate('/employee')}>Back to Dashboard</Button>
+      {gateError && (
+        <div className="mx-auto mb-6 max-w-lg">
+          <div
+            className={`rounded-xl border px-4 py-3 text-sm ${
+              gateError.code === 'SUCCESS'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400'
+                : gateError.code === 'OUTSIDE_ALLOWED_AREA'
+                ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400'
+                : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'
+            }`}
+          >
+            {gateError.message}
           </div>
         </div>
       )}
 
-      {faceDisabled === true && !canDo && (
-        <div className="card mx-auto max-w-lg p-8 text-center">
-          <CalendarCheck2 className="mx-auto h-10 w-10 text-emerald-500" />
-          <h3 className="mt-3 font-bold text-slate-900 dark:text-slate-100">{mode === 'checkin' ? 'Already checked in today' : 'No active check-in to end'}</h3>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{mode === 'checkin' ? 'You can check out instead.' : 'Check in first, then come back to check out.'}</p>
-          <Button className="mt-4" variant="secondary" onClick={() => switchMode(otherMode)}>{otherLabel}</Button>
-        </div>
-      )}
-
-      {faceDisabled === false && !canDo && (
-        <div className="card mx-auto max-w-lg">
-          <div className="flex flex-col items-center gap-3 p-8 text-center">
-            <CalendarCheck2 className="h-10 w-10 text-emerald-500" />
-            <h3 className="font-bold text-slate-900 dark:text-slate-100">
-              {mode === 'checkin' ? 'Already checked in today' : 'No active check-in to end'}
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {mode === 'checkin' ? 'Check-in is done for today. You can check out instead.' : 'Check in first, then come back to check out.'}
-            </p>
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => switchMode(otherMode)}>{otherLabel}</Button>
-              <Button variant="ghost" onClick={() => navigate('/employee')}>Back to Dashboard</Button>
-            </div>
+      {settings && settings.faceEnabled === false && !gateError && !inlineCapture && (
+        <div className="mx-auto mb-6 max-w-lg">
+          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300">
+            <CalendarCheck2 className="h-4 w-4" /> Tap Check In or Check Out — your location is verified automatically if required.
           </div>
         </div>
       )}
 
-      {faceDisabled === false && canDo && (
-        <div className="card mx-auto max-w-lg">
-          <div className="flex flex-col items-center gap-4 p-8 text-center">
-            <ScanFace className="h-10 w-10 text-brand-600 dark:text-brand-400" />
-            <div>
-              <h3 className="font-bold text-slate-900 dark:text-slate-100">
-                {mode === 'checkin' ? 'Ready to check in?' : 'Ready to check out?'}
-              </h3>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Your location is verified against the company geofence first. Only when everything passes does the camera open.
-              </p>
-            </div>
-
-            {gateError && (
-              <div
-                className={`w-full rounded-xl border px-4 py-3 text-sm ${
-                  gateError.code === 'SUCCESS'
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400'
-                    : gateError.code === 'OUTSIDE_ALLOWED_AREA'
-                    ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400'
-                    : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'
-                }`}
-              >
-                {gateError.message}
-              </div>
-            )}
-
-            <div className="flex flex-col items-center gap-2">
-              {settings === null && (
-                <p className="text-xs text-slate-400">Checking today's attendance rules…</p>
-              )}
-              <Button onClick={handleStart} loading={gating} disabled={gating || settings === null}>
-                <ScanFace className="h-4 w-4" /> {actionLabel}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/employee')}>Back to Dashboard</Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <Modal
-        open={cameraOpen}
-        onClose={() => setCameraOpen(false)}
-        title={mode === 'checkin' ? 'Face Check In' : 'Face Check Out'}
-        subtitle="Position your face inside the guide so your identity can be verified."
-      >
-        {cameraOpen && (
+      {inlineCapture && settings?.faceEnabled !== false && (
+        <div className="mx-auto max-w-lg">
           <FaceCapture
-            key={`${mode}-${forceStart}`}
+            key={`${mode}-${captureKey}`}
             mode="attendance"
             onCaptured={submit}
-            onClose={() => setCameraOpen(false)}
+            onClose={() => {
+              setInlineCapture(false);
+              today.refresh?.();
+            }}
             successExtra={(data) => (
               <div className="mx-auto max-w-sm rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
                 {mode === 'checkin' ? (
@@ -260,16 +205,16 @@ export default function FaceAttendance() {
               dupHint && code === dupHint.code ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-500/10 dark:text-amber-400">
                   <p className="font-semibold">{dupHint.message}</p>
-                  {dupHint.code === 'ALREADY_CHECKED_IN' && (
+                  {dupHint.code === 'ALREADY_CHECKED_IN' && canCheckOut && (
                     <div className="mt-2 flex justify-center">
-                      <Button size="sm" variant="secondary" onClick={() => switchMode('checkout')}>
+                      <Button size="sm" onClick={() => startAction('checkout')} className="bg-rose-600 text-white hover:bg-rose-700">
                         <LogOut className="h-4 w-4" /> Check Out Instead
                       </Button>
                     </div>
                   )}
-                  {dupHint.code === 'NOT_CHECKED_IN' && (
+                  {dupHint.code === 'NOT_CHECKED_IN' && canCheckIn && (
                     <div className="mt-2 flex justify-center">
-                      <Button size="sm" variant="secondary" onClick={() => switchMode('checkin')}>
+                      <Button size="sm" onClick={() => startAction('checkin')} className="bg-emerald-600 text-white hover:bg-emerald-700">
                         <LogIn className="h-4 w-4" /> Check In Instead
                       </Button>
                     </div>
@@ -278,8 +223,8 @@ export default function FaceAttendance() {
               ) : null
             }
           />
-        )}
-      </Modal>
+        </div>
+      )}
     </div>
   );
 }

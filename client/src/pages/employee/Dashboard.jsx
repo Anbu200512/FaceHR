@@ -36,12 +36,13 @@ export default function EmployeeHome() {
 
   const rec = today.data;
 
+  const canCheckOut = Boolean(rec?.checkInTime && !rec?.checkOutTime);
   const actions = [
     {
       to: '/employee/attendance',
-      label: rec?.checkInTime && !rec.checkOutTime ? 'Check Out' : 'Check In',
-      icon: rec?.checkInTime && !rec.checkOutTime ? LogOut : LogIn,
-      tone: 'bg-emerald-600 text-white',
+      label: canCheckOut ? 'Check Out' : 'Check In',
+      icon: canCheckOut ? LogOut : LogIn,
+      tone: canCheckOut ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white',
     },
     { to: '/employee/history', label: 'My History', icon: History, tone: 'bg-brand-600 text-white' },
     { to: '/employee/leave', label: 'Apply Leave', icon: Plane, tone: 'bg-sky-600 text-white' },
