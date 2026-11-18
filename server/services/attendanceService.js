@@ -25,12 +25,18 @@ async function getSettings() {
   rows.forEach((r) => {
     map[r.key] = r.value;
   });
+  const lateVal = map.lateEnabled;
+  const lateEnabled = lateVal === undefined
+    ? DEFAULTS.lateEnabled
+    : !(lateVal === false || lateVal === 'false' || lateVal === 0 || lateVal === '0');
+  const threshold = Number(map.halfDayThresholdHours ?? DEFAULTS.halfDayThresholdHours);
+  const grace = Number(map.graceMinutes ?? DEFAULTS.graceMinutes);
   return {
     officeStartTime: normalizeTime(map.officeStartTime, DEFAULTS.officeStartTime),
     officeEndTime: normalizeTime(map.officeEndTime, DEFAULTS.officeEndTime),
-    halfDayThresholdHours: Number(map.halfDayThresholdHours ?? DEFAULTS.halfDayThresholdHours),
-    graceMinutes: Math.max(0, Number(map.graceMinutes ?? DEFAULTS.graceMinutes) || 0),
-    lateEnabled: map.lateEnabled !== undefined ? !!map.lateEnabled : DEFAULTS.lateEnabled,
+    halfDayThresholdHours: Number.isFinite(threshold) && threshold > 0 ? threshold : DEFAULTS.halfDayThresholdHours,
+    graceMinutes: Number.isFinite(grace) ? Math.max(0, Math.min(240, Math.round(grace))) : DEFAULTS.graceMinutes,
+    lateEnabled,
   };
 }
 
@@ -96,7 +102,7 @@ async function evaluateCheckInStatus(date, checkInDate, employee = null) {
 
   const start = new Date(date);
   const [h, m] = settings.officeStartTime.split(':').map((p) => parseInt(p, 10));
-  start.setHours(h || 9, m || 30, 0, 0);
+  start.setHours(h, m, 0, 0);
   const graceCutoff = new Date(start.getTime() + (Number(settings.graceMinutes) || 0) * 60000);
 
   const checkIn = checkInDate instanceof Date ? checkInDate : new Date(checkInDate);

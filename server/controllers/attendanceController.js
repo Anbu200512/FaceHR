@@ -759,7 +759,7 @@ const markAttendanceManual = asyncHandler(async (req, res) => {
     // comparison stays correct even if the server runs in another timezone.
     const wallIn = parseTimeToMinutes(checkInLocal || (String(checkIn || '').includes('T') ? '' : checkIn));
     const forLate = wallIn !== null ? combineDateWithMinutes(dayDate, wallIn) : checkInDate;
-    const evalResult = await evaluateCheckInStatus(dayDate, forLate, employeeDoc);
+    const evalResult = await evaluateCheckInStatus(dayDate, forLate, emp);
     lateMinutes = evalResult.lateMinutes || 1;
   }
 
