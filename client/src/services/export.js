@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatDate } from './format';
+import { formatDate, resolveAsset } from './format';
 
 function triggerDownload(content, filename, type = 'text/csv;charset=utf-8;') {
   const blob = new Blob([content], { type });
@@ -156,8 +156,40 @@ function maskAccount(n) {
   return `${'*'.repeat(Math.min(s.length - 4, 8))}${s.slice(-4)}`;
 }
 
-export function exportEmployeeProfilePdf(emp) {
+function loadImageAsDataUrl(url) {
+  if (!url || typeof document === 'undefined') return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const iw = img.naturalWidth || img.width;
+        const ih = img.naturalHeight || img.height;
+        if (!iw || !ih) return resolve(null);
+        const size = Math.min(iw, ih);
+        const sx = (iw - size) / 2;
+        const sy = (ih - size) / 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(null);
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, size, size);
+        resolve(canvas.toDataURL('image/jpeg', 0.92));
+      } catch (_e) {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+export async function exportEmployeeProfilePdf(emp) {
   if (!emp) return;
+  const photoUrl = resolveAsset(emp.profilePhoto);
+  const photoDataUrl = photoUrl ? await loadImageAsDataUrl(photoUrl) : null;
+
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   let y = 16;
   const pageW = doc.internal.pageSize.getWidth();
@@ -208,6 +240,20 @@ export function exportEmployeeProfilePdf(emp) {
   };
 
   const name = fullNameOf(emp);
+  const photoSize = 28;
+  const photoX = pageW - margin - photoSize;
+  const photoY = 12;
+
+  if (photoDataUrl) {
+    try {
+      doc.addImage(photoDataUrl, 'JPEG', photoX, photoY, photoSize, photoSize);
+      doc.setDrawColor(226, 232, 240);
+      doc.rect(photoX, photoY, photoSize, photoSize);
+    } catch (_e) {
+      // ignore image draw errors
+    }
+  }
+
   doc.setFontSize(16);
   doc.setTextColor(37, 67, 235);
   doc.text('Employee Profile Report', margin, y);
@@ -220,6 +266,7 @@ export function exportEmployeeProfilePdf(emp) {
   doc.setTextColor(100, 116, 139);
   doc.text(`FaceHR - Generated ${new Date().toLocaleString()}`, margin, y);
   y += 8;
+  if (photoDataUrl) y = Math.max(y, photoY + photoSize + 6);
 
   const mgr = (p, fb) => {
     if (p) return `${fullNameOf(p)}${p.employeeId ? ` (${p.employeeId})` : ''}`;
@@ -331,6 +378,6 @@ export function exportEmployeeProfilePdf(emp) {
     );
   }
 
-  const safeId = String(emp.employeeId || emp.id || 'employee').replace(/[^a-z0-9_-]/gi, '_');
-  doc.save(`employee-profile-${safeId}.pdf`);
+  const fileId = String(emp.employeeId || emp.id || 'employee').trim().replace(/[\\/:*?"<>|]/g, '_') || 'employee';
+  doc.save(`${fileId} profile.pdf`);
 }
