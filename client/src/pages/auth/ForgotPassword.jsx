@@ -38,7 +38,7 @@ export default function ForgotPassword() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Request received</h1>
-            <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+            <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-300">
               If an account exists for this email, an HR admin has been notified to reset your password.
               Admins can reset it from the Employees page.
             </p>
@@ -55,7 +55,7 @@ export default function ForgotPassword() {
     <div className="card animate-slide-up">
       <div className="border-b px-6 pb-5 pt-6 dark:border-slate-700">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Forgot password</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
           Enter your account email and our HR team will help you reset your password.
         </p>
       </div>
@@ -71,7 +71,7 @@ export default function ForgotPassword() {
         <Button type="submit" loading={loading} className="w-full">
           {loading ? 'Sending request...' : 'Send Reset Request'}
         </Button>
-        <Link to="/login" className="flex items-center justify-center gap-1.5 text-sm font-medium text-slate-500 hover:text-brand-600 dark:text-slate-400">
+        <Link to="/login" className="flex items-center justify-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-300 hover:text-brand-600">
           <ArrowLeft className="h-4 w-4" /> Back to sign in
         </Link>
       </form>

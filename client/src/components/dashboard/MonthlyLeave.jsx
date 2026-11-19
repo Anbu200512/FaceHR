@@ -24,9 +24,9 @@ function LeaveMetric({ icon: Icon, label, value, sub, tone = 'indigo', loading }
           </>
         ) : (
           <>
-            <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{label}</p>
+            <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-300">{label}</p>
             <p className="mt-0.5 text-2xl font-bold text-slate-900 dark:text-slate-100">{value ?? '-'}</p>
-            {sub && <p className="truncate text-xs text-slate-400">{sub}</p>}
+            {sub && <p className="truncate text-xs text-slate-400 dark:text-slate-300">{sub}</p>}
           </>
         )}
       </div>
@@ -40,7 +40,7 @@ export default function MonthlyLeave({ data, loading }) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Monthly Leave</h2>
-          <p className="text-xs text-slate-400">Annual leave allocation and usage for {data?.year || new Date().getFullYear()}</p>
+          <p className="text-xs text-slate-400 dark:text-slate-300">Annual leave allocation and usage for {data?.year || new Date().getFullYear()}</p>
         </div>
         <Link to="/admin/leaves" className="flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">
           Manage leaves <ArrowRight className="h-4 w-4" />

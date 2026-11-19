@@ -16,7 +16,6 @@ import { useApi } from '../../hooks/useApi';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useToast } from '../../context/ToastContext';
 import { resolveAsset } from '../../services/format';
-import { exportEmployeesToCsv, exportEmployeesToPdf, exportEmployeeProfilePdf } from '../../services/export';
 import PageHeader from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -135,8 +134,9 @@ export default function Employees() {
         toast.error('No employees to export on this page');
         return;
       }
+      const { exportEmployeesToCsv, exportEmployeesToPdf } = await import('../../services/export');
       if (format === 'csv') exportEmployeesToCsv(rows, `page ${page}`);
-      else exportEmployeesToPdf(rows, `page ${page}`);
+      else await exportEmployeesToPdf(rows, `page ${page}`);
     } catch (err) {
       toast.error(extractError(err, 'Could not export employees'));
     } finally {
@@ -150,7 +150,10 @@ export default function Employees() {
     if (!empId) return;
     setProfileExportId(empId);
     try {
-      const { data: res } = await api.get(`/employees/${empId}`);
+      const [{ data: res }, { exportEmployeeProfilePdf }] = await Promise.all([
+        api.get(`/employees/${empId}`),
+        import('../../services/export'),
+      ]);
       await exportEmployeeProfilePdf(res?.data || res);
     } catch (err) {
       toast.error(extractError(err, 'Could not export employee profile'));
@@ -182,7 +185,7 @@ export default function Employees() {
       <Card className="mb-5 p-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <div className="relative sm:col-span-2 lg:col-span-2">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-300" />
             <input
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -261,7 +264,7 @@ export default function Employees() {
                       <td className="td">
                         {emp.employmentType || emp.category || '-'}
                         {emp.employmentType === 'Intern' && emp.internEndDate ? (
-                          <span className="block text-[11px] text-slate-400">Ends {new Date(emp.internEndDate).toLocaleDateString()}</span>
+                          <span className="block text-[11px] text-slate-400 dark:text-slate-300">Ends {new Date(emp.internEndDate).toLocaleDateString()}</span>
                         ) : null}
                       </td>
                       <td className="td"><Badge>{emp.status}</Badge></td>
@@ -313,12 +316,12 @@ export default function Employees() {
                   <p className="truncate font-semibold text-slate-800 dark:text-slate-100">
                     {[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}
                   </p>
-                  <p className="text-xs text-slate-400 break-words">{emp.employeeId} · {emp.department?.name || 'No dept'}</p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 break-words">
+                  <p className="text-xs text-slate-400 dark:text-slate-300 break-words">{emp.employeeId} · {emp.department?.name || 'No dept'}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-300 break-words">
                     {emp.designation?.name || '-'} · {emp.employmentType || emp.category || '-'}
                   </p>
                   {emp.employmentType === 'Intern' && emp.internEndDate && (
-                    <p className="mt-0.5 text-[11px] text-slate-400">Ends {new Date(emp.internEndDate).toLocaleDateString()}</p>
+                    <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-300">Ends {new Date(emp.internEndDate).toLocaleDateString()}</p>
                   )}
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     <Badge>{emp.status}</Badge>
@@ -366,7 +369,7 @@ function IconBtn({ children, onClick, title, danger }) {
     <button
       onClick={onClick}
       title={title}
-      className={`rounded-lg p-1.5 transition ${danger ? 'text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10' : 'text-slate-500 hover:bg-slate-100 hover:text-brand-600 dark:text-slate-400 dark:hover:bg-slate-800'}`}
+      className={`rounded-lg p-1.5 transition ${danger ? 'text-slate-400 dark:text-slate-300 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10' : 'text-slate-500 hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800'}`}
     >
       {children}
     </button>

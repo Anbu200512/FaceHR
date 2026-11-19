@@ -36,11 +36,11 @@ export default function Modal({ open, onClose, title, subtitle, children, footer
         <div className="flex items-start justify-between gap-4 border-b px-5 py-4 dark:border-slate-700">
           <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{title}</h2>
-            {subtitle && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>}
+            {subtitle && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-300">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+            className="rounded-lg p-1.5 text-slate-400 dark:text-slate-300 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
             aria-label="Close dialog"
           >
             <X className="h-5 w-5" />

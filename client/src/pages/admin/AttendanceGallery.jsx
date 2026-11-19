@@ -54,7 +54,7 @@ export default function AttendanceGallery() {
       )}
 
       <Modal open={!!view} onClose={() => setView(null)} title={view?.label} size="md">
-        {view && <img src={view.src} alt={view.label} className="w-full rounded-xl object-contain" />}
+        {view && <img src={view.src} alt={view.label} className="w-full rounded-xl object-contain" loading="lazy" decoding="async" />}
       </Modal>
     </div>
   );

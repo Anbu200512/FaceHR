@@ -183,7 +183,7 @@ export default function EmployeeHome() {
                 <p className="truncate font-bold text-slate-900 dark:text-slate-100">
                   {[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(' ') || user?.name}
                 </p>
-                <p className="break-words text-xs text-slate-400">
+                <p className="break-words text-xs text-slate-400 dark:text-slate-300">
                   {emp.designation?.name || '-'} • {emp.department?.name || '-'}
                   {emp.employmentType ? ` • ${emp.employmentType}` : ''}
                 </p>
@@ -196,7 +196,7 @@ export default function EmployeeHome() {
             </div>
             <div className="grid w-full grid-cols-1 gap-4 text-center sm:w-auto sm:min-w-[260px] sm:grid-cols-2">
               <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                <p className="flex items-center justify-center gap-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                <p className="flex items-center justify-center gap-1 text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-300">
                   <Clock3 className="h-3.5 w-3.5" /> Check-in
                 </p>
                 <p className="mt-1 font-mono text-lg font-bold text-emerald-600 dark:text-emerald-400">
@@ -204,7 +204,7 @@ export default function EmployeeHome() {
                 </p>
               </div>
               <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                <p className="flex items-center justify-center gap-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                <p className="flex items-center justify-center gap-1 text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-300">
                   <Clock3 className="h-3.5 w-3.5" /> Duration
                 </p>
                 <p className="mt-1 font-mono text-lg font-bold text-slate-700 dark:text-slate-200">
@@ -351,10 +351,10 @@ export default function EmployeeHome() {
           </div>
           {monthly.data ? (
             <div className="grid grid-cols-2 gap-px sm:grid-cols-4">
-              <div className="p-5"><p className="text-xs font-medium text-slate-400">Present</p><p className="mt-1 text-2xl font-bold text-emerald-600">{monthly.data.summary?.presentDays ?? 0}</p></div>
-              <div className="p-5"><p className="text-xs font-medium text-slate-400">Late</p><p className="mt-1 text-2xl font-bold text-amber-600">{monthly.data.summary?.lateDays ?? 0}</p></div>
-              <div className="p-5"><p className="text-xs font-medium text-slate-400">Absent</p><p className="mt-1 text-2xl font-bold text-rose-600">{monthly.data.summary?.absentDays ?? 0}</p></div>
-              <div className="p-5"><p className="text-xs font-medium text-slate-400">Hours</p><p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">{formatDuration(monthly.data.summary?.totalHours || 0)}</p></div>
+              <div className="p-5"><p className="text-xs font-medium text-slate-400 dark:text-slate-300">Present</p><p className="mt-1 text-2xl font-bold text-emerald-600">{monthly.data.summary?.presentDays ?? 0}</p></div>
+              <div className="p-5"><p className="text-xs font-medium text-slate-400 dark:text-slate-300">Late</p><p className="mt-1 text-2xl font-bold text-amber-600">{monthly.data.summary?.lateDays ?? 0}</p></div>
+              <div className="p-5"><p className="text-xs font-medium text-slate-400 dark:text-slate-300">Absent</p><p className="mt-1 text-2xl font-bold text-rose-600">{monthly.data.summary?.absentDays ?? 0}</p></div>
+              <div className="p-5"><p className="text-xs font-medium text-slate-400 dark:text-slate-300">Hours</p><p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">{formatDuration(monthly.data.summary?.totalHours || 0)}</p></div>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
@@ -380,7 +380,7 @@ export default function EmployeeHome() {
               <div className="flex items-end justify-between">
                 <div>
                   <p className="text-4xl font-bold text-slate-900 dark:text-slate-100">{balance.data.remaining}</p>
-                  <p className="text-xs text-slate-400">remaining of {balance.data.allowance} days</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-300">remaining of {balance.data.allowance} days</p>
                 </div>
                 <CalendarDays className="h-8 w-8 text-sky-500" />
               </div>
@@ -391,7 +391,7 @@ export default function EmployeeHome() {
               {Object.keys(balance.data.breakdown || {}).length > 0 && (
                 <div className="mt-4 border-t pt-3 dark:border-slate-700">
                   {Object.entries(balance.data.breakdown).map(([type, days]) => (
-                    <div key={type} className="flex justify-between py-0.5 text-xs text-slate-500 dark:text-slate-400">
+                    <div key={type} className="flex justify-between py-0.5 text-xs text-slate-500 dark:text-slate-300">
                       <span>{type}</span><span className="font-semibold">{days}d</span>
                     </div>
                   ))}

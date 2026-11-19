@@ -63,8 +63,8 @@ export default function Settings() {
           <div className="space-y-6 p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <label className="label flex items-center gap-1.5"><AlarmClock className="h-4 w-4 text-slate-400" /> Office start time</label>
-                <p className="mt-1 text-xs text-slate-400">Employees checking in after this (plus grace time) are marked Late.</p>
+                <label className="label flex items-center gap-1.5"><AlarmClock className="h-4 w-4 text-slate-400 dark:text-slate-300" /> Office start time</label>
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-300">Employees checking in after this (plus grace time) are marked Late.</p>
               </div>
               <div className="flex items-center gap-2">
                 <input type="time" value={officeStartTime} onChange={(e) => setOfficeStartTime(e.target.value)} className="input" />
@@ -74,13 +74,13 @@ export default function Settings() {
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <label className="label flex items-center gap-1.5"><Clock3 className="h-4 w-4 text-slate-400" /> Grace time</label>
-                <p className="mt-1 text-xs text-slate-400">Minutes after start time allowed before marking Late (e.g. 5).</p>
+                <label className="label flex items-center gap-1.5"><Clock3 className="h-4 w-4 text-slate-400 dark:text-slate-300" /> Grace time</label>
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-300">Minutes after start time allowed before marking Late (e.g. 5).</p>
               </div>
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <input type="number" min="0" max="240" step="1" value={graceMinutes} onChange={(e) => setGraceMinutes(e.target.value)} className="input w-24 pr-9" />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">min</span>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 dark:text-slate-300">min</span>
                 </div>
                 <Button size="sm" onClick={() => save('graceMinutes', graceMinutes)} loading={saving && savedKey === 'graceMinutes'} disabled={saving}>Save</Button>
               </div>
@@ -88,8 +88,8 @@ export default function Settings() {
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <label className="label flex items-center gap-1.5"><Clock3 className="h-4 w-4 text-slate-400" /> Office end time</label>
-                <p className="mt-1 text-xs text-slate-400">Configured workday end time (global default; can be overridden per employee).</p>
+                <label className="label flex items-center gap-1.5"><Clock3 className="h-4 w-4 text-slate-400 dark:text-slate-300" /> Office end time</label>
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-300">Configured workday end time (global default; can be overridden per employee).</p>
               </div>
               <div className="flex items-center gap-2">
                 <input type="time" value={officeEndTime} onChange={(e) => setOfficeEndTime(e.target.value)} className="input" />
@@ -99,13 +99,13 @@ export default function Settings() {
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <label className="label flex items-center gap-1.5"><Clock3 className="h-4 w-4 text-slate-400" /> Half-day threshold</label>
-                <p className="mt-1 text-xs text-slate-400">Under this many hours, a completed day is recorded as Half Day.</p>
+                <label className="label flex items-center gap-1.5"><Clock3 className="h-4 w-4 text-slate-400 dark:text-slate-300" /> Half-day threshold</label>
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-300">Under this many hours, a completed day is recorded as Half Day.</p>
               </div>
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <input type="number" min="1" max="16" step="0.5" value={halfDay} onChange={(e) => setHalfDay(e.target.value)} className="input w-24 pr-8" />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">hrs</span>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 dark:text-slate-300">hrs</span>
                 </div>
                 <Button size="sm" onClick={() => save('halfDayThresholdHours', halfDay)} loading={saving && savedKey === 'halfDayThresholdHours'} disabled={saving}>Save</Button>
               </div>
@@ -114,7 +114,7 @@ export default function Settings() {
             <div className="flex items-center justify-between border-t pt-5 dark:border-slate-700">
               <div>
                 <p className="font-semibold text-slate-800 dark:text-slate-100">Mark employees as Late</p>
-                <p className="mt-1 text-xs text-slate-400">Disable to treat every check-in as on time.</p>
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-300">Disable to treat every check-in as on time.</p>
               </div>
               <button
                 onClick={() => { const next = !lateEnabled; setLateEnabled(next); save('lateEnabled', next); }}
@@ -136,34 +136,11 @@ export default function Settings() {
                 <ScanFace className="h-6 w-6 text-brand-600 dark:text-brand-400" />
                 <div>
                   <p className="font-semibold text-slate-800 dark:text-slate-100">Recognition engine</p>
-                  <p className="text-xs text-slate-400">Descriptors are computed in the employee's browser and matched server-side.</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-300">Descriptors are computed in the employee's browser and matched server-side.</p>
                 </div>
               </div>
               <Badge tone={face?.available ? 'emerald' : 'amber'}>
-                {face?.available ? 'Active' : 'Fallback'}
-              </Badge>
-            </div>
-            <dl className="grid grid-cols-2 gap-3 rounded-xl border border-slate-200 p-4 text-sm dark:border-slate-700">
-              <div>
-                <dt className="text-xs font-medium text-slate-400">Backend</dt>
-                <dd className="mt-0.5 font-mono text-xs font-semibold text-slate-800 dark:text-slate-100">{face?.backend || 'none'}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-slate-400">Match threshold</dt>
-                <dd className="mt-0.5 font-mono text-xs font-semibold text-slate-800 dark:text-slate-100">{face?.threshold ?? 0.6}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-slate-400">Model dir</dt>
-                <dd className="mt-0.5 truncate font-mono text-xs text-slate-600 dark:text-slate-300" title={face?.modelDir}>{face?.modelDir || '-'}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-slate-400">Status</dt>
-                <dd className="mt-0.5 truncate text-xs text-slate-600 dark:text-slate-300" title={face?.error}>{face?.error || (face?.available ? 'ready' : 'client-side mode')}</dd>
-              </div>
-            </dl>
-            <p className="flex items-start gap-2 text-xs leading-relaxed text-slate-400">
-              <ToggleLeft className="mt-0.5 h-4 w-4 shrink-0" />
-              When the optional native TensorFlow backend isn't available, the server still validates every matching step using the descriptor sent from the browser - no recognized fallback lowers security.
+                {face?.available ? 'Active' : 'Fallback'} </Badge> </div> <dl className="grid grid-cols-2 gap-3 rounded-xl border border-slate-200 p-4 text-sm dark:border-slate-700"> <div> <dt className="text-xs font-medium text-slate-400 dark:text-slate-300 dark:text-slate-400">Backend</dt> <dd className="mt-0.5 font-mono text-xs font-semibold text-slate-800 dark:text-slate-100">{face?.backend ||'none'}</dd> </div> <div> <dt className="text-xs font-medium text-slate-400 dark:text-slate-300 dark:text-slate-400">Match threshold</dt> <dd className="mt-0.5 font-mono text-xs font-semibold text-slate-800 dark:text-slate-100">{face?.threshold ?? 0.6}</dd> </div> <div> <dt className="text-xs font-medium text-slate-400 dark:text-slate-400">Model dir</dt> <dd className="mt-0.5 truncate font-mono text-xs text-slate-600 dark:text-slate-400" title={face?.modelDir}>{face?.modelDir ||'-'}</dd> </div> <div> <dt className="text-xs font-medium text-slate-400 dark:text-slate-300 dark:text-slate-400">Status</dt> <dd className="mt-0.5 truncate text-xs text-slate-600 dark:text-slate-400" title={face?.error}>{face?.error || (face?.available ?'ready' : 'client-side mode')}</dd> </div> </dl> <p className="flex items-start gap-2 text-xs leading-relaxed text-slate-400 dark:text-slate-300 dark:text-slate-400"> <ToggleLeft className="mt-0.5 h-4 w-4 shrink-0" /> When the optional native TensorFlow backend isn't available, the server still validates every matching step using the descriptor sent from the browser - no recognized fallback lowers security.
             </p>
           </div>
         </Card>

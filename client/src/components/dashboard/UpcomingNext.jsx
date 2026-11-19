@@ -19,7 +19,7 @@ function ItemRow({ src, name, sub, badge }) {
       <Avatar name={name} src={src} size="sm" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{name}</p>
-        <p className="truncate text-xs text-slate-400">{sub}</p>
+        <p className="truncate text-xs text-slate-400 dark:text-slate-300">{sub}</p>
       </div>
       {badge}
     </li>
@@ -29,9 +29,9 @@ function ItemRow({ src, name, sub, badge }) {
 function CompactEmpty({ icon: Icon, title, message }) {
   return (
     <div className="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-slate-200 px-4 py-5 text-center dark:border-slate-700">
-      <Icon className="h-5 w-5 text-slate-300 dark:text-slate-600" />
-      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
-      <p className="text-xs text-slate-400">{message}</p>
+      <Icon className="h-5 w-5 text-slate-300 dark:text-slate-300" />
+      <p className="text-sm font-medium text-slate-500 dark:text-slate-300">{title}</p>
+      <p className="text-xs text-slate-400 dark:text-slate-300">{message}</p>
     </div>
   );
 }
@@ -45,7 +45,7 @@ export default function UpcomingNext({ data, loading }) {
     <section>
       <div className="mb-3">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Upcoming</h2>
-        <p className="text-xs text-slate-400">Upcoming leaves, birthdays and other HR activities</p>
+        <p className="text-xs text-slate-400 dark:text-slate-300">Upcoming leaves, birthdays and other HR activities</p>
       </div>
 
       <Card className="overflow-hidden">
@@ -53,7 +53,7 @@ export default function UpcomingNext({ data, loading }) {
           <section>
             <div className="flex items-center gap-2 px-5 pt-4">
               <CalendarClock className="h-4 w-4 text-brand-500" />
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Upcoming Leave</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">Upcoming Leave</h3>
             </div>
             <ul className="px-5 pb-2 pt-1">
               {loading ? (
@@ -87,7 +87,7 @@ export default function UpcomingNext({ data, loading }) {
           <section className="pt-3">
             <div className="flex items-center gap-2 px-5">
               <Inbox className="h-4 w-4 text-amber-500" />
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Pending Approvals</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">Pending Approvals</h3>
             </div>
             <ul className="px-5 pb-2 pt-1">
               {loading ? (
@@ -128,7 +128,7 @@ export default function UpcomingNext({ data, loading }) {
           <section className="pt-3">
             <div className="flex items-center gap-2 px-5">
               <PartyPopper className="h-4 w-4 text-violet-500" />
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Birthdays &amp; Events</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">Birthdays &amp; Events</h3>
             </div>
             <ul className="px-5 pb-2 pt-1">
               {loading ? (

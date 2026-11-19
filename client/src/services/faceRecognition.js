@@ -9,22 +9,24 @@
  * Model weights are served from ./public/models (also mirrored on the server
  * for optional server-side verification).
  */
-import * as faceapi from 'face-api.js';
-
 const MODELS_URL = `${import.meta.env.BASE_URL}models`;
 
+let faceapiPromise;
 let modelsLoaded = false;
 let modelError = null;
 let lastDescriptor = null;
 let detectionRunning = false;
 
-const DEFAULT_OPTIONS = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.45 });
+const getFaceapi = () => (faceapiPromise ||= import('face-api.js'));
+const getDefaultOptions = (faceapi) =>
+  new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.45 });
 
 /** Load the face-api models exactly once. Resolves true/false. */
 export async function loadFaceModels() {
   if (modelsLoaded) return true;
   if (modelError) return false;
   try {
+    const faceapi = await getFaceapi();
     await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
       faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL),
@@ -51,8 +53,9 @@ export function faceModelsState() {
 export async function analyzeVideo(videoEl) {
   if (!videoEl || !videoEl.videoWidth) return null;
   try {
+    const faceapi = await getFaceapi();
     const result = await faceapi
-      .detectSingleFace(videoEl, DEFAULT_OPTIONS)
+      .detectSingleFace(videoEl, getDefaultOptions(faceapi))
       .withFaceLandmarks()
       .withFaceDescriptor();
     if (!result) return null;
@@ -73,7 +76,8 @@ export async function analyzeVideo(videoEl) {
 export async function countFaces(videoEl) {
   if (!videoEl || !videoEl.videoWidth) return 0;
   try {
-    const dets = await faceapi.detectAllFaces(videoEl, DEFAULT_OPTIONS);
+    const faceapi = await getFaceapi();
+    const dets = await faceapi.detectAllFaces(videoEl, getDefaultOptions(faceapi));
     return dets.length;
   } catch (err) {
     return 0;
@@ -155,8 +159,9 @@ export function getLastDescriptor() {
 
 /** Refresh descriptor derived from a captured canvas image (for re-verification). */
 export async function descriptorFromCanvas(canvas) {
+  const faceapi = await getFaceapi();
   const result = await faceapi
-    .detectSingleFace(canvas, DEFAULT_OPTIONS)
+    .detectSingleFace(canvas, getDefaultOptions(faceapi))
     .withFaceLandmarks()
     .withFaceDescriptor();
   return result ? result.descriptor : null;

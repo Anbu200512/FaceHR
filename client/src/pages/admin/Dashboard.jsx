@@ -62,7 +62,7 @@ export default function Dashboard() {
   return (
     <div>
       <PageHeader
-        title={`${greeting()}, ${user?.name?.split(' ')[0]} 👋`}
+        title={`${greeting()}, ${user?.name?.split(' ')[0] || 'Admin'}`}
         description="Here's what's happening across your organization."
       />
 

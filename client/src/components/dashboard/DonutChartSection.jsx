@@ -16,7 +16,7 @@ export default function DonutChartSection({ title, description, icon: Icon, rows
     <div className="min-w-0">
       <div className="mb-3">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{title}</h2>
-        <p className="text-xs text-slate-400">{description}</p>
+        <p className="text-xs text-slate-400 dark:text-slate-300">{description}</p>
       </div>
 
       <Card className="p-5">
@@ -57,7 +57,7 @@ export default function DonutChartSection({ title, description, icon: Icon, rows
               </ResponsiveContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                 <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{total}</p>
-                <p className="text-[11px] uppercase tracking-wide text-slate-400">Employees</p>
+                <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-300">Employees</p>
               </div>
             </div>
 

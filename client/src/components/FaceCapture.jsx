@@ -268,7 +268,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
           <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
             {ok ? (isRegister ? 'Face Registered' : 'Face Verified') : 'Face Not Recognized'}
           </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400">{submitResult.message}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-300">{submitResult.message}</p>
           {ok && successExtra && <div className="mt-2">{successExtra(submitResult.data)}</div>}
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             {!ok && (
@@ -297,7 +297,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
           </div>
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Verifying face…</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
               Please keep still. This only takes a moment.
             </p>
           </div>
@@ -342,7 +342,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
             {isRegister ? 'Face Registration' : 'Face Attendance'}
           </h3>
         </div>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
           {isRegister
             ? 'Please look at the camera. Your face photo and biometric data are used only for attendance.'
             : 'Please look at the camera. Your face will be verified automatically.'}
@@ -360,7 +360,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
               <>
                 <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
                 <p className="font-medium text-slate-700 dark:text-slate-200">{camMsg.title}</p>
-                <p className="text-sm text-slate-400">{camMsg.desc}</p>
+                <p className="text-sm text-slate-400 dark:text-slate-300">{camMsg.desc}</p>
               </>
             ) : (
               <>
@@ -418,7 +418,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
                 <Button className="w-full" onClick={() => captureNow()} disabled={faceTone !== 'good'}>
                   <Camera className="h-4 w-4" /> Capture Face
                 </Button>
-                <p className="mt-2 text-center text-[11px] text-slate-400">
+                <p className="mt-2 text-center text-[11px] text-slate-400 dark:text-slate-300">
                   {faceTone !== 'good' ? 'Face must be centered and clear to enable capture.' : 'Center your face and tap capture.'}
                 </p>
               </div>
@@ -442,7 +442,7 @@ function ErrorPanel({ msg, onRetry }) {
       </div>
       <div>
         <p className="font-bold text-slate-900 dark:text-slate-100">{msg.title}</p>
-        <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">{msg.desc}</p>
+        <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-300">{msg.desc}</p>
       </div>
       <Button variant="secondary" onClick={onRetry}>
         <RefreshCcw className="h-4 w-4" /> Retry

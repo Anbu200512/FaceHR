@@ -39,7 +39,7 @@ const TONE_BG = {
   rose: 'bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400',
   indigo: 'bg-brand-100 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400',
   violet: 'bg-violet-100 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400',
-  slate: 'bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-slate-400',
+  slate: 'bg-slate-100 text-slate-500 dark:text-slate-300 dark:bg-slate-700/50',
 };
 
 function timeAgo(iso) {
@@ -70,7 +70,7 @@ export default function RecentActivity({ year, month, location, department }) {
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Recent Activity</h2>
-          <p className="text-xs text-slate-400">Latest events from the organization</p>
+          <p className="text-xs text-slate-400 dark:text-slate-300">Latest events from the organization</p>
         </div>
         <Button variant="ghost" size="sm" onClick={refetch}>
           <RefreshCw className="h-4 w-4" /> Refresh
@@ -113,7 +113,7 @@ export default function RecentActivity({ year, month, location, department }) {
                       <span className="font-semibold text-slate-900 dark:text-slate-100">{name}</span>{' '}
                       <span>{ev.description}</span>
                     </p>
-                    <p className="mt-0.5 text-xs text-slate-400">{timeAgo(ev.time)}</p>
+                    <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-300">{timeAgo(ev.time)}</p>
                   </div>
                   {ev.status && <Badge>{ev.status}</Badge>}
                 </li>

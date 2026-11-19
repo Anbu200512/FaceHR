@@ -15,7 +15,7 @@ export function DocumentsStep({ photoFile, photoPreview, getDoc, setDoc, clearDo
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
               {photoFile ? 'New photo selected' : 'No photo selected'}
             </p>
-            <p className="mt-0.5 text-xs text-slate-400">JPG, PNG or WebP up to 5 MB.</p>
+            <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-300">JPG, PNG or WebP up to 5 MB.</p>
             <div className="mt-3 flex justify-center gap-2 sm:justify-start">
               <label className="btn-secondary cursor-pointer text-xs">
                 <Camera className="h-4 w-4" />
@@ -64,12 +64,12 @@ export function DocumentsStep({ photoFile, photoPreview, getDoc, setDoc, clearDo
                           {doc.file.originalName}
                           {doc.file.size ? ` · ${formatFileSize(doc.file.size)}` : ''}
                         </p>
-                        <p className="truncate text-xs text-slate-400">
+                        <p className="truncate text-xs text-slate-400 dark:text-slate-300">
                           {doc.status === 'new' ? 'Pending upload' : uploadDate ? `Uploaded ${formatDate(uploadDate)}` : ''}
                         </p>
                       </>
                     ) : (
-                      <p className="truncate text-xs text-slate-400">PDF or image, up to 10 MB.</p>
+                      <p className="truncate text-xs text-slate-400 dark:text-slate-300">PDF or image, up to 10 MB.</p>
                     )}
                   </div>
                 </div>

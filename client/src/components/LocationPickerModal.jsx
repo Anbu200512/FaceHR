@@ -87,7 +87,7 @@ export default function LocationPickerModal({ open, onClose, onConfirm, initial 
         </p>
       )}
       <GeofenceMap center={center} radius={0} interactive onPick={setCenter} height={380} />
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 dark:text-slate-300">
         <span>
           Selected: <span className="font-mono text-slate-600 dark:text-slate-300">{center.lat}°, {center.lng}°</span>
         </span>

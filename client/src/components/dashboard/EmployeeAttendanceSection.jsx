@@ -32,12 +32,12 @@ export default function EmployeeAttendanceSection({ data, loading, year, month }
               <h2 className="text-base font-bold text-slate-900 group-hover:text-brand-600 dark:text-slate-100 dark:group-hover:text-brand-400">
                 {title}
               </h2>
-              <p className="text-xs text-slate-400">{description}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-300">{description}</p>
             </Link>
           ) : (
             <>
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{title}</h2>
-              <p className="text-xs text-slate-400">{description}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-300">{description}</p>
             </>
           )}
         </div>

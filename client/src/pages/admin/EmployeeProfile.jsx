@@ -1,6 +1,4 @@
-import { useEffect, useState,
-  ImmigrationSectionView,
-} from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -23,7 +21,7 @@ import api, { extractError } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import { useToast } from '../../context/ToastContext';
 import { resolveAsset, formatDate, formatDuration, formatTime, formatLocation, toDateKey } from '../../services/format';
-import { exportEmployeeProfilePdf } from '../../services/export';
+
 import PageHeader from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -77,6 +75,7 @@ export default function EmployeeProfile({ faceMode }) {
   const [todayTick, setTodayTick] = useState(0);
   const [accessBusy, setAccessBusy] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
+  const [capturedLocation, setCapturedLocation] = useState(null);
 
   const { data, loading, refetch } = useApi(async () => {
     const { data } = await api.get(`/employees/${id}`);
@@ -187,6 +186,7 @@ export default function EmployeeProfile({ faceMode }) {
     if (!emp) return;
     setExportBusy(true);
     try {
+      const { exportEmployeeProfilePdf } = await import('../../services/export');
       await exportEmployeeProfilePdf(emp);
     } catch (err) {
       toast.error(extractError(err, 'Could not export employee profile'));
@@ -195,7 +195,7 @@ export default function EmployeeProfile({ faceMode }) {
     }
   };
 
-  if (loading) return <FullScreenLoader label="Loading employee profile…" />;
+  if (loading) return <FullScreenLoader label="Loading employee profileΓÇª" />;
   const emp = data;
   if (!emp) return <EmptyState title="Employee not found" />;
 
@@ -204,7 +204,7 @@ export default function EmployeeProfile({ faceMode }) {
   if (registerMode) {
     return (
       <div>
-        <PageHeader title={`Face Registration · ${[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}`} description="Help the employee position their face clearly. Only a single photo and a biometric descriptor are stored - never video.">
+        <PageHeader title={`Face Registration ┬╖ ${[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}`} description="Help the employee position their face clearly. Only a single photo and a biometric descriptor are stored - never video.">
           <Button variant="ghost" onClick={() => setRegisterMode(false)}>
             <ArrowLeft className="h-4 w-4" /> Back to Profile
           </Button>
@@ -231,7 +231,7 @@ export default function EmployeeProfile({ faceMode }) {
 
   return (
     <div>
-      <PageHeader title="Employee Profile" description={`${emp.employeeId} · joined ${formatDate(emp.joiningDate)}`}>
+      <PageHeader title="Employee Profile" description={`${emp.employeeId} ┬╖ joined ${formatDate(emp.joiningDate)}`}>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <Button variant="ghost" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" /> Back
@@ -267,7 +267,7 @@ export default function EmployeeProfile({ faceMode }) {
             <p className="font-mono text-xs font-semibold text-brand-600 dark:text-brand-400">{emp.employeeId}</p>
             <RoleBadges roles={emp.roles} className="mt-1.5" />
             <p className="mt-1 break-words text-sm text-slate-500 dark:text-slate-400">
-              {emp.designation?.name || 'No designation'} · {emp.department?.name || 'No department'}{emp.office?.name ? ` · ${emp.office.name}` : ''}
+              {emp.designation?.name || 'No designation'} ┬╖ {emp.department?.name || 'No department'}{emp.office?.name ? ` ┬╖ ${emp.office.name}` : ''}
             </p>
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
               <span className="inline-flex min-w-0 items-center gap-2 break-all text-slate-600 dark:text-slate-300">
@@ -389,9 +389,9 @@ export default function EmployeeProfile({ faceMode }) {
           successExtra={(data) => (
             <div className="mx-auto max-w-sm rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
               {actionMode === 'checkin' ? (
-                <>Checked in at <span className="font-mono font-bold">{formatTime(data?.checkInTime)}</span> · {data?.status === 'Late' ? 'Marked Late' : 'On time'}.</>
+                <>Checked in at <span className="font-mono font-bold">{formatTime(data?.checkInTime)}</span> ┬╖ {data?.status === 'Late' ? 'Marked Late' : 'On time'}.</>
               ) : (
-                <>Checked out at <span className="font-mono font-bold">{formatTime(data?.checkOutTime)}</span> · Total <span className="font-bold">{formatDuration(data?.workingHoursMinutes)}</span>.</>
+                <>Checked out at <span className="font-mono font-bold">{formatTime(data?.checkOutTime)}</span> ┬╖ Total <span className="font-bold">{formatDuration(data?.workingHoursMinutes)}</span>.</>
               )}
             </div>
           )}
@@ -447,7 +447,7 @@ function FaceStatusCard({ emp, hasFace, onRegister, onRemove }) {
             </p>
             <p className="text-xs text-slate-400">
               {hasFace
-                ? `Linked to faceId ${emp.face?.faceId?.slice(0, 8)}… · Registered on ${formatDate(emp.face?.updatedAt)}`
+                ? `Linked to faceId ${emp.face?.faceId?.slice(0, 8)}ΓÇª ┬╖ Registered on ${formatDate(emp.face?.updatedAt)}`
                 : 'This employee cannot use face attendance yet.'}
             </p>
           </div>
@@ -497,7 +497,7 @@ function AttendanceSummary({ emp }) {
         ].map(([label, val]) => (
           <div key={label} className="p-4">
             <p className="text-xs font-medium text-slate-400">{label}</p>
-            <p className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100 sm:text-xl">{val ?? (loading ? '…' : '-')}</p>
+            <p className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100 sm:text-xl">{val ?? (loading ? 'ΓÇª' : '-')}</p>
           </div>
         ))}
       </div>

@@ -157,9 +157,9 @@ export default function FaceAttendance() {
               <Clock3 className="h-4.5 w-4.5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Today’s shift window</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-300">Today’s shift window</p>
               <p className="mt-0.5 font-semibold text-slate-800 dark:text-slate-100">{shiftLabel}</p>
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-300">
                 {graceLabel}{office.lateEnabled !== false ? ' • Check in after start + grace is marked late' : ''}
               </p>
             </div>
@@ -188,7 +188,7 @@ export default function FaceAttendance() {
             </Button>
           </div>
           {rec?.checkInTime && (
-            <div className="text-sm text-slate-500 dark:text-slate-400">
+            <div className="text-sm text-slate-500 dark:text-slate-300">
               In: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatTime(rec.checkInTime)}</span>
               {rec.checkOutTime && (
                 <> • Out: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatTime(rec.checkOutTime)}</span></>
@@ -198,14 +198,14 @@ export default function FaceAttendance() {
         </div>
         <div className="border-t px-5 py-3 dark:border-slate-700">
           {rec?.status ? (
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-300">
               Today&apos;s status: <Badge>{rec.status}</Badge>
               {rec.faceVerified && <Badge>Face Verified</Badge>}
               {rec.status === 'Late' && rec.lateMinutes ? <Badge>Late by {rec.lateMinutes} min</Badge> : null}
               {rec.workingHoursMinutes ? <Badge>Worked {formatDuration(rec.workingHoursMinutes)}</Badge> : null}
             </div>
           ) : (
-            <p className="text-xs text-slate-400">You haven&apos;t checked in today yet.</p>
+            <p className="text-xs text-slate-400 dark:text-slate-300">You haven&apos;t checked in today yet.</p>
           )}
         </div>
       </Card>

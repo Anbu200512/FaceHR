@@ -57,7 +57,7 @@ export default function MyRegularizations() {
           </div>
           <div className="space-y-4 p-5">
             <Input label="Date *" type="date" max={today} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Input label="Check-in" type="time" value={form.checkIn} onChange={(e) => setForm({ ...form, checkIn: e.target.value })} />
               <Input label="Check-out" type="time" value={form.checkOut} onChange={(e) => setForm({ ...form, checkOut: e.target.value })} />
             </div>
@@ -96,10 +96,10 @@ export default function MyRegularizations() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-slate-800 dark:text-slate-100">{formatDate(r.date)}</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-400 dark:text-slate-300">
                       In: {r.requestedCheckIn ? formatTime(r.requestedCheckIn) : '-'} • Out: {r.requestedCheckOut ? formatTime(r.requestedCheckOut) : '-'}
                     </p>
-                    {r.reason && <p className="mt-1 truncate text-xs text-slate-500">{r.reason}</p>}
+                    {r.reason && <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-300">{r.reason}</p>}
                     {r.adminNote && <p className="mt-1 text-xs font-medium text-rose-500">Note: {r.adminNote}</p>}
                   </div>
                   <Badge tone={TONES[r.status] || 'slate'}>{r.status}</Badge>

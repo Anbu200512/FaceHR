@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarCheck, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import api from '../../services/api';
@@ -71,13 +71,13 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
           <h2 className="font-bold text-slate-900 dark:text-slate-100">My Attendance</h2>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => shift(-1)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800" aria-label="Previous month">
+          <button onClick={() => shift(-1)} className="rounded-lg p-1.5 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Previous month">
             <ChevronLeft className="h-4 w-4" />
           </button>
           <span className="min-w-28 text-center text-sm font-bold text-slate-800 dark:text-slate-100">
             {MONTH_NAMES[month]} {year}
           </span>
-          <button onClick={() => shift(1)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800" aria-label="Next month">
+          <button onClick={() => shift(1)} className="rounded-lg p-1.5 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Next month">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -85,14 +85,14 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
 
       <div className="px-5 pt-4">
         {office && (
-          <div className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-            Shift: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatClock(office.officeStartTime)} – {formatClock(office.officeEndTime)}</span>
-            <span className="text-slate-400"> • </span>
+          <div className="mb-3 text-xs text-slate-500 dark:text-slate-300">
+            Shift: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatClock(office.officeStartTime)} ΓÇô {formatClock(office.officeEndTime)}</span>
+            <span className="text-slate-400 dark:text-slate-300"> ΓÇó </span>
             {office.lateEnabled === false ? 'Late marking off' : `${Number(office.graceMinutes || 0)} min grace`}
           </div>
         )}
         {s ? (
-          <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+          <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 dark:text-slate-300">
             <span><b className="text-emerald-600">{s.presentDays}</b> present</span>
             <span><b className="text-amber-600">{s.lateDays}</b> late</span>
             <span><b className="text-rose-600">{s.absentDays}</b> absent</span>
@@ -112,7 +112,7 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
         ) : (
           <div className="grid grid-cols-7 gap-1">
             {WEEKDAYS.map((d) => (
-              <div key={d} className="py-0.5 text-center text-[9px] font-bold uppercase tracking-wide text-slate-400">{d}</div>
+              <div key={d} className="py-0.5 text-center text-[9px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-300">{d}</div>
             ))}
             {Array.from({ length: firstWeekday }).map((_, i) => (
               <div key={`pad-${i}`} />
@@ -123,15 +123,7 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
                 <button
                   key={d.date}
                   onClick={() => setSelected(selected?.date === d.date ? null : d)}
-                  className={`relative flex h-7 items-center justify-center rounded-md text-xs font-semibold transition ${
-                    selected?.date === d.date
-                      ? 'bg-brand-600 text-white shadow'
-                      : isToday
-                        ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-300 hover:bg-brand-100 dark:bg-brand-500/15 dark:text-brand-300 dark:ring-brand-500/40 dark:hover:bg-brand-500/25'
-                        : d.isWeekend
-                          ? 'text-slate-300 hover:bg-slate-100 dark:text-slate-500 dark:hover:bg-slate-800'
-                          : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'
-                  }`}
+                  className={`relative flex h-7 items-center justify-center rounded-md text-xs font-semibold transition ${ selected?.date === d.date ? 'bg-brand-600 text-white shadow' : isToday ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-300 hover:bg-brand-100 dark:bg-brand-500/15 dark:text-brand-300 dark:ring-brand-500/40 dark:hover:bg-brand-500/25' : d.isWeekend ? 'text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800' } dark:text-slate-200`}
                 >
                   {d.day}
                   <span className={`absolute bottom-0.5 h-1 w-1 rounded-full ${dot(d.status)}`} />
@@ -147,29 +139,29 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
           return (
             <div className="mt-3 space-y-2 rounded-lg border border-slate-200 px-4 py-2.5 dark:border-slate-700">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-300">
                   <span className={`h-2 w-2 rounded-full ${dot(selected.status)}`} />
                   <b className="text-slate-700 dark:text-slate-200">
                     {new Date(selected.date).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}
                   </b>
                   {selected.date === todayKey && <span className="rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">Today</span>}
                 </span>
-                <span className="text-[11px] uppercase tracking-wide text-slate-400">In</span>
+                <span className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-300">In</span>
                 <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
                   {selected.record?.checkInTime ? new Date(selected.record.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
                 </span>
-                <span className="text-[11px] uppercase tracking-wide text-slate-400">Out</span>
+                <span className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-300">Out</span>
                 <span className="font-mono text-xs font-bold text-rose-600 dark:text-rose-400">
                   {selected.record?.checkOutTime ? new Date(selected.record.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
                 </span>
-                <span className="text-[11px] uppercase tracking-wide text-slate-400">Hours</span>
+                <span className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-300">Hours</span>
                 <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-200">
                   {selected.record?.workingHoursMinutes ? formatDuration(selected.record.workingHoursMinutes) : '-'}
                 </span>
                 <Badge tone={TONES[selected.status]} className="ml-auto">{selected.status}</Badge>
               </div>
               {(inLoc || outLoc) && (
-                <div className="flex flex-wrap items-start gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex flex-wrap items-start gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-300">
                   {inLoc && (
                     <span className="inline-flex max-w-full items-start gap-1.5">
                       <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
@@ -191,7 +183,7 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
         <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[520px] border-collapse text-xs">
             <thead>
-              <tr className="border-b text-left text-[9px] font-bold uppercase tracking-wide text-slate-400 dark:border-slate-700">
+              <tr className="border-b text-left text-[9px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-300 dark:border-slate-700">
                 <th className="py-1.5 pr-3">Date</th>
                 <th className="py-1.5 pr-3">Status</th>
                 <th className="py-1.5 pr-3">Check-in</th>
@@ -210,7 +202,7 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
                 ))
               ) : (data?.days || []).length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-sm text-slate-400">No attendance records for this month.</td>
+                  <td colSpan={5} className="py-8 text-center text-sm text-slate-400 dark:text-slate-300">No attendance records for this month.</td>
                 </tr>
               ) : (data?.days || []).map((d) => (
                 <tr
@@ -224,7 +216,7 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
                     {new Date(d.date).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}
                   </td>
                   <td className="py-1.5 pr-3">
-                    <span className={`inline-flex items-center gap-1.5 font-medium ${d.isWeekend ? 'text-slate-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                    <span className={`inline-flex items-center gap-1.5 font-medium ${d.isWeekend ? 'text-slate-400 dark:text-slate-300 dark:text-slate-400' : 'text-slate-600 dark:text-slate-400'}`}>
                       <span className={`h-2 w-2 rounded-full ${dot(d.status)}`} /> {d.status}
                     </span>
                   </td>
@@ -246,14 +238,14 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
         <div className="flex flex-wrap items-center justify-between gap-3 border-t py-3 dark:border-slate-700">
           <div className="flex flex-wrap gap-2.5">
             {STATUS_LIST.map((st) => (
-              <span key={st} className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
+              <span key={st} className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-300">
                 <span className={`h-2 w-2 rounded-full ${dot(st)}`} /> {st}
               </span>
             ))}
           </div>
           {showFooterLink && (
             <Link to="/employee/history" className="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">
-              Full history →
+              Full history ΓåÆ
             </Link>
           )}
         </div>

@@ -178,14 +178,14 @@ export default function ManualAttendance() {
                   <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
                     {employee.firstName} {employee.lastName}
                   </p>
-                  <p className="truncate text-xs text-slate-400">
+                  <p className="truncate text-xs text-slate-400 dark:text-slate-300">
                     {employee.employeeId}
                     {employee.department?.name ? ` · ${employee.department.name}` : ''}
                   </p>
                 </div>
                 <button
                   onClick={clearEmployee}
-                  className="ml-2 rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-700"
+                  className="ml-2 rounded-lg p-1.5 text-slate-400 dark:text-slate-300 hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-700"
                   aria-label="Clear employee"
                 >
                   <X className="h-4 w-4" />
@@ -194,7 +194,7 @@ export default function ManualAttendance() {
             ) : (
               <>
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-300" />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -210,7 +210,7 @@ export default function ManualAttendance() {
                         <SkeletonRow cols={2} />
                       </div>
                     ) : results.length === 0 ? (
-                      <p className="px-3 py-2.5 text-sm text-slate-400">No active employees found.</p>
+                      <p className="px-3 py-2.5 text-sm text-slate-400 dark:text-slate-300">No active employees found.</p>
                     ) : (
                       results.map((emp) => (
                         <button
@@ -222,7 +222,7 @@ export default function ManualAttendance() {
                             <span className="block truncate text-sm font-medium text-slate-700 dark:text-slate-200">
                               {[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}
                             </span>
-                            <span className="block truncate text-xs text-slate-400">
+                            <span className="block truncate text-xs text-slate-400 dark:text-slate-300">
                               {emp.employeeId}
                               {emp.department?.name ? ` · ${emp.department.name}` : ''}
                             </span>
@@ -245,7 +245,7 @@ export default function ManualAttendance() {
               onChange={(e) => setDate(e.target.value)}
               className="input"
             />
-            <p className="mt-1.5 text-xs text-slate-400">Past dates and today are allowed. Future dates are blocked.</p>
+            <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-300">Past dates and today are allowed. Future dates are blocked.</p>
           </div>
         </div>
 
@@ -268,7 +268,7 @@ export default function ManualAttendance() {
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {/* Current record */}
           <Card className="p-5">
-            <h3 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <h3 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-500 dark:text-slate-300">
               <CalendarCheck className="h-4 w-4" /> Current record
             </h3>
             {recordLoading ? (
@@ -277,62 +277,7 @@ export default function ManualAttendance() {
                 <SkeletonRow cols={3} />
               </div>
             ) : !recordLoaded ? (
-              <EmptyState title="Pick a date" message="Choose a date to see what's stored for this employee." />
-            ) : !record ? (
-              <div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">No record stored</p>
-                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                  Nothing is saved for {formatDate(`${date}T00:00:00`)} yet. Saving will create one.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Badge>{record.status}</Badge>
-                  <span className="text-xs text-slate-400">
-                    {record.faceVerified ? 'Face verified' : 'Manually marked'}
-                  </span>
-                </div>
-                <dl className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <dt className="text-xs text-slate-400">Check-in</dt>
-                    <dd className="font-semibold text-slate-700 dark:text-slate-200">
-                      {record.checkInTime ? formatTime(record.checkInTime) : '-'}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-slate-400">Check-out</dt>
-                    <dd className="font-semibold text-slate-700 dark:text-slate-200">
-                      {record.checkOutTime ? formatTime(record.checkOutTime) : '-'}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-slate-400">Working hours</dt>
-                    <dd className="font-semibold text-slate-700 dark:text-slate-200">
-                      {record.workingHoursMinutes ? formatDuration(record.workingHoursMinutes) : '-'}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-slate-400">Late by</dt>
-                    <dd className="font-semibold text-slate-700 dark:text-slate-200">
-                      {record.lateMinutes ? `${record.lateMinutes}m` : '-'}
-                    </dd>
-                  </div>
-                </dl>
-                {record.note && (
-                  <div>
-                    <p className="text-xs text-slate-400">Note</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">{record.note}</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </Card>
-
-          {/* Edit form */}
-          <Card className="p-5">
-            <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              {record ? 'Edit attendance' : 'Mark attendance'}
+              <EmptyState title="Pick a date" message="Choose a date to see what's stored for this employee." /> ) : !record ? ( <div> <p className="text-sm font-medium text-slate-600 dark:text-slate-300">No record stored</p> <p className="mt-2 text-sm text-slate-500 dark:text-slate-400"> Nothing is saved for {formatDate(`${date}T00:00:00`)} yet. Saving will create one. </p> </div> ) : ( <div className="space-y-3"> <div className="flex items-center gap-2"> <Badge>{record.status}</Badge> <span className="text-xs text-slate-400 dark:text-slate-400"> {record.faceVerified ?'Face verified' : 'Manually marked'} </span> </div>               <dl className="grid grid-cols-1 gap-3 text-sm min-[360px]:grid-cols-2"> <div> <dt className="text-xs text-slate-400 dark:text-slate-300">Check-in</dt> <dd className="font-semibold text-slate-700 dark:text-slate-200"> {record.checkInTime ? formatTime(record.checkInTime) :'-'} </dd> </div> <div> <dt className="text-xs text-slate-400 dark:text-slate-300">Check-out</dt> <dd className="font-semibold text-slate-700 dark:text-slate-200"> {record.checkOutTime ? formatTime(record.checkOutTime) :'-'} </dd> </div> <div> <dt className="text-xs text-slate-400 dark:text-slate-300">Working hours</dt> <dd className="font-semibold text-slate-700 dark:text-slate-200"> {record.workingHoursMinutes ? formatDuration(record.workingHoursMinutes) :'-'} </dd> </div> <div> <dt className="text-xs text-slate-400 dark:text-slate-300">Late by</dt> <dd className="font-semibold text-slate-700 dark:text-slate-200"> {record.lateMinutes ? `${record.lateMinutes}m` :'-'} </dd> </div> </dl> {record.note && ( <div> <p className="text-xs text-slate-400 dark:text-slate-300">Note</p> <p className="text-sm text-slate-600 dark:text-slate-400">{record.note}</p> </div> )} </div> )} </Card> {/* Edit form */} <Card className="p-5"> <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400"> {record ?'Edit attendance' : 'Mark attendance'}
             </h3>
 
             <div className="space-y-4">
@@ -346,7 +291,7 @@ export default function ManualAttendance() {
               </div>
 
               {!hideTimes && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="label">Check-in *</label>
                     <TimeInput value={checkIn} onChange={setCheckIn} />
@@ -360,7 +305,7 @@ export default function ManualAttendance() {
 
               <div>
                 <label className="label">
-                  Note <span className="font-normal text-slate-400">(optional - skip if not needed)</span>
+                  Note <span className="font-normal text-slate-400 dark:text-slate-300">(optional - skip if not needed)</span>
                 </label>
                 <textarea
                   value={note}

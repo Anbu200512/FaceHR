@@ -27,7 +27,7 @@ export default function FilterBar({ value, onChange, locations = [], departments
               <button
                 type="button"
                 onClick={() => shiftMonth(-1)}
-                className="flex h-10 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                className="flex h-10 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500 dark:text-slate-300 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
                 aria-label="Previous month"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -44,7 +44,7 @@ export default function FilterBar({ value, onChange, locations = [], departments
               <button
                 type="button"
                 onClick={() => shiftMonth(1)}
-                className="flex h-10 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                className="flex h-10 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500 dark:text-slate-300 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
                 aria-label="Next month"
               >
                 <ChevronRight className="h-4 w-4" />

@@ -130,16 +130,16 @@ export default function Announcements() {
                     <Badge tone="sky">{a.audience === 'all' ? 'Everyone' : a.department?.name || 'Department'}</Badge>
                   </div>
                   <p className="mt-2 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">{a.message}</p>
-                  <p className="mt-2 text-xs text-slate-400">
+                  <p className="mt-2 text-xs text-slate-400 dark:text-slate-300">
                     {a.author?.name ? `By ${a.author.name} · ` : ''}{formatDateTime(a.createdAt)}
                     {a.expiresAt ? ` · Expires ${formatDateTime(a.expiresAt)}` : ''}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <button onClick={() => openEdit(a)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand-600 dark:text-slate-400 dark:hover:bg-slate-800">
+                  <button onClick={() => openEdit(a)} className="rounded-lg p-1.5 text-slate-500 dark:text-slate-300 hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800">
                     <Pencil className="h-4 w-4" />
                   </button>
-                  <button onClick={() => setDeleteId(a._id)} className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10">
+                  <button onClick={() => setDeleteId(a._id)} className="rounded-lg p-1.5 text-slate-500 dark:text-slate-300 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -153,7 +153,7 @@ export default function Announcements() {
         <div className="space-y-4">
           <Input label="Title *" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Office closed on Friday" />
           <Textarea label="Message *" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} rows={5} placeholder="Write the announcement…" />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Select label="Priority" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} options={ANNOUNCEMENT_PRIORITIES} />
             <Select label="Audience" value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value })} options={ANNOUNCEMENT_AUDIENCES} />
           </div>

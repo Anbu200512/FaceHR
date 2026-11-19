@@ -56,7 +56,7 @@ export function ToastProvider({ children }) {
               <p className="flex-1 text-sm font-medium text-slate-800 dark:text-slate-100">{t.message}</p>
               <button
                 onClick={() => dismiss(t.id)}
-                className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+                className="rounded-md p-1 text-slate-400 dark:text-slate-300 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
                 aria-label="Dismiss notification"
               >
                 <X className="h-4 w-4" />

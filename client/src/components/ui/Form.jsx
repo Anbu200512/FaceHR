@@ -10,7 +10,7 @@ export function Input({ label, error, hint, className, register, name, ...props 
         {...(register ? register(name) : {})}
         {...props}
       />
-      {hint && !error && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
+      {hint && !error && <p className="mt-1 text-xs text-slate-400 dark:text-slate-300">{hint}</p>}
       {error && <p className="mt-1 text-xs font-medium text-rose-500">{error}</p>}
     </div>
   );

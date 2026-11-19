@@ -53,7 +53,7 @@ export default function Resignation() {
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-500/10">
                 <AlertCircle className="h-5 w-5" />
               </div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-slate-500 dark:text-slate-300">
                 Submitting this request notifies HR with your reason and intended date. A resignation is official only after HR approves it.
               </p>
             </div>
@@ -73,19 +73,19 @@ export default function Resignation() {
               <div>
                 <label className="label">Resignation date</label>
                 <div className="relative">
-                  <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-300" />
                   <input type="date" min={today} value={form.resignationDate} onChange={(e) => setForm({ ...form, resignationDate: e.target.value })} className="input pl-9" />
                 </div>
               </div>
               <div>
                 <label className="label">Employee feedback</label>
                 <div className="relative">
-                  <MessageSquareText className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                  <MessageSquareText className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400 dark:text-slate-300" />
                   <textarea value={form.feedback} onChange={(e) => setForm({ ...form, feedback: e.target.value })} rows={3} className="input pl-9" placeholder="Tell us what could have been better…" />
                 </div>
               </div>
               <div>
-                <label className="label">Additional comments <span className="text-xs text-slate-400">(optional)</span></label>
+                <label className="label">Additional comments <span className="text-xs text-slate-400 dark:text-slate-300">(optional)</span></label>
                 <textarea value={form.comments} onChange={(e) => setForm({ ...form, comments: e.target.value })} rows={3} className="input" placeholder="Anything else you would like to add…" />
               </div>
               {hasPending && (
@@ -127,9 +127,9 @@ export default function Resignation() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-slate-800 dark:text-slate-100">{r.reason}</p>
-                    <p className="text-xs text-slate-400">Effective {formatDate(r.resignationDate)} · submitted {formatDate(r.createdAt)}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-300">Effective {formatDate(r.resignationDate)} · submitted {formatDate(r.createdAt)}</p>
                     {r.feedback && <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{r.feedback}</p>}
-                    {r.comments && <p className="mt-1 text-xs text-slate-400">{r.comments}</p>}
+                    {r.comments && <p className="mt-1 text-xs text-slate-400 dark:text-slate-300">{r.comments}</p>}
                     {r.adminNote && <p className="mt-1 text-xs text-rose-500">{r.adminNote}</p>}
                   </div>
                   <Badge tone={STATUS_TONES[r.status]}>{r.status}</Badge>

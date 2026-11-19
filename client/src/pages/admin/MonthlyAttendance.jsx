@@ -64,7 +64,7 @@ export default function MonthlyAttendance() {
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => shift(-1)}><ChevronLeft className="h-4 w-4" /></Button>
             <span className="flex items-center gap-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
-              <CalendarRange className="h-4 w-4 text-slate-400" />
+              <CalendarRange className="h-4 w-4 text-slate-400 dark:text-slate-300" />
               {MONTHS[month]} {year}
             </span>
             <Button variant="ghost" onClick={() => shift(1)}><ChevronRight className="h-4 w-4" /></Button>
@@ -87,7 +87,7 @@ export default function MonthlyAttendance() {
         <Card className="overflow-hidden">
           <div className="flex items-center justify-between border-b px-5 py-3 dark:border-slate-700">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{MONTHS[month]} {year}</p>
-            <p className="text-xs text-slate-400">{data.rows.length} employees</p>
+            <p className="text-xs text-slate-400 dark:text-slate-300">{data.rows.length} employees</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px]">
@@ -111,7 +111,7 @@ export default function MonthlyAttendance() {
                     <tr key={r._id} className="border-b transition last:border-0 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50">
                       <td className="td">
                         <p className="font-semibold text-slate-800 dark:text-slate-100">{r.firstName} {r.lastName}</p>
-                        <p className="text-xs text-slate-400">{r.employeeId} · {r.department?.name || '-'}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-300">{r.employeeId} · {r.department?.name || '-'}</p>
                       </td>
                       <td className="td text-emerald-600">{s.presentDays}</td>
                       <td className="td text-amber-600">{s.lateDays}</td>

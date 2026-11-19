@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { lazy, Suspense, useEffect, useState } from 'react';
 import { Save, MapPin, MapPinned, ScanFace, LocateFixed, RefreshCw } from 'lucide-react';
 import { extractError } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -6,8 +6,9 @@ import { fetchAttendanceSettings, saveAttendanceSettings } from '../../services/
 import PageHeader from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import Button, { FullScreenLoader } from '../../components/ui/Button';
-import GeofenceMap from '../../components/GeofenceMap';
-import LocationPickerModal from '../../components/LocationPickerModal';
+
+const GeofenceMap = lazy(() => import('../../components/GeofenceMap'));
+const LocationPickerModal = lazy(() => import('../../components/LocationPickerModal'));
 
 function ToggleRow({ label, description, checked, onChange }) {
   return (
@@ -209,7 +210,7 @@ export default function AttendanceSettings() {
                 />
               </div>
 
-              <div className="grid min-w-0 grid-cols-2 gap-4">
+              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="min-w-0">
                   <label className="label">Latitude</label>
                   <input
@@ -276,16 +277,18 @@ export default function AttendanceSettings() {
                   Pick the exact spot on the map - the blue circle shows the allowed radius that is applied to everyone.
                 </p>
                 {hasValidCenter ? (
-                  <GeofenceMap
-                    center={mapCenter}
-                    radius={Math.min(Math.max(Number(form.allowedRadius) || 1, 1), 10000)}
-                    height={300}
-                    interactive
-                    onPick={(pick) => {
-                      set('latitude', pick.lat);
-                      set('longitude', pick.lng);
-                    }}
-                  />
+                  <Suspense fallback={<div className="flex h-[300px] items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-400 dark:border-slate-700 dark:bg-slate-800/60">Loading map...</div>}>
+                    <GeofenceMap
+                      center={mapCenter}
+                      radius={Math.min(Math.max(Number(form.allowedRadius) || 1, 1), 10000)}
+                      height={300}
+                      interactive
+                      onPick={(pick) => {
+                        set('latitude', pick.lat);
+                        set('longitude', pick.lng);
+                      }}
+                    />
+                  </Suspense>
                 ) : (
                   <div className="flex h-[300px] items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-400 dark:border-slate-700 dark:bg-slate-800/60">
                     Enter a valid latitude and longitude to preview the geofence.
@@ -311,15 +314,19 @@ export default function AttendanceSettings() {
         </div>
       </div>
 
-      <LocationPickerModal
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        onConfirm={(pick) => {
-          set('latitude', pick.lat);
-          set('longitude', pick.lng);
-        }}
-        initial={hasValidCenter ? { latitude: lat, longitude: lng } : { latitude: 13.0866182, longitude: 80.1916159 }}
-      />
+      {pickerOpen && (
+        <Suspense fallback={null}>
+          <LocationPickerModal
+            open={pickerOpen}
+            onClose={() => setPickerOpen(false)}
+            onConfirm={(pick) => {
+              set('latitude', pick.lat);
+              set('longitude', pick.lng);
+            }}
+            initial={hasValidCenter ? { latitude: lat, longitude: lng } : { latitude: 13.0866182, longitude: 80.1916159 }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

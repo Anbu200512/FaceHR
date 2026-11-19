@@ -24,6 +24,23 @@
   ::-webkit-scrollbar-thumb {
     @apply rounded-full bg-slate-300 dark:bg-slate-600;
   }
+  .dark select,
+  .dark input[type='date'],
+  .dark input[type='time'],
+  .dark input[type='datetime-local'] {
+    color-scheme: dark;
+  }
+  select option {
+    background-color: #fff;
+    color: #0f172a;
+  }
+  .dark select option {
+    background-color: #1e293b;
+    color: #f1f5f9;
+  }
+  .dark ::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
 }
 
 @layer components {
@@ -47,7 +64,7 @@
   .input {
     @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition
       placeholder:text-slate-400 hover:border-slate-300 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10
-      dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-500
+      dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-400
       dark:hover:border-slate-600 dark:focus:border-brand-500 dark:focus:ring-brand-500/20;
   }
   .btn {
@@ -70,13 +87,13 @@
     @apply btn bg-emerald-600 text-white shadow-sm shadow-emerald-600/20 hover:bg-emerald-700;
   }
   .label {
-    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400;
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300;
   }
   .th {
-    @apply whitespace-nowrap px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400;
+    @apply whitespace-nowrap px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-300;
   }
   .td {
-    @apply px-4 py-3.5 text-sm text-slate-700 dark:text-slate-300;
+    @apply px-4 py-3.5 text-sm text-slate-700 dark:text-slate-200;
   }
 }
 

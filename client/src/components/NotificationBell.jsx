@@ -34,7 +34,7 @@ export default function NotificationBell({ admin }) {
   return (
     <button
       onClick={() => navigate(to)}
-      className="relative rounded-xl p-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+      className="relative rounded-xl p-2.5 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
       aria-label="Notifications"
       title="Notifications"
     >

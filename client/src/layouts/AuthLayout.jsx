@@ -48,7 +48,7 @@ export default function AuthLayout() {
             <Logo size="md" />
           </div>
           <Outlet />
-          <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
+          <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-300">
             © {new Date().getFullYear()} FaceHR
           </p>
         </div>

@@ -31,9 +31,9 @@ export function StatCard({ label, value, icon: Icon, tone = 'indigo', sub, loadi
           </>
         ) : (
           <>
-            <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{label}</p>
+            <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-300">{label}</p>
             <p className="mt-0.5 text-2xl font-bold text-slate-900 dark:text-slate-100">{value ?? '-'}</p>
-            {sub && <p className="truncate text-xs text-slate-400">{sub}</p>}
+            {sub && <p className="truncate text-xs text-slate-400 dark:text-slate-300">{sub}</p>}
           </>
         )}
       </div>

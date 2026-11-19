@@ -59,7 +59,7 @@ export default function MyLeaves() {
                 <div className="flex items-end justify-between">
                   <div>
                     <p className="text-4xl font-bold text-slate-900 dark:text-slate-100">{balance.data.remaining}</p>
-                    <p className="text-xs text-slate-400">of {balance.data.allowance} days ({balance.data.year})</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-300">of {balance.data.allowance} days ({balance.data.year})</p>
                   </div>
                   <CalendarDays className="h-8 w-8 text-sky-500" />
                 </div>
@@ -70,7 +70,7 @@ export default function MyLeaves() {
                 {balance.data.policies?.length > 0 && (
                   <div className="mt-4 space-y-1.5 border-t pt-3 dark:border-slate-700">
                     {balance.data.policies.map((p) => (
-                      <div key={p.leaveType} className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                      <div key={p.leaveType} className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-300">
                         <span>{p.leaveType}</span>
                         <span className="font-semibold">
                           {p.unlimited ? `${p.used} used` : `${p.remaining} / ${p.allowance}`}
@@ -80,7 +80,7 @@ export default function MyLeaves() {
                     ))}
                   </div>
                 )}
-                <p className="mt-3 text-[11px] text-slate-400">Weekends and public holidays are not counted as leave days.</p>
+                <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-300">Weekends and public holidays are not counted as leave days.</p>
               </div>
             ) : (
               <div className="space-y-4 p-5">
@@ -104,7 +104,7 @@ export default function MyLeaves() {
                   {LEAVE_TYPES.map((t) => <option key={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="label">From</label>
                   <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="input" />
@@ -153,8 +153,8 @@ export default function MyLeaves() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-slate-800 dark:text-slate-100">{l.leaveType}</p>
-                    <p className="text-xs text-slate-400">{formatDate(l.startDate)} â†’ {formatDate(l.endDate)} Â· {l.days} day(s)</p>
-                    {l.reason && <p className="mt-1 truncate text-xs text-slate-500">{l.reason}</p>}
+                    <p className="text-xs text-slate-400 dark:text-slate-300">{formatDate(l.startDate)} â†’ {formatDate(l.endDate)} Â· {l.days} day(s)</p>
+                    {l.reason && <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-300">{l.reason}</p>}
                     {l.adminNote && <p className="mt-1 text-xs text-rose-500">{l.adminNote}</p>}
                   </div>
                   <Badge tone={TONES[l.status]}>{l.status}</Badge>

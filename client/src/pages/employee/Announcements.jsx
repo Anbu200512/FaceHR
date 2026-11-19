@@ -44,7 +44,7 @@ export default function Announcements() {
                 {a.audience === 'department' && <Badge tone="sky">{a.department?.name || 'Department'}</Badge>}
               </div>
               <p className="mt-2 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">{a.message}</p>
-              <p className="mt-2 text-xs text-slate-400">
+              <p className="mt-2 text-xs text-slate-400 dark:text-slate-300">
                 {a.author?.name ? `By ${a.author.name} · ` : ''}{formatDateTime(a.createdAt)}
                 {a.expiresAt ? ` · Valid until ${formatDateTime(a.expiresAt)}` : ''}
               </p>

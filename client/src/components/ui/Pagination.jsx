@@ -10,7 +10,7 @@ export default function Pagination({ page, pageSize, total, onPageChange, onPage
 
   return (
     <div className="flex flex-col items-center justify-between gap-3 border-t px-4 py-3 dark:border-slate-700 sm:flex-row">
-      <p className="text-xs text-slate-500 dark:text-slate-400">
+      <p className="text-xs text-slate-500 dark:text-slate-300">
         Showing <span className="font-semibold text-slate-700 dark:text-slate-200">{from}-{to}</span> of{' '}
         <span className="font-semibold text-slate-700 dark:text-slate-200">{total}</span>
       </p>

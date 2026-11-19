@@ -34,7 +34,7 @@ export default function EmployeeWeekOff() {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Weekly schedule</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Configured by your admin</p>
+              <p className="text-sm text-slate-500 dark:text-slate-300">Configured by your admin</p>
             </div>
           </div>
         </div>
@@ -62,26 +62,26 @@ export default function EmployeeWeekOff() {
             <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/40">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Primary week off</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-300">Primary week off</p>
                   <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">{weeklyOffDay || 'Not set'}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-700 dark:bg-slate-800/40">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Second week off</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-300">Second week off</p>
                   <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">{secondWeeklyOffDay || 'None'}</p>
                 </div>
               </div>
 
               <div className="mt-6">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Working days</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-300">Working days</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {workingDays.length ? workingDays.map((d) => (
                     <span key={d} className="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-500/10 dark:text-brand-300 dark:ring-brand-500/30">{d}</span>
-                  )) : <span className="text-sm text-slate-500 dark:text-slate-400">No working days set.</span>}
+                  )) : <span className="text-sm text-slate-500 dark:text-slate-300">No working days set.</span>}
                 </div>
               </div>
 
               <div className="mt-6 flex items-start gap-2 rounded-xl border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                <Coffee className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                <Coffee className="mt-0.5 h-4 w-4 shrink-0 text-slate-400 dark:text-slate-300" />
                 <span>Week off is managed by your admin. Contact HR/admin for changes.</span>
               </div>
             </>

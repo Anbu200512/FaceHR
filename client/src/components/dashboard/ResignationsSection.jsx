@@ -46,7 +46,7 @@ export default function ResignationsSection({ rows, loading, refetch, title = 'R
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{title}</h2>
-          <p className="text-xs text-slate-400">{description}</p>
+          <p className="text-xs text-slate-400 dark:text-slate-300">{description}</p>
         </div>
         {pending > 0 && <Badge tone="amber">{pending} pending</Badge>}
       </div>
@@ -70,7 +70,7 @@ export default function ResignationsSection({ rows, loading, refetch, title = 'R
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b text-xs uppercase tracking-wide text-slate-400 dark:border-slate-700">
+                <tr className="border-b text-xs uppercase tracking-wide text-slate-400 dark:text-slate-300 dark:border-slate-700">
                   <th className="px-4 py-3 font-medium">Employee</th>
                   <th className="px-4 py-3 font-medium">Reason</th>
                   <th className="px-4 py-3 font-medium">Resignation date</th>
@@ -93,13 +93,13 @@ export default function ResignationsSection({ rows, loading, refetch, title = 'R
                           <p className="truncate font-semibold text-slate-800 dark:text-slate-100">
                             {r.employee?.firstName} {r.employee?.lastName}
                           </p>
-                          <p className="truncate text-xs text-slate-400">{r.employee?.department?.name || 'No department'}</p>
+                          <p className="truncate text-xs text-slate-400 dark:text-slate-300">{r.employee?.department?.name || 'No department'}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-700 dark:text-slate-200">{r.reason}</p>
-                      {r.feedback && <p className="max-w-[220px] truncate text-xs text-slate-400" title={r.feedback}>“{r.feedback}”</p>}
+                      {r.feedback && <p className="max-w-[220px] truncate text-xs text-slate-400 dark:text-slate-300" title={r.feedback}>“{r.feedback}”</p>}
                       {r.adminNote && <p className="max-w-[220px] truncate text-xs text-rose-500" title={r.adminNote}>Note: {r.adminNote}</p>}
                     </td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{formatDate(r.resignationDate)}</td>
@@ -148,16 +148,16 @@ export default function ResignationsSection({ rows, loading, refetch, title = 'R
                 <div className="min-w-0">
                   <p className="font-semibold text-slate-800 dark:text-slate-100">
                     {review.item.employee?.firstName} {review.item.employee?.lastName}
-                    <span className="font-normal text-slate-400"> · {review.item.employee?.department?.name || 'No department'}</span>
+                    <span className="font-normal text-slate-400 dark:text-slate-300"> · {review.item.employee?.department?.name || 'No department'}</span>
                   </p>
-                  <p className="text-xs text-slate-400">Submitted {formatDateTime(review.item.createdAt)}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-300">Submitted {formatDateTime(review.item.createdAt)}</p>
                 </div>
               </div>
               <div className="mt-3 grid gap-1.5">
                 <p><span className="font-semibold">Reason:</span> {review.item.reason}</p>
                 <p><span className="font-semibold">Resignation date:</span> {formatDate(review.item.resignationDate)}</p>
                 {review.item.feedback && <p><span className="font-semibold">Feedback:</span> {review.item.feedback}</p>}
-                {review.item.comments && <p className="text-xs text-slate-400">{review.item.comments}</p>}
+                {review.item.comments && <p className="text-xs text-slate-400 dark:text-slate-300">{review.item.comments}</p>}
                 {review.item.adminNote && <p className="text-xs text-rose-500"><span className="font-semibold">Admin note:</span> {review.item.adminNote}</p>}
               </div>
             </div>
@@ -171,7 +171,7 @@ export default function ResignationsSection({ rows, loading, refetch, title = 'R
                 <div>
                   <label className="label">Admin note {review.action === 'reject' && '(recommended)'}</label>
                   <div className="relative">
-                    <MessageSquareText className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                    <MessageSquareText className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400 dark:text-slate-300" />
                     <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} className="input pl-9" placeholder="Optional note to the employee…" />
                   </div>
                 </div>

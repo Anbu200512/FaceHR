@@ -47,14 +47,14 @@ export default function Login() {
           </div>
           <div className="min-w-0">
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 sm:text-2xl">Welcome back</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Sign in to your FaceHR account</p>
+            <p className="text-sm text-slate-500 dark:text-slate-300">Sign in to your FaceHR account</p>
           </div>
         </div>
       </div>
 
       <div className="px-5 py-5 sm:px-7 sm:py-6">
         <div className="mb-5">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Sign in as</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">Sign in as</p>
           <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2" role="tablist" aria-label="Sign in as">
             {TABS.map((t) => {
               const active = role === t.key;
@@ -73,7 +73,7 @@ export default function Login() {
                   )}
                 >
                   <p className={clsx('text-sm font-semibold', active ? 'text-brand-700 dark:text-brand-300' : 'text-slate-700 dark:text-slate-200')}>{t.label}</p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">{t.hint}</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-300">{t.hint}</p>
                 </button>
               );
             })}
@@ -87,7 +87,7 @@ export default function Login() {
               'flex items-center gap-2.5 rounded-xl border bg-slate-50/50 px-3.5 py-3 transition focus-within:bg-white focus-within:ring-4 dark:bg-slate-800/40 dark:focus-within:bg-slate-900',
               errors.identifier ? 'border-rose-400 focus-within:ring-rose-500/10' : 'border-slate-200 focus-within:border-brand-500 focus-within:ring-brand-500/10 dark:border-slate-700'
             )}>
-              <span className="shrink-0 text-slate-400">{isEmployee ? <IdCard className="h-4 w-4" /> : <AtSign className="h-4 w-4" />}</span>
+              <span className="shrink-0 text-slate-400 dark:text-slate-300">{isEmployee ? <IdCard className="h-4 w-4" /> : <AtSign className="h-4 w-4" />}</span>
               <input
                 id="identifier"
                 type="text"
@@ -107,7 +107,7 @@ export default function Login() {
               'flex items-center gap-2.5 rounded-xl border bg-slate-50/50 px-3.5 py-3 transition focus-within:bg-white focus-within:ring-4 dark:bg-slate-800/40 dark:focus-within:bg-slate-900',
               errors.password ? 'border-rose-400 focus-within:ring-rose-500/10' : 'border-slate-200 focus-within:border-brand-500 focus-within:ring-brand-500/10 dark:border-slate-700'
             )}>
-              <span className="shrink-0 text-slate-400"><Lock className="h-4 w-4" /></span>
+              <span className="shrink-0 text-slate-400 dark:text-slate-300"><Lock className="h-4 w-4" /></span>
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
@@ -119,7 +119,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setShowPassword((s) => !s)}
-                className="-m-1 shrink-0 rounded-lg p-2 text-slate-400 hover:bg-slate-200/70 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                className="-m-1 shrink-0 rounded-lg p-2 text-slate-400 dark:text-slate-300 hover:bg-slate-200/70 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -140,7 +140,7 @@ export default function Login() {
             {isSubmitting ? 'Signing in...' : (<><span>Sign in</span><ArrowRight className="h-4 w-4" /></>)}
           </Button>
 
-          <p className="rounded-lg bg-slate-50 px-3 py-2 text-center text-xs text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+          <p className="rounded-lg bg-slate-50 px-3 py-2 text-center text-xs text-slate-500 dark:text-slate-300 dark:bg-slate-800/50">
             {isEmployee ? 'Use your Employee ID or registered email to continue.' : 'Use your administrator email to continue.'}
           </p>
         </form>

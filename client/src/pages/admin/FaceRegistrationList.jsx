@@ -54,7 +54,7 @@ export default function FaceRegistrationList() {
                 <p className="truncate font-semibold text-slate-800 dark:text-slate-100">
                   {[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")}
                 </p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400 dark:text-slate-300">
                   {emp.employeeId} · {emp.department?.name || 'No dept'}
                 </p>
                 <div className="mt-1.5"><Badge>Not Registered</Badge></div>

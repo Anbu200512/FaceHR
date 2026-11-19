@@ -10,7 +10,7 @@ export default function LocationAttendance({ rows, loading }) {
     <div className="min-w-0">
       <div className="mb-3">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Location-wise Attendance</h2>
-        <p className="text-xs text-slate-400">Attendance status across office locations</p>
+        <p className="text-xs text-slate-400 dark:text-slate-300">Attendance status across office locations</p>
       </div>
 
       <Card className="overflow-hidden">
@@ -29,7 +29,7 @@ export default function LocationAttendance({ rows, loading }) {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b text-xs uppercase tracking-wide text-slate-400 dark:border-slate-700">
+                <tr className="border-b text-xs uppercase tracking-wide text-slate-400 dark:text-slate-300 dark:border-slate-700">
                   <th className="px-4 py-3 font-medium">Location</th>
                   <th className="px-4 py-3 text-right font-medium">Employees</th>
                   <th className="px-4 py-3 text-right font-medium">Present</th>
@@ -65,7 +65,7 @@ export default function LocationAttendance({ rows, loading }) {
                               style={{ width: `${Math.min(100, presentPct)}%` }}
                             />
                           </div>
-                          <span className="w-12 text-xs text-slate-400">{presentPct}%</span>
+                          <span className="w-12 text-xs text-slate-400 dark:text-slate-300">{presentPct}%</span>
                         </div>
                       </td>
                     </tr>

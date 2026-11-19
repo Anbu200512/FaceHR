@@ -41,6 +41,13 @@ export default function TimeInput({ value, onChange, className, placeholder, dis
 
   const empty = !parts.h || !parts.m || !parts.ap;
 
+  const selectCls = clsx(
+    'rounded-md border-0 bg-transparent py-0.5 text-sm font-semibold text-slate-700 outline-none dark:bg-slate-900 dark:text-slate-200',
+    empty && 'text-slate-400 dark:text-slate-300'
+  );
+  const optCls = 'bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100';
+  const optPlaceholderCls = 'bg-white text-slate-500 dark:bg-slate-800 dark:text-slate-400';
+
   return (
     <div
       className={clsx(
@@ -55,32 +62,32 @@ export default function TimeInput({ value, onChange, className, placeholder, dis
         value={parts.h}
         disabled={disabled}
         onChange={(e) => emit({ h: e.target.value })}
-        className={clsx('w-14 border-0 bg-transparent py-0.5 text-sm font-semibold text-slate-700 outline-none dark:text-slate-200', empty && 'text-slate-400')}
+        className={clsx('w-14', selectCls)}
       >
-        <option value="">hh</option>
-        {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+        <option value="" className={optPlaceholderCls}>hh</option>
+        {HOURS.map((h) => <option key={h} value={h} className={optCls}>{h}</option>)}
       </select>
-      <span className="text-sm font-semibold text-slate-400">:</span>
+      <span className="text-sm font-semibold text-slate-400 dark:text-slate-300">:</span>
       <select
         aria-label="Minute"
         value={parts.m}
         disabled={disabled}
         onChange={(e) => emit({ m: e.target.value })}
-        className={clsx('w-14 border-0 bg-transparent py-0.5 text-sm font-semibold text-slate-700 outline-none dark:text-slate-200', empty && 'text-slate-400')}
+        className={clsx('w-14', selectCls)}
       >
-        <option value="">mm</option>
-        {MINUTES.map((m) => <option key={m} value={m}>{m}</option>)}
+        <option value="" className={optPlaceholderCls}>mm</option>
+        {MINUTES.map((m) => <option key={m} value={m} className={optCls}>{m}</option>)}
       </select>
       <select
         aria-label="AM or PM"
         value={parts.ap}
         disabled={disabled}
         onChange={(e) => emit({ ap: e.target.value })}
-        className={clsx('w-16 border-0 bg-transparent py-0.5 text-sm font-bold text-slate-700 outline-none dark:text-slate-200', empty && 'text-slate-400')}
+        className={clsx('w-16', selectCls)}
       >
-        <option value="">-</option>
-        <option value="AM">AM</option>
-        <option value="PM">PM</option>
+        <option value="" className={optPlaceholderCls}>-</option>
+        <option value="AM" className={optCls}>AM</option>
+        <option value="PM" className={optCls}>PM</option>
       </select>
     </div>
   );

@@ -105,7 +105,7 @@ export default function NotificationsPage() {
       ) : (
         <div className="space-y-3">
           {unreadCount > 0 && (
-            <p className="text-sm text-slate-500 dark:text-slate-400">{unreadCount} unread notification{unreadCount === 1 ? '' : 's'}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-300">{unreadCount} unread notification{unreadCount === 1 ? '' : 's'}</p>
           )}
           {items.map((n) => {
             const nid = n.id || n._id;
@@ -123,7 +123,7 @@ export default function NotificationsPage() {
                       <div className="min-w-0 flex-1">
                         <p className={`text-sm font-semibold ${n.read ? 'text-slate-700 dark:text-slate-200' : 'text-slate-900 dark:text-slate-100'}`}>{n.title}</p>
                         {n.message && <p className="mt-1 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">{n.message}</p>}
-                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 dark:text-slate-300">
                           <span>{formatDateTime(n.createdAt)}</span>
                           {n.link && (
                             <span className="inline-flex items-center gap-1 text-brand-600 dark:text-brand-400">

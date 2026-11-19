@@ -13,7 +13,7 @@ export default function NewJoinersList({ rows, loading }) {
     <div className="min-w-0">
       <div className="mb-3">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">New Joiners This Month</h2>
-        <p className="text-xs text-slate-400">Employees who joined this month</p>
+        <p className="text-xs text-slate-400 dark:text-slate-300">Employees who joined this month</p>
       </div>
 
       <Card className="overflow-hidden">
@@ -40,7 +40,7 @@ export default function NewJoinersList({ rows, loading }) {
                   <p className="truncate font-semibold text-slate-800 dark:text-slate-100">
                     {[e.firstName, e.middleName, e.lastName].filter(Boolean).join(" ")}
                   </p>
-                  <p className="flex items-center gap-1 truncate text-xs text-slate-400">
+                  <p className="flex items-center gap-1 truncate text-xs text-slate-400 dark:text-slate-300">
                     {e.department?.name || 'No department'}
                     {e.office?.name && (
                       <span className="inline-flex items-center gap-0.5"><MapPin className="h-3 w-3" /> {e.office.name}</span>

@@ -28,7 +28,7 @@ export function SectionCard({ title, subtitle, icon: Icon, children }) {
         </div>
         <div>
           <h3 className="font-bold text-slate-900 dark:text-slate-100">{title}</h3>
-          {subtitle && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>}
+          {subtitle && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-300">{subtitle}</p>}
         </div>
       </div>
       <div className="p-5">{children}</div>
@@ -75,7 +75,7 @@ export function UploadChip({ name, sizeLabel, onRemove, meta, children }) {
         <UploadCloud className="h-4 w-4 shrink-0 text-brand-500" />
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{name}</p>
-          {sizeLabel && <p className="truncate text-xs text-slate-400">{sizeLabel}</p>}
+          {sizeLabel && <p className="truncate text-xs text-slate-400 dark:text-slate-300">{sizeLabel}</p>}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
@@ -124,7 +124,7 @@ export function CheckboxField({ label, checked, onChange, hint }) {
       />
       <span className="min-w-0">
         <span className="font-medium">{label}</span>
-        {hint && <span className="ml-1 text-xs font-normal text-slate-400">{hint}</span>}
+        {hint && <span className="ml-1 text-xs font-normal text-slate-400 dark:text-slate-300">{hint}</span>}
       </span>
     </label>
   );

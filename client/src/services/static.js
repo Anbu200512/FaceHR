@@ -5,7 +5,7 @@ export const STATUS_STYLES = {
   'Half Day': 'bg-purple-50 text-purple-700 ring-purple-600/20 dark:bg-purple-500/10 dark:text-purple-400',
   'On Leave': 'bg-sky-50 text-sky-700 ring-sky-600/20 dark:bg-sky-500/10 dark:text-sky-400',
   Leave: 'bg-sky-50 text-sky-700 ring-sky-600/20 dark:bg-sky-500/10 dark:text-sky-400',
-  Weekend: 'bg-slate-100 text-slate-500 ring-slate-500/20 dark:bg-slate-700/40 dark:text-slate-400',
+  Weekend: 'bg-slate-100 text-slate-500 dark:text-slate-300 ring-slate-500/20 dark:bg-slate-700/40',
   Active: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400',
   Inactive: 'bg-slate-100 text-slate-600 ring-slate-500/20 dark:bg-slate-700/40 dark:text-slate-300',
   Pending: 'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400',

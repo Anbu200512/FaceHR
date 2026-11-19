@@ -6,8 +6,8 @@ import { formatDuration } from '../../services/format';
 
 function Metric({ icon: Icon, label, value }) {
   return (
-    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-      <Icon className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-300">
+      <Icon className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-300" />
       <span>{label}</span>
       <span className="ml-auto font-bold text-slate-800 dark:text-slate-100">{value}</span>
     </div>
@@ -27,7 +27,7 @@ export default function MonthlyAttendanceCard({ row }) {
         <Avatar name={name} src={emp.profilePhoto} size="md" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">{name}</p>
-          <p className="truncate text-xs text-slate-400">{emp.employeeId} · {dept}{office ? ` · ${office}` : ''}</p>
+          <p className="truncate text-xs text-slate-400 dark:text-slate-300">{emp.employeeId} · {dept}{office ? ` · ${office}` : ''}</p>
         </div>
         <Badge>{row.status}</Badge>
       </div>

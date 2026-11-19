@@ -7,7 +7,6 @@ import api, { extractError } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import { useToast } from '../../context/ToastContext';
 import { formatDuration, toDateKey } from '../../services/format';
-import { exportAttendanceToCsv, exportAttendanceToPdf } from '../../services/export';
 import PageHeader from '../../components/PageHeader';
 import { Card, StatCard } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -57,13 +56,24 @@ export default function Reports() {
     { name: 'Half Day', value: s.halfDays },
   ].filter((d) => d.value > 0) : [];
 
-  const handleExport = (format) => {
-    if (!data || !data.rows.length) { toast.error('No rows to export. Enable “Include detail rows”.'); return; }
+  const handleExport = async (format) => {
+    if (!data || !data.rows.length) {
+      toast.error('No rows to export. Enable "Include detail rows".');
+      return;
+    }
     const summary = {
       range: { from: data.summary.range.from, to: data.summary.range.to },
     };
-    if (format === 'csv') exportAttendanceToCsv(data.rows, `facehr-report-${summary.range.from}-${summary.range.to}`);
-    else exportAttendanceToPdf(data.rows, summary);
+    try {
+      const { exportAttendanceToCsv, exportAttendanceToPdf } = await import('../../services/export');
+      if (format === 'csv') {
+        exportAttendanceToCsv(data.rows, `facehr-report-${summary.range.from}-${summary.range.to}`);
+      } else {
+        await exportAttendanceToPdf(data.rows, summary);
+      }
+    } catch (err) {
+      toast.error('Could not export report');
+    }
   };
 
   return (
@@ -98,7 +108,7 @@ export default function Reports() {
             </label>
           </div>
         </div>
-        <p className="mt-3 text-xs text-slate-400">Ranges are limited to 92 days.</p>
+        <p className="mt-3 text-xs text-slate-400 dark:text-slate-300">Ranges are limited to 92 days.</p>
       </Card>
 
       {loading && !data ? (
@@ -194,7 +204,7 @@ export default function Reports() {
                   <tbody>
                     {data?.rows?.slice(0, 50).map((r, idx) => (
                       <tr key={idx} className="border-b last:border-0 dark:border-slate-700">
-                        <td className="td"><p className="font-semibold text-slate-800 dark:text-slate-100">{r.employeeName}</p><p className="text-xs text-slate-400">{r.employeeId}</p></td>
+                        <td className="td"><p className="font-semibold text-slate-800 dark:text-slate-100">{r.employeeName}</p><p className="text-xs text-slate-400 dark:text-slate-300">{r.employeeId}</p></td>
                         <td className="td">{r.department}</td>
                         <td className="td">{r.date}</td>
                         <td className="td">{r.checkIn ? new Date(r.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</td>

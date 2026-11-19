@@ -25,7 +25,7 @@ export default function Departments() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`rounded-lg px-4 py-1.5 text-sm font-semibold capitalize transition ${tab === t ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
+            className={`rounded-lg px-4 py-1.5 text-sm font-semibold capitalize transition ${tab === t ? 'bg-brand-600 text-white' : 'text-slate-500 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-200'}`}
           >
             {t}
           </button>
@@ -94,7 +94,7 @@ function DepartmentsTab() {
   return (
     <div>
       <Card className="mb-4 flex items-center justify-between p-4">
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <p className="text-sm text-slate-500 dark:text-slate-300">
           {loading ? 'Loading…' : `${data?.length || 0} departments`}
         </p>
         <Button size="sm" onClick={openNew}><Plus className="h-4 w-4" /> New Department</Button>
@@ -122,19 +122,19 @@ function DepartmentsTab() {
                   {d.head ? (
                     <div className="mt-2 flex items-center gap-2">
                       <Avatar name={`${d.head.firstName} ${d.head.lastName}`} size="xs" />
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <p className="text-xs text-slate-500 dark:text-slate-300">
                         Head: <span className="font-medium text-slate-700 dark:text-slate-200">{d.head.firstName} {d.head.lastName}</span>
                       </p>
                     </div>
                   ) : (
-                    <p className="mt-2 text-xs text-slate-400">No head assigned</p>
+                    <p className="mt-2 text-xs text-slate-400 dark:text-slate-300">No head assigned</p>
                   )}
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <button onClick={() => openEdit(d)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand-600 dark:text-slate-400 dark:hover:bg-slate-800">
+                  <button onClick={() => openEdit(d)} className="rounded-lg p-1.5 text-slate-500 dark:text-slate-300 hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800">
                     <Pencil className="h-4 w-4" />
                   </button>
-                  <button onClick={() => setDeleteId(d._id)} className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10">
+                  <button onClick={() => setDeleteId(d._id)} className="rounded-lg p-1.5 text-slate-500 dark:text-slate-300 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -222,7 +222,7 @@ function DesignationsTab() {
   return (
     <div>
       <Card className="mb-4 flex items-center justify-between p-4">
-        <p className="text-sm text-slate-500 dark:text-slate-400">{loading ? 'Loading…' : `${data?.length || 0} designations`}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-300">{loading ? 'Loading…' : `${data?.length || 0} designations`}</p>
         <Button size="sm" onClick={openNew}><Plus className="h-4 w-4" /> New Designation</Button>
       </Card>
 
@@ -243,10 +243,10 @@ function DesignationsTab() {
             <Card key={d._id} className="flex items-center justify-between p-4">
               <span className="font-semibold text-slate-800 dark:text-slate-100">{d.name}</span>
               <div className="flex gap-1">
-                <button onClick={() => openEdit(d)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand-600 dark:text-slate-400 dark:hover:bg-slate-800">
+                <button onClick={() => openEdit(d)} className="rounded-lg p-1.5 text-slate-500 dark:text-slate-300 hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800">
                   <Pencil className="h-4 w-4" />
                 </button>
-                <button onClick={() => setDeleteId(d._id)} className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10">
+                <button onClick={() => setDeleteId(d._id)} className="rounded-lg p-1.5 text-slate-500 dark:text-slate-300 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>

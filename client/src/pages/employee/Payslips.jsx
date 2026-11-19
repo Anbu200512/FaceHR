@@ -82,7 +82,7 @@ export default function Payslips() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-slate-800 dark:text-slate-100">{monthName(p.month)} {p.year}</p>
-                  <p className="text-xs text-slate-400">{p.presentDays}/{p.workingDays} days present · {p.lopDays} LOP</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-300">{p.presentDays}/{p.workingDays} days present · {p.lopDays} LOP</p>
                 </div>
               </div>
               <div className="flex items-center justify-between gap-3 sm:justify-end">
@@ -104,12 +104,12 @@ export default function Payslips() {
           <div className="space-y-4">
             <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/60">
               <p className="font-bold text-slate-900 dark:text-slate-100">{detail.employee?.firstName} {detail.employee?.lastName}</p>
-              <p className="text-xs text-slate-400">{detail.employeeId}{detail.employee?.department?.name ? ` · ${detail.employee.department.name}` : ''}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-300">{detail.employeeId}{detail.employee?.department?.name ? ` · ${detail.employee.department.name}` : ''}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div className="rounded-xl border p-3 dark:border-slate-700">
-                <p className="mb-2 text-xs font-semibold uppercase text-slate-400">Earnings</p>
+                <p className="mb-2 text-xs font-semibold uppercase text-slate-400 dark:text-slate-300">Earnings</p>
                 <Row label="Basic" value={money(detail.basic, detail.currency)} />
                 <Row label="HRA" value={money(detail.hra, detail.currency)} />
                 <Row label="Special allowance" value={money(detail.specialAllowance, detail.currency)} />
@@ -117,7 +117,7 @@ export default function Payslips() {
                 <div className="mt-2 flex justify-between border-t pt-2 font-semibold dark:border-slate-700"><span>Gross</span><span>{money(detail.gross, detail.currency)}</span></div>
               </div>
               <div className="rounded-xl border p-3 dark:border-slate-700">
-                <p className="mb-2 text-xs font-semibold uppercase text-slate-400">Deductions</p>
+                <p className="mb-2 text-xs font-semibold uppercase text-slate-400 dark:text-slate-300">Deductions</p>
                 <Row label="Base deductions" value={money(detail.breakdown?.deductions?.base ?? 0, detail.currency)} />
                 <Row label={`Loss of pay (${detail.lopDays}d)`} value={money(detail.lopAmount, detail.currency)} />
                 <Row label="PF" value={money(detail.pf, detail.currency)} />
@@ -130,7 +130,7 @@ export default function Payslips() {
               <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Net Pay</span>
               <span className="text-lg font-bold text-emerald-700 dark:text-emerald-300">{money(detail.netPay, detail.currency)}</span>
             </div>
-            <div className="text-xs text-slate-400">
+            <div className="text-xs text-slate-400 dark:text-slate-300">
               Attendance: {detail.presentDays} present · {detail.breakdown?.paidLeaveDays || 0} paid leave · {detail.lopDays} loss of pay · {detail.workingDays} working days
             </div>
           </div>

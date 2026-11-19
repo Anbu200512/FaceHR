@@ -20,6 +20,16 @@ export default function GeofenceMap({ center, radius = 100, interactive = false,
   const mapRef = useRef(null);
   const markerRef = useRef(null);
   const circleRef = useRef(null);
+  const onPickRef = useRef(onPick);
+  const interactiveRef = useRef(interactive);
+
+  useEffect(() => {
+    onPickRef.current = onPick;
+  }, [onPick]);
+
+  useEffect(() => {
+    interactiveRef.current = interactive;
+  }, [interactive]);
 
   const lat = Number(center?.latitude ?? center?.lat);
   const lng = Number(center?.longitude ?? center?.lng);
@@ -37,8 +47,8 @@ export default function GeofenceMap({ center, radius = 100, interactive = false,
     L.tileLayer(OSM_TILES, { attribution: TILE_ATTRIBUTION, maxZoom: 19 }).addTo(map);
 
     map.on('click', (e) => {
-      if (!interactive) return;
-      onPick?.({ lat: Number(e.latlng.lat.toFixed(6)), lng: Number(e.latlng.lng.toFixed(6)) });
+      if (!interactiveRef.current) return;
+      onPickRef.current?.({ lat: Number(e.latlng.lat.toFixed(6)), lng: Number(e.latlng.lng.toFixed(6)) });
     });
 
     mapRef.current = map;
@@ -58,7 +68,6 @@ export default function GeofenceMap({ center, radius = 100, interactive = false,
     // Re-center only when the actual center changes, so the user's pan/zoom
     // position is preserved when just the radius is edited.
     map.setView([lat, lng], Math.max(map.getZoom(), zoom));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lat, lng, hasCenter, zoom]);
 
   useEffect(() => {
@@ -67,10 +76,10 @@ export default function GeofenceMap({ center, radius = 100, interactive = false,
 
     if (!markerRef.current) {
       markerRef.current = L.marker([lat, lng], { icon: makePinIcon(), draggable: interactive }).addTo(map);
-      markerRef.current.on('dragend', (_e) => {
-        if (!interactive) return;
+      markerRef.current.on('dragend', () => {
+        if (!interactiveRef.current) return;
         const ll = markerRef.current.getLatLng();
-        onPick?.({ lat: Number(ll.lat.toFixed(6)), lng: Number(ll.lng.toFixed(6)) });
+        onPickRef.current?.({ lat: Number(ll.lat.toFixed(6)), lng: Number(ll.lng.toFixed(6)) });
       });
     } else {
       markerRef.current.setLatLng([lat, lng]);
@@ -94,8 +103,7 @@ export default function GeofenceMap({ center, radius = 100, interactive = false,
       circleRef.current.setLatLng([lat, lng]);
       circleRef.current.setRadius(Math.max(1, Number(radius) || 1));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lat, lng, radius, interactive, hasCenter, onPick]);
+  }, [lat, lng, radius, interactive, hasCenter]);
 
   return <div ref={containerRef} style={{ height }} className={`z-0 overflow-hidden rounded-xl ${className}`} />;
 }

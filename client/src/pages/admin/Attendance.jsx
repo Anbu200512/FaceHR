@@ -9,7 +9,6 @@ import {
   formatTime,
   formatDuration,
 } from '../../services/format';
-import { exportAttendanceToCsv } from '../../services/export';
 import PageHeader from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -75,7 +74,7 @@ export default function Attendance() {
   const handleExport = async () => {
     const payload = rows.map((r) => ({
       employeeId: r.employee.employeeId,
-      employeeName: `${[r.employee.firstName, r.employee.middleName, r.employee.lastName].filter(Boolean).join(" ")}`,
+      employeeName: `${[r.employee.firstName, r.employee.middleName, r.employee.lastName].filter(Boolean).join(' ')}`,
       department: r.employee.department?.name || '-',
       date: formatDate(r.date),
       checkIn: r.checkInTime ? formatTime(r.checkInTime) : '-',
@@ -83,7 +82,12 @@ export default function Attendance() {
       hours: r.workingHoursMinutes ? formatDuration(r.workingHoursMinutes) : '-',
       status: r.status,
     }));
-    exportAttendanceToCsv(payload, `attendance-${date || 'export'}`);
+    try {
+      const { exportAttendanceToCsv } = await import('../../services/export');
+      exportAttendanceToCsv(payload, `attendance-${date || 'export'}`);
+    } catch {
+      // export is a client-side action; ignore module load failures silently
+    }
   };
 
   return (
@@ -99,7 +103,7 @@ export default function Attendance() {
       <Card className="mb-5 p-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-300" />
             <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Employee or ID" className="input pl-9" />
           </div>
           <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setPage(1); }} className="input" title="Date" />
@@ -150,7 +154,7 @@ export default function Attendance() {
                   <tr key={r._id || `${r.employee._id}-${r.date}`} className="border-b transition last:border-0 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50">
                     <td className="td">
                       <p className="font-semibold text-slate-800 dark:text-slate-100">{[r.employee.firstName, r.employee.middleName, r.employee.lastName].filter(Boolean).join(" ")}</p>
-                      <p className="text-xs text-slate-400">{r.employeeId || r.employee.employeeId}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-300">{r.employeeId || r.employee.employeeId}</p>
                     </td>
                     <td className="td">{formatDate(r.date)}</td>
                     <td className="td">{r.checkInTime ? formatTime(r.checkInTime) : '-'}</td>
@@ -162,13 +166,13 @@ export default function Attendance() {
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Verified
                         </span>
-                      ) : <span className="text-xs text-slate-400">Manual</span>}
+                      ) : <span className="text-xs text-slate-400 dark:text-slate-300">Manual</span>}
                     </td>
                     <td className="td">
                       <div className="flex justify-end gap-1.5">
                         {r.checkInPhoto && <PhotoThumb src={resolveAsset(r.checkInPhoto)} label={`Check-in · ${formatTime(r.checkInTime)}`} onView={() => setView({ src: resolveAsset(r.checkInPhoto), label: `Check-in · ${formatTime(r.checkInTime)}` })} />}
                         {r.checkOutPhoto && <PhotoThumb src={resolveAsset(r.checkOutPhoto)} label={`Check-out · ${formatTime(r.checkOutTime)}`} onView={() => setView({ src: resolveAsset(r.checkOutPhoto), label: `Check-out · ${formatTime(r.checkOutTime)}` })} />}
-                        {!r.checkInPhoto && !r.checkOutPhoto && <span className="text-xs text-slate-300">-</span>}
+                        {!r.checkInPhoto && !r.checkOutPhoto && <span className="text-xs text-slate-300 dark:text-slate-300">-</span>}
                       </div>
                     </td>
                   </tr>
@@ -203,11 +207,11 @@ export default function Attendance() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-semibold text-slate-800 dark:text-slate-100">{[r.employee.firstName, r.employee.middleName, r.employee.lastName].filter(Boolean).join(" ")}</p>
-                  <p className="text-xs text-slate-400">{formatDate(r.date)} · {r.employeeId}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-300">{formatDate(r.date)} · {r.employeeId}</p>
                 </div>
                 <Badge>{r.status}</Badge>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-300">
                 <div>In: <span className="font-semibold text-slate-700 dark:text-slate-200">{r.checkInTime ? formatTime(r.checkInTime) : '-'}</span></div>
                 <div>Out: <span className="font-semibold text-slate-700 dark:text-slate-200">{r.checkOutTime ? formatTime(r.checkOutTime) : '-'}</span></div>
                 <div className="col-span-2">Hours: <span className="font-semibold text-slate-700 dark:text-slate-200">{r.workingHoursMinutes ? formatDuration(r.workingHoursMinutes) : '-'}</span></div>
@@ -227,7 +231,7 @@ export default function Attendance() {
       </div>
 
       <Modal open={!!view} onClose={() => setView(null)} title={view?.label} size="sm">
-        {view && <img src={view.src} alt={view.label} className="w-full rounded-xl object-contain" />}
+        {view && <img src={view.src} alt={view.label} className="w-full rounded-xl object-contain" loading="lazy" decoding="async" />}
       </Modal>
     </div>
   );
@@ -236,7 +240,7 @@ export default function Attendance() {
 function PhotoThumb({ src, label, onView }) {
   return (
     <button onClick={onView} title={label} className="group relative">
-      <img src={src} alt={label} className="h-9 w-9 rounded-lg object-cover ring-1 ring-black/5" />
+      <img src={src} alt={label} className="h-9 w-9 rounded-lg object-cover ring-1 ring-black/5" loading="lazy" decoding="async" />
       <span className="absolute inset-0 hidden items-center justify-center rounded-lg bg-black/40 group-hover:flex">
         <Eye className="h-3.5 w-3.5 text-white" />
       </span>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import {
   UserRound,
   Landmark,
@@ -831,7 +831,7 @@ function WeekOffEditor({ emp, ctx, onSaved, readOnly = false }) {
   }
 
   return (
-    <SectionCard title="Week Off" subtitle="Configure the employee’s weekly off days and working days." icon={CalendarDays}>
+    <SectionCard title="Week Off" subtitle="Configure the employeeΓÇÖs weekly off days and working days." icon={CalendarDays}>
       <FieldGrid>
         <Select
           label="Weekly Off Day"
@@ -1090,7 +1090,7 @@ function WorkLocationEditor({ emp, ctx, onSaved }) {
             name="office"
             value={office}
             onChange={(e) => setOffice(e.target.value)}
-            placeholder={locLoading ? 'Loading locations…' : 'Select a location'}
+            placeholder={locLoading ? 'Loading locationsΓÇª' : 'Select a location'}
             options={locations.map((l) => ({ value: l._id, label: l.name }))}
           />
           <p className="mt-2 text-xs text-slate-400">
@@ -1221,7 +1221,7 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
               {emp.profilePhoto ? 'Profile photo uploaded' : 'No profile photo yet'}
             </p>
-            <p className="mt-0.5 text-xs text-slate-400">Allowed: JPG, PNG, WebP • Max 5 MB</p>
+            <p className="mt-0.5 text-xs text-slate-400">Allowed: JPG, PNG, WebP ΓÇó Max 5 MB</p>
             <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
               <label className={`btn-secondary text-xs ${photoBusy || removePhotoBusy ? 'pointer-events-none cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
                 <Camera className="h-4 w-4" /> {emp.profilePhoto ? 'Replace photo' : 'Upload photo'}
@@ -1235,11 +1235,11 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
               </label>
               {emp.profilePhoto && (
                 <Button type="button" variant="ghost" size="sm" onClick={() => setRemovePhotoOpen(true)} disabled={photoBusy || removePhotoBusy}>
-                  <Trash2 className="h-4 w-4" /> {removePhotoBusy ? 'Removing…' : 'Remove photo'}
+                  <Trash2 className="h-4 w-4" /> {removePhotoBusy ? 'RemovingΓÇª' : 'Remove photo'}
                 </Button>
               )}
-              {photoBusy && <Button type="button" variant="ghost" size="sm" loading disabled>Uploading photo…</Button>}
-              {removePhotoBusy && <Button type="button" variant="ghost" size="sm" loading disabled>Removing photo…</Button>}
+              {photoBusy && <Button type="button" variant="ghost" size="sm" loading disabled>Uploading photoΓÇª</Button>}
+              {removePhotoBusy && <Button type="button" variant="ghost" size="sm" loading disabled>Removing photoΓÇª</Button>}
             </div>
           </div>
         </div>
@@ -1265,11 +1265,11 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
               </label>
             </div>
           </div>
-          <p className="mt-3 text-xs text-slate-400">Any file type supported by the server • Max 10 MB</p>
+          <p className="mt-3 text-xs text-slate-400">Any file type supported by the server ΓÇó Max 10 MB</p>
           <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
             {form.file && <p className="min-w-0 flex-1 truncate text-xs text-slate-400">{form.file.name}</p>}
             <Button type="button" size="sm" onClick={onUpload} loading={uploading} disabled={uploading || !form.file}>
-              <FileUp className="h-4 w-4" /> {uploading ? 'Uploading…' : 'Upload'}
+              <FileUp className="h-4 w-4" /> {uploading ? 'UploadingΓÇª' : 'Upload'}
             </Button>
           </div>
         </div>
@@ -1293,7 +1293,7 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
                       <p className="font-semibold text-slate-800 dark:text-slate-100">{KIND_LABEL[d.kind] || d.kind || 'Document'}</p>
                       <p className="text-xs text-slate-400">
                         {d.originalName}
-                        {d.size ? ` · ${formatFileSize(d.size)}` : ''}
+                        {d.size ? ` ┬╖ ${formatFileSize(d.size)}` : ''}
                       </p>
                     </td>
                     <td className="td text-sm text-slate-500 dark:text-slate-400">{formatDate(d.updatedAt || d.createdAt)}</td>
@@ -1310,7 +1310,7 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
                           </>
                         )}
                         <label className={`inline-flex items-center gap-1 text-xs font-semibold text-slate-500 dark:text-slate-300 ${uploading || deleteBusy || replaceBusyId ? 'pointer-events-none cursor-not-allowed opacity-50' : 'cursor-pointer hover:underline'}`}>
-                          <RefreshCw className={`h-3.5 w-3.5 ${replaceBusyId === d._id ? 'animate-spin' : ''}`} /> {replaceBusyId === d._id ? 'Replacing…' : 'Replace'}
+                          <RefreshCw className={`h-3.5 w-3.5 ${replaceBusyId === d._id ? 'animate-spin' : ''}`} /> {replaceBusyId === d._id ? 'ReplacingΓÇª' : 'Replace'}
                           <input type="file" className="hidden" disabled={uploading || deleteBusy || !!replaceBusyId} onChange={(e) => { const f = e.target.files?.[0]; if (f) onReplace(d, f); e.target.value = ''; }} />
                         </label>
                         <button type="button" onClick={() => setDeleting(d)} disabled={uploading || deleteBusy || !!replaceBusyId} className="inline-flex items-center gap-1 text-xs font-semibold text-rose-500 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-400">

@@ -154,7 +154,7 @@ export default function AdminLayout() {
         {(!desktopSidebarCollapsed || drawer) && <Link to="/admin" onClick={() => setDrawer(false)}><Logo /></Link>}
         <button
           onClick={() => desktopSidebarCollapsed ? setDesktopSidebarCollapsed(false) : setDesktopSidebarCollapsed(true)}
-          className="hidden rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 lg:inline-flex"
+          className="hidden rounded-lg p-1.5 text-slate-400 dark:text-slate-300 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 lg:inline-flex"
           aria-label={desktopSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           title={desktopSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
@@ -165,7 +165,7 @@ export default function AdminLayout() {
         {NAV_SECTIONS.map((section) => (
           <div key={section.label}>
             {(!desktopSidebarCollapsed || drawer) && (
-              <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-300">
                 {section.label}
               </p>
             )}
@@ -217,7 +217,7 @@ export default function AdminLayout() {
                                 'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition',
                                 isActive
                                   ? 'bg-brand-50 font-medium text-brand-700 dark:bg-brand-500/10 dark:text-brand-400'
-                                  : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                                  : 'text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                               )
                             }
                           >
@@ -274,8 +274,8 @@ export default function AdminLayout() {
         ))}
       </nav>
       {(!desktopSidebarCollapsed || drawer) && <div className="border-t p-4 dark:border-slate-700">
-        <p className="text-xs font-semibold text-slate-400">FaceHR Admin</p>
-        <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">
+        <p className="text-xs font-semibold text-slate-400 dark:text-slate-300">FaceHR Admin</p>
+        <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400 dark:text-slate-300">
           Smart HR Management with Face-Based Attendance
         </p>
       </div>}
@@ -298,7 +298,7 @@ export default function AdminLayout() {
           <aside className="absolute inset-y-0 left-0 w-72 bg-white shadow-lift animate-slide-up dark:bg-slate-900">
             <button
               onClick={() => setDrawer(false)}
-              className="absolute right-3 top-3 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="absolute right-3 top-3 rounded-lg p-1.5 text-slate-400 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
               aria-label="Close menu"
             >
               <X className="h-5 w-5" />
@@ -313,7 +313,7 @@ export default function AdminLayout() {
         <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-white/90 px-4 backdrop-blur dark:border-slate-700 dark:bg-slate-900/90 sm:px-6">
           <button
             onClick={() => setDrawer(true)}
-            className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 lg:hidden"
+            className="rounded-xl p-2 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden"
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
@@ -321,7 +321,7 @@ export default function AdminLayout() {
           {!desktopSidebarOpen && (
             <button
               onClick={() => setDesktopSidebarOpen(true)}
-              className="hidden rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 lg:inline-flex"
+              className="hidden rounded-xl p-2 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 lg:inline-flex"
               aria-label="Open sidebar"
               title="Open sidebar"
             >
@@ -330,7 +330,7 @@ export default function AdminLayout() {
           )}
 
           <form onSubmit={onSearch} className="relative hidden flex-1 md:block md:max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-300" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -341,7 +341,7 @@ export default function AdminLayout() {
           <div className="ml-auto flex items-center gap-1.5">
             <button
               onClick={toggle}
-              className="rounded-xl p-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="rounded-xl p-2.5 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
               aria-label="Toggle dark mode"
             >
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
@@ -354,7 +354,7 @@ export default function AdminLayout() {
                 className="ml-1 flex items-center gap-2 rounded-xl p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <Avatar user={user?.employeeData || user} size="sm" name={user?.name} />
-                <ChevronDown className="hidden h-4 w-4 text-slate-400 sm:block" />
+                <ChevronDown className="hidden h-4 w-4 text-slate-400 dark:text-slate-300 sm:block" />
               </button>
               {profileOpen && (
                 <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-xl border bg-white shadow-lift dark:bg-slate-900">
@@ -362,7 +362,7 @@ export default function AdminLayout() {
                     <Avatar user={user?.employeeData || user} size="lg" name={user?.name} />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{user?.name}</p>
-                      <p className="truncate text-xs text-slate-400">{user?.email}</p>
+                      <p className="truncate text-xs text-slate-400 dark:text-slate-300">{user?.email}</p>
                     </div>
                   </div>
                   <button onClick={() => { setProfileOpen(false); setPwOpen(true); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">

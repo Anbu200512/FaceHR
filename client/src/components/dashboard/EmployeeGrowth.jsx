@@ -26,7 +26,7 @@ export default function EmployeeGrowth({ trend, hr, loading }) {
     <div className="min-w-0">
       <div className="mb-3">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Employee Growth</h2>
-        <p className="text-xs text-slate-400">Joiners, resignations and net change - last 6 months</p>
+        <p className="text-xs text-slate-400 dark:text-slate-300">Joiners, resignations and net change - last 6 months</p>
       </div>
 
       <Card className="p-5">
@@ -44,7 +44,7 @@ export default function EmployeeGrowth({ trend, hr, loading }) {
                 <div key={label} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                   <div className="flex items-center gap-2">
                     <Icon className={clsx('h-4 w-4', TONE_TXT[tone])} />
-                    <p className="truncate text-xs text-slate-400">{label}</p>
+                    <p className="truncate text-xs text-slate-400 dark:text-slate-300">{label}</p>
                   </div>
                   <p className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">{value}</p>
                 </div>
@@ -53,9 +53,9 @@ export default function EmployeeGrowth({ trend, hr, loading }) {
 
             {months.length === 0 ? (
               <div className="mt-4 flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center dark:border-slate-700">
-                <TrendingUp className="h-5 w-5 text-slate-300 dark:text-slate-600" />
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No growth data yet</p>
-                <p className="text-xs text-slate-400">Monthly joiners and resignations will be charted here.</p>
+                <TrendingUp className="h-5 w-5 text-slate-300 dark:text-slate-300" />
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-300">No growth data yet</p>
+                <p className="text-xs text-slate-400 dark:text-slate-300">Monthly joiners and resignations will be charted here.</p>
               </div>
             ) : (
               <div className="mt-4 h-52">

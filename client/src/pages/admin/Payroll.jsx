@@ -145,16 +145,16 @@ export default function Payroll() {
                     <td className="td"><Badge tone={r.status === 'Paid' ? 'emerald' : 'sky'}>{r.status}</Badge></td>
                     <td className="td">
                       <div className="flex justify-end gap-1">
-                        <button onClick={() => openDetail(r._id)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand-600 dark:text-slate-400 dark:hover:bg-slate-800" title="View">
+                        <button onClick={() => openDetail(r._id)} className="rounded-lg p-1.5 text-slate-500 dark:text-slate-300 hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800" title="View">
                           <Eye className="h-4 w-4" />
                         </button>
                         {r.status !== 'Paid' && (
-                          <button onClick={() => markPaid(r._id)} className="rounded-lg p-1.5 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 dark:text-slate-400 dark:hover:bg-emerald-500/10" title="Mark paid">
+                          <button onClick={() => markPaid(r._id)} className="rounded-lg p-1.5 text-slate-500 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-500/10" title="Mark paid">
                             <BadgeCheck className="h-4 w-4" />
                           </button>
                         )}
                         {r.status !== 'Paid' && (
-                          <button onClick={() => setDeleteId(r._id)} className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10" title="Delete">
+                          <button onClick={() => setDeleteId(r._id)} className="rounded-lg p-1.5 text-slate-500 dark:text-slate-300 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10" title="Delete">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}
@@ -171,7 +171,7 @@ export default function Payroll() {
       {/* Generate modal */}
       <Modal open={genOpen} onClose={() => setGenOpen(false)} title="Generate Payroll" subtitle="Payslips are recalculated from salary, attendance, leaves and holidays." size="sm">
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Select label="Month" value={genForm.month} onChange={(e) => setGenForm({ ...genForm, month: e.target.value })} options={MONTH_OPTIONS.map((m, i) => ({ value: i + 1, label: m }))} />
             <Select label="Year" value={genForm.year} onChange={(e) => setGenForm({ ...genForm, year: e.target.value })} options={yearOptions.map((y) => ({ value: y, label: String(y) }))} />
           </div>
@@ -201,9 +201,9 @@ export default function Payroll() {
         ) : (
           <>
             <div className="mb-4 grid grid-cols-3 gap-3">
-              <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60"><p className="text-xs text-slate-400">Gross</p><p className="font-bold">{money(detail.totalGross)}</p></div>
-              <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60"><p className="text-xs text-slate-400">Deductions</p><p className="font-bold">{money(detail.totalDeductions)}</p></div>
-              <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60"><p className="text-xs text-slate-400">Net</p><p className="font-bold">{money(detail.totalNet)}</p></div>
+              <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60"><p className="text-xs text-slate-400 dark:text-slate-300">Gross</p><p className="font-bold">{money(detail.totalGross)}</p></div>
+              <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60"><p className="text-xs text-slate-400 dark:text-slate-300">Deductions</p><p className="font-bold">{money(detail.totalDeductions)}</p></div>
+              <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60"><p className="text-xs text-slate-400 dark:text-slate-300">Net</p><p className="font-bold">{money(detail.totalNet)}</p></div>
             </div>
             <div className="overflow-x-auto rounded-xl border dark:border-slate-700">
               <table className="w-full">
@@ -223,7 +223,7 @@ export default function Payroll() {
                     <tr key={p._id} className="border-b last:border-0 dark:border-slate-700">
                       <td className="td">
                         <p className="font-semibold text-slate-800 dark:text-slate-100">{p.employee?.firstName} {p.employee?.lastName}</p>
-                        <p className="text-xs text-slate-400">{p.employeeId}{p.employee?.department?.name ? ` · ${p.employee.department.name}` : ''}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-300">{p.employeeId}{p.employee?.department?.name ? ` · ${p.employee.department.name}` : ''}</p>
                       </td>
                       <td className="td">{p.presentDays}/{p.workingDays}</td>
                       <td className="td">{p.lopDays}</td>

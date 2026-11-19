@@ -72,7 +72,7 @@ export default function Leaves() {
       <Card className="mb-5 p-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-300" />
             <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search employee or leave type..." className="input pl-9" />
           </div>
           <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="input">
@@ -112,14 +112,14 @@ export default function Leaves() {
                       <Avatar name={name} src={resolveAsset(l.employee?.profilePhoto)} size="sm" />
                       <div className="min-w-0">
                         <p className="font-semibold text-slate-800 dark:text-slate-100">{name}</p>
-                        <p className="text-xs text-slate-400">{l.employeeId}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-300">{l.employeeId}</p>
                       </div>
                     </div>
                   </td>
                   <td className="td">{l.leaveType}</td>
                   <td className="td">{formatDate(l.startDate)} → {formatDate(l.endDate)}</td>
                   <td className="td">{l.days}</td>
-                  <td className="td max-w-[220px]"><p className="truncate text-sm text-slate-500" title={l.reason}>{l.reason || '-'}</p></td>
+                  <td className="td max-w-[220px]"><p className="truncate text-sm text-slate-500 dark:text-slate-300" title={l.reason}>{l.reason || '-'}</p></td>
                   <td className="td"><Badge tone={STATUS_TONES[l.status]}>{l.status}</Badge></td>
                   <td className="td">
                     <div className="flex justify-end gap-2">
@@ -133,7 +133,7 @@ export default function Leaves() {
                           </Button>
                         </>
                       ) : (
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-slate-400 dark:text-slate-300">
                           {l.reviewedBy?.name ? `Reviewed by ${l.reviewedBy.name}` : '-'}
                           {l.adminNote ? ` · ${l.adminNote}` : ''}
                         </span>
@@ -174,7 +174,7 @@ export default function Leaves() {
                 <Avatar name={name} src={resolveAsset(l.employee?.profilePhoto)} size="sm" />
                 <div className="min-w-0">
                   <p className="font-semibold text-slate-800 dark:text-slate-100">{name}</p>
-                  <p className="text-xs text-slate-400">{l.employeeId}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-300">{l.employeeId}</p>
                 </div>
               </div>
               <Badge tone={STATUS_TONES[l.status]}>{l.status}</Badge>
@@ -182,8 +182,8 @@ export default function Leaves() {
             <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
               <span className="font-semibold">{l.leaveType}</span> · {l.days} day(s)
             </p>
-            <p className="text-xs text-slate-400">{formatDate(l.startDate)} → {formatDate(l.endDate)}</p>
-            {l.reason && <p className="mt-2 truncate text-xs text-slate-500">{l.reason}</p>}
+            <p className="text-xs text-slate-400 dark:text-slate-300">{formatDate(l.startDate)} → {formatDate(l.endDate)}</p>
+            {l.reason && <p className="mt-2 truncate text-xs text-slate-500 dark:text-slate-300">{l.reason}</p>}
             {l.status === 'Pending' && (
               <div className="mt-3 flex gap-2">
                 <Button size="sm" variant="secondary" className="flex-1" onClick={() => openReview(l, 'approve')}><Check className="h-4 w-4" /> Approve</Button>
@@ -209,7 +209,7 @@ export default function Leaves() {
             <div>
               <label className="label">Admin note {review.action === 'reject' && '(recommended)'}</label>
               <div className="relative">
-                <MessageSquareText className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <MessageSquareText className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400 dark:text-slate-300" />
                 <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} className="input pl-9" placeholder="Optional note to the employee…" />
               </div>
             </div>

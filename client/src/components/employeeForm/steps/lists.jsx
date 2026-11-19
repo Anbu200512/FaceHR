@@ -66,7 +66,7 @@ export function QualificationStep({ values, addEntry, updateEntry, removeEntry }
             <Input label="Degree" value={q.degree || ''} onChange={(e) => updateEntry('qualifications', i, 'degree', e.target.value)} placeholder="B.E. Computer Science" />
             <Input label="Institution" value={q.institution || ''} onChange={(e) => updateEntry('qualifications', i, 'institution', e.target.value)} placeholder="University / College" />
             <Input label="Field of Study" value={q.fieldOfStudy || ''} onChange={(e) => updateEntry('qualifications', i, 'fieldOfStudy', e.target.value)} placeholder="Computer Science" />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Select label="Start Year" value={q.startYear || ''} onChange={(e) => updateEntry('qualifications', i, 'startYear', e.target.value)} placeholder="Year" options={YEARS} />
               <Select label="End Year" value={q.endYear || ''} onChange={(e) => updateEntry('qualifications', i, 'endYear', e.target.value)} placeholder="Year" options={YEARS} />
             </div>
@@ -110,7 +110,7 @@ function CertFileBlock({ c, i, onFileSelect, onFileRemove }) {
             <Award className="h-4 w-4 shrink-0 text-brand-500" />
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{lbl}</p>
-              <p className="text-xs text-slate-400">{c._pending ? 'Pending upload' : 'Uploaded'}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-300">{c._pending ? 'Pending upload' : 'Uploaded'}</p>
             </div>
             {!c._pending && (
               <a href={resolveAsset(c.file.path)} target="_blank" rel="noreferrer" className="text-brand-600 hover:text-brand-700 dark:text-brand-400">

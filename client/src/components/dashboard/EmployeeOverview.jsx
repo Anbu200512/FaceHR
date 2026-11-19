@@ -19,12 +19,12 @@ function MiniDonut({ title, subtitle, icon: Icon, data, palette }) {
         <Icon className="h-4 w-4 text-brand-500" />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{title}</p>
-          <p className="text-xs text-slate-400">{subtitle}</p>
+          <p className="text-xs text-slate-400 dark:text-slate-300">{subtitle}</p>
         </div>
       </div>
 
       {total === 0 ? (
-        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-slate-200 py-6 text-center text-xs text-slate-400 dark:border-slate-700">
+        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-slate-200 py-6 text-center text-xs text-slate-400 dark:text-slate-300 dark:border-slate-700">
           No employees yet
         </div>
       ) : (
@@ -41,7 +41,7 @@ function MiniDonut({ title, subtitle, icon: Icon, data, palette }) {
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
               <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{total}</p>
-              <p className="text-[9px] uppercase tracking-wide text-slate-400">Total</p>
+              <p className="text-[9px] uppercase tracking-wide text-slate-400 dark:text-slate-300">Total</p>
             </div>
           </div>
           <ul className="min-w-0 flex-1 space-y-1.5">
@@ -72,7 +72,7 @@ export default function EmployeeOverview({ departments, locations, hr, loading }
     <div className="min-w-0">
       <div className="mb-3">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Employee Overview</h2>
-        <p className="text-xs text-slate-400">Workforce composition by location, gender and department</p>
+        <p className="text-xs text-slate-400 dark:text-slate-300">Workforce composition by location, gender and department</p>
       </div>
 
       <Card className="p-5">

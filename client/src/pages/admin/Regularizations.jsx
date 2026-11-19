@@ -42,7 +42,7 @@ export default function Regularizations() {
       <Card className="mb-5 p-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className="relative sm:col-span-2 lg:col-span-2">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-300" />
             <input
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -89,7 +89,7 @@ export default function Regularizations() {
                       <Avatar name={name} src={resolveAsset(r.employee?.profilePhoto)} size="sm" />
                       <div className="min-w-0">
                         <p className="font-semibold text-slate-800 dark:text-slate-100">{name}</p>
-                        <p className="text-xs text-slate-400">{r.employeeId || r.employee?.employeeId || ''}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-300">{r.employeeId || r.employee?.employeeId || ''}</p>
                       </div>
                     </div>
                   </td>
@@ -104,7 +104,7 @@ export default function Regularizations() {
                         <Eye className="h-4 w-4" /> View
                       </Button>
                     ) : (
-                      <span className="text-sm text-slate-400"></span>
+                      <span className="text-sm text-slate-400 dark:text-slate-300"></span>
                     )}
                   </td>
                   <td className="td"><Badge tone={STATUS_TONES[r.status] || 'slate'}>{r.status}</Badge></td>
@@ -138,12 +138,12 @@ export default function Regularizations() {
             <p><span className="font-medium text-slate-700 dark:text-slate-200">Date:</span> {formatDate(viewRow.date)}</p>
             <p><span className="font-medium text-slate-700 dark:text-slate-200">Requested:</span> In {viewRow.requestedCheckIn ? formatTime(viewRow.requestedCheckIn) : ''} / Out {viewRow.requestedCheckOut ? formatTime(viewRow.requestedCheckOut) : ''}</p>
             <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-              <p className="mb-1 text-xs font-semibold uppercase text-slate-400">Reason</p>
+              <p className="mb-1 text-xs font-semibold uppercase text-slate-400 dark:text-slate-300">Reason</p>
               <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-200">{viewRow.reason || ''}</p>
             </div>
             {viewRow.adminNote && (
               <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-                <p className="mb-1 text-xs font-semibold uppercase text-slate-400">Admin Note</p>
+                <p className="mb-1 text-xs font-semibold uppercase text-slate-400 dark:text-slate-300">Admin Note</p>
                 <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-200">{viewRow.adminNote}</p>
               </div>
             )}

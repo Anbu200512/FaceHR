@@ -25,7 +25,7 @@ export default function HRActivitySummary({ hr, loading }) {
     <div className="min-w-0">
       <div className="mb-3">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">HR Activity Summary</h2>
-        <p className="text-xs text-slate-400">Recent workforce activity</p>
+        <p className="text-xs text-slate-400 dark:text-slate-300">Recent workforce activity</p>
       </div>
 
       <Card className="p-5">
@@ -51,7 +51,7 @@ export default function HRActivitySummary({ hr, loading }) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{label}</p>
-                  <p className="truncate text-xs text-slate-400">{caption}</p>
+                  <p className="truncate text-xs text-slate-400 dark:text-slate-300">{caption}</p>
                 </div>
                 <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{format ? format(hr?.[key] ?? 0) : hr?.[key] ?? 0}</p>
               </li>

@@ -6,7 +6,7 @@ export default function EmployeeSummary({ hr, loading }) {
     <section>
       <div className="mb-3">
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Employee Summary</h2>
-        <p className="text-xs text-slate-400">Workforce composition across the organisation</p>
+        <p className="text-xs text-slate-400 dark:text-slate-300">Workforce composition across the organisation</p>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total Employees" value={hr?.totalEmployees ?? 0} icon={Users} tone="indigo" loading={loading} />

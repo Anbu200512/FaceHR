@@ -27,7 +27,7 @@ export default function StepBar({ steps, current, visited, onChange }) {
                     'relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition',
                     isDone && 'bg-brand-600 text-white',
                     isActive && !isDone && 'bg-brand-600 text-white ring-4 ring-brand-600/20',
-                    !isDone && !isActive && 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
+                    !isDone && !isActive && 'bg-slate-200 text-slate-500 dark:text-slate-300 dark:bg-slate-700'
                   )}
                 >
                   {isDone ? <Check className="h-3.5 w-3.5" /> : i + 1}
@@ -35,7 +35,7 @@ export default function StepBar({ steps, current, visited, onChange }) {
                 <span
                   className={clsx(
                     'whitespace-nowrap text-xs font-semibold',
-                    isActive ? 'text-brand-700 dark:text-brand-300' : isDone ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400'
+                    isActive ? 'text-brand-700 dark:text-brand-300' : isDone ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-300'
                   )}
                 >
                   {step.label}

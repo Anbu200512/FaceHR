@@ -55,7 +55,7 @@ export default function Holidays() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-slate-800 dark:text-slate-100">{h.name}</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-400 dark:text-slate-300">
                     {formatDate(h.date)} · {new Date(h.date).toLocaleDateString(undefined, { weekday: 'long' })}
                     {h.description ? ` · ${h.description}` : ''}
                   </p>

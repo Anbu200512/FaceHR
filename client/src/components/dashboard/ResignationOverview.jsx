@@ -35,7 +35,7 @@ export default function ResignationOverview({ data, loading }) {
           </span>
           <div className="min-w-0">
             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Resignation Overview</h2>
-            <p className="text-xs text-slate-400">Resignation requests by reason this month</p>
+            <p className="text-xs text-slate-400 dark:text-slate-300">Resignation requests by reason this month</p>
           </div>
         </div>
         {!loading && (
@@ -57,9 +57,9 @@ export default function ResignationOverview({ data, loading }) {
           <div className="flex flex-col items-center rounded-2xl bg-slate-50/80 py-5 dark:bg-slate-800/30">
             <div className="relative h-44 w-44 rounded-full border-[27px] border-slate-200/80 shadow-inner dark:border-slate-700">
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                <p className="text-[10px] uppercase tracking-wide text-slate-400">Total</p>
+                <p className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-300">Total</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">0</p>
-                <p className="text-[10px] uppercase tracking-wide text-slate-400">This Month</p>
+                <p className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-300">This Month</p>
               </div>
             </div>
           </div>
@@ -77,9 +77,9 @@ export default function ResignationOverview({ data, loading }) {
                 </PieChart>
               </ResponsiveContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                <p className="text-[10px] uppercase tracking-wide text-slate-400">Total</p>
+                <p className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-300">Total</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{total}</p>
-                <p className="text-[10px] uppercase tracking-wide text-slate-400">This Month</p>
+                <p className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-300">This Month</p>
               </div>
             </div>
 
@@ -89,7 +89,7 @@ export default function ResignationOverview({ data, loading }) {
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: COLORS[item.reason] || '#94a3b8' }} />
                   <span className="flex-1 font-medium text-slate-600 dark:text-slate-300">{item.reason}</span>
                   <span className="font-bold text-slate-800 dark:text-slate-100">{item.count}</span>
-                  <span className="w-14 text-right text-xs text-slate-400">{item.percent}%</span>
+                  <span className="w-14 text-right text-xs text-slate-400 dark:text-slate-300">{item.percent}%</span>
                 </li>
               ))}
             </ul>

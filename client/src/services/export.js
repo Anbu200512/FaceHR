@@ -1,5 +1,3 @@
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { formatDate, resolveAsset } from './format';
 
 function triggerDownload(content, filename, type = 'text/csv;charset=utf-8;') {
@@ -62,7 +60,12 @@ export function exportCSV(filename, columns, rows) {
 /**
  * Export rows to PDF with autoTable. `columns` = [{ key, label, render? }].
  */
-export function exportPDF(filename, title, columns, rows) {
+export async function exportPDF(filename, title, columns, rows) {
+  const [{ jsPDF }, autoTableModule] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
+  const autoTable = autoTableModule.default || autoTableModule;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   doc.setFontSize(14);
   doc.setTextColor(37, 67, 235);
@@ -127,9 +130,9 @@ export function exportAttendanceToCsv(rows, fileBase) {
 /**
  * Export a flat attendance rows array to PDF.
  */
-export function exportAttendanceToPdf(rows, summary) {
+export async function exportAttendanceToPdf(rows, summary) {
   const { columns, title, fileBase } = buildAttendanceExportPayload(summary, rows || []);
-  exportPDF(`${fileBase}.pdf`, title, columns, (rows || []).map(normalizeAttendanceRow));
+  await exportPDF(`${fileBase}.pdf`, title, columns, (rows || []).map(normalizeAttendanceRow));
 }
 
 function buildEmployeesExportPayload(rows, scopeLabel) {
@@ -174,9 +177,9 @@ export function exportEmployeesToCsv(rows, scopeLabel) {
   exportCSV(`${fileBase}.csv`, columns, normalized);
 }
 
-export function exportEmployeesToPdf(rows, scopeLabel) {
+export async function exportEmployeesToPdf(rows, scopeLabel) {
   const { columns, title, fileBase, rows: normalized } = buildEmployeesExportPayload(rows, scopeLabel);
-  exportPDF(`${fileBase}.pdf`, title, columns, normalized);
+  await exportPDF(`${fileBase}.pdf`, title, columns, normalized);
 }
 
 function val(v, fallback = '-') {
@@ -235,7 +238,12 @@ function loadImageAsDataUrl(url) {
 export async function exportEmployeeProfilePdf(emp) {
   if (!emp) return;
   const photoUrl = resolveAsset(emp.profilePhoto);
-  const photoDataUrl = photoUrl ? await loadImageAsDataUrl(photoUrl) : null;
+  const [{ jsPDF }, autoTableModule, photoDataUrl] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+    photoUrl ? loadImageAsDataUrl(photoUrl) : Promise.resolve(null),
+  ]);
+  const autoTable = autoTableModule.default || autoTableModule;
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   let y = 16;

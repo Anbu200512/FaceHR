@@ -61,7 +61,7 @@ export default function BasicInfoEditor({
                 className="w-full"
                 disabled={!isEdit && !manualEmployeeId}
               />
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-300">
                 {isEdit
                   ? 'Edit the unique employee identifier.'
                   : manualEmployeeId
@@ -251,7 +251,7 @@ function RolesEditor({ roles = [], onChange }) {
   return (
     <div>
       <label className="label" htmlFor="employee-roles">Roles</label>
-      <p className="mb-2 text-xs text-slate-400">Assign one or more roles, e.g. Team Lead, HR, Software Engineer.</p>
+      <p className="mb-2 text-xs text-slate-400 dark:text-slate-300">Assign one or more roles, e.g. Team Lead, HR, Software Engineer.</p>
 
       {roles.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1.5">
@@ -295,7 +295,7 @@ function RolesEditor({ roles = [], onChange }) {
             key={role}
             type="button"
             onClick={() => addRoles(role)}
-            className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:border-brand-300 hover:text-brand-600 dark:border-slate-700 dark:text-slate-400 dark:hover:border-brand-500/40 dark:hover:text-brand-400"
+            className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 dark:text-slate-300 transition hover:border-brand-300 hover:text-brand-600 dark:border-slate-700 dark:hover:border-brand-500/40 dark:hover:text-brand-400"
           >
             + {role}
           </button>

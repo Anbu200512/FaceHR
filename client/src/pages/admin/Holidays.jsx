@@ -115,17 +115,17 @@ export default function Holidays() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-slate-800 dark:text-slate-100">{h.name}</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-400 dark:text-slate-300">
                     {formatDate(h.date)} · {new Date(h.date).toLocaleDateString(undefined, { weekday: 'long' })}
                     {h.description ? ` · ${h.description}` : ''}
                   </p>
                 </div>
                 <Badge tone={h.active ? undefined : 'rose'}>{h.active ? h.type : 'Inactive'}</Badge>
                 <div className="flex gap-1">
-                  <button onClick={() => openEdit(h)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand-600 dark:text-slate-400 dark:hover:bg-slate-800">
+                  <button onClick={() => openEdit(h)} className="rounded-lg p-1.5 text-slate-500 dark:text-slate-300 hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800">
                     <Pencil className="h-4 w-4" />
                   </button>
-                  <button onClick={() => setDeleteId(h._id)} className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10">
+                  <button onClick={() => setDeleteId(h._id)} className="rounded-lg p-1.5 text-slate-500 dark:text-slate-300 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -138,7 +138,7 @@ export default function Holidays() {
       <Modal open={!!modal} onClose={() => setModal(null)} title={modal?.editing ? 'Edit Holiday' : 'Add Holiday'} size="sm">
         <div className="space-y-4">
           <Input label="Holiday name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Diwali" />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Input label="Date *" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
             <Select label="Type" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} options={HOLIDAY_TYPES} />
           </div>
