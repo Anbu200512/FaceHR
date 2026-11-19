@@ -1,16 +1,17 @@
 const prisma = require('../config/prisma');
 const { createNotification } = require('./notificationService');
-const { getEffectiveOfficeSettings } = require('./attendanceService');
-const { startOfDay, endOfDay, toDateKey, isWeekend, parseTimeToMinutes } = require('../utils/date');
+const { getEffectiveOfficeSettings, getSettings } = require('./attendanceService');
+const { startOfDay, endOfDay, toDateKey, isWeekend, parseTimeToMinutes, nowMinutesInZone } = require('../utils/date');
 
 const REMINDER_INTERVAL_MS = 15 * 60 * 1000;
 const CHECKIN_BUFFER_MIN = 30;
 const CHECKOUT_BUFFER_MIN = 30;
 
 async function runAttendanceReminders(now = new Date()) {
-  const day = startOfDay(now);
-  const dayKey = toDateKey(day);
-  if (isWeekend(day)) return { created: 0, skipped: 'weekend' };
+  const { officeTimezone: tz = '' } = await getSettings();
+  const day = startOfDay(now, tz);
+  const dayKey = toDateKey(day, tz);
+  if (isWeekend(day, tz)) return { created: 0, skipped: 'weekend' };
 
   const holiday = await prisma.holiday.findFirst({
     where: { date: day, active: true },
@@ -18,7 +19,7 @@ async function runAttendanceReminders(now = new Date()) {
   });
   if (holiday) return { created: 0, skipped: 'holiday' };
 
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const nowMinutes = nowMinutesInZone(now, tz);
 
   const users = await prisma.user.findMany({
     where: { role: 'employee', active: true, employeeRefId: { not: null } },
@@ -48,7 +49,7 @@ async function runAttendanceReminders(now = new Date()) {
       where: {
         employeeRefId: { in: employeeIds },
         status: 'Approved',
-        startDate: { lte: endOfDay(day) },
+        startDate: { lt: endOfDay(day, tz) },
         endDate: { gte: day },
       },
       select: { employeeRefId: true },
@@ -56,7 +57,7 @@ async function runAttendanceReminders(now = new Date()) {
     prisma.notification.findMany({
       where: {
         userId: { in: active.map((u) => u.id) },
-        createdAt: { gte: day, lt: endOfDay(day) },
+        createdAt: { gte: day, lt: endOfDay(day, tz) },
         link: '/employee/attendance',
         title: { in: ['Check-in reminder', 'Check-out reminder'] },
       },

@@ -2,6 +2,7 @@ const prisma = require('../config/prisma');
 const { Prisma } = require('@prisma/client');
 const asyncHandler = require('../utils/asyncHandler');
 const { computeDayStatus } = require('./attendanceController');
+const { getSettings } = require('../services/attendanceService');
 const { startOfDay, monthRange, toDateKey, isWeekend, diffDays } = require('../utils/date');
 
 const ALLOWANCE = 12;
@@ -96,7 +97,8 @@ async function computeLeaveSummary(employees, year, monthIndex) {
 
 async function computeUpcoming(employees) {
   const empIds = employees.map((e) => e.id);
-  const today = startOfDay(new Date());
+  const { officeTimezone: tz = '' } = await getSettings();
+  const today = startOfDay(new Date(), tz);
   const [upcoming, pendingList] = await Promise.all([
     prisma.leave.findMany({
       where: { employeeRefId: { in: empIds }, status: 'Approved', startDate: { gte: today } },
@@ -119,7 +121,7 @@ async function computeUpcoming(employees) {
     if (Number.isNaN(dob.getTime())) continue;
     const next = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
     if (next < today) next.setFullYear(next.getFullYear() + 1);
-    const days = Math.round((startOfDay(next) - today) / 86400000);
+    const days = Math.round((startOfDay(next, tz) - today) / 86400000);
     if (days >= 0 && days <= 7) {
       birthdays.push({
         id: e.id,
@@ -322,7 +324,8 @@ async function computeHrSummary(employees, year, monthIndex, location, departmen
   if (location) resignParts.push(Prisma.sql`"office" = ${location}`);
   if (department) resignParts.push(Prisma.sql`"department" = ${department}`);
   const resignWhereSql = Prisma.join(resignParts, ' AND ');
-  const dayStart = startOfDay(now);
+  const { officeTimezone: tz = '' } = await getSettings();
+  const dayStart = startOfDay(now, tz);
 
   const [counts] = await prisma.$queryRaw`
     SELECT
@@ -492,7 +495,8 @@ const getDashboard = asyncHandler(async (req, res) => {
 
   // --- Current month: latest applicable (today) snapshot ---
   if (isCurrentMonth) {
-    const rows = await computeDayStatus(employees, now);
+    const { officeTimezone: tz = '' } = await getSettings();
+    const rows = await computeDayStatus(employees, now, tz);
 
     // Do NOT override today's status with old/latest records; keeps "Present Today" accurate.
 

@@ -1,8 +1,8 @@
 const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 const { createNotification } = require('../services/notificationService');
-const { evaluateCheckInStatus, computeFinalStatus } = require('../services/attendanceService');
-const { startOfDay, parseDateKey, toDateKey, getDayName } = require('../utils/date');
+const { evaluateCheckInStatus, computeFinalStatus, getSettings } = require('../services/attendanceService');
+const { startOfDay, endOfDay, parseDateKey, toDateKey, getDayName, combineDateWithMinutes, parseTimeToMinutes } = require('../utils/date');
 
 const EMPLOYEE_INCLUDE = {
   select: {
@@ -15,21 +15,19 @@ const EMPLOYEE_INCLUDE = {
   },
 };
 
-function resolveDay(value) {
+function resolveDay(value, tz = '') {
   if (!value) return null;
-  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return parseDateKey(value);
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return parseDateKey(value, tz);
   const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? null : startOfDay(d);
+  return Number.isNaN(d.getTime()) ? null : startOfDay(d, tz);
 }
 
-function combine(day, time) {
+function combine(day, time, tz = '') {
   if (!time) return null;
   if (typeof time === 'string' && /^\d{1,2}:\d{2}/.test(time)) {
-    const [h, m] = time.split(':').map((p) => parseInt(p, 10));
-    if (Number.isNaN(h) || Number.isNaN(m)) return null;
-    const d = new Date(day);
-    d.setHours(h, m, 0, 0);
-    return d;
+    const minutes = parseTimeToMinutes(time);
+    if (minutes === null) return null;
+    return combineDateWithMinutes(day, minutes, tz);
   }
   const d = new Date(time);
   return Number.isNaN(d.getTime()) ? null : d;
@@ -40,13 +38,14 @@ const applyRegularization = asyncHandler(async (req, res) => {
   const employeeRefId = req.user.employee;
   if (!employeeRefId) return res.status(403).json({ success: false, message: 'Only employees can request regularization' });
 
+  const { officeTimezone: tz = '' } = await getSettings();
   const { date, checkIn, checkOut, reason } = req.body;
-  const day = resolveDay(date);
+  const day = resolveDay(date, tz);
   if (!day) return res.status(400).json({ success: false, message: 'A valid date is required' });
-  if (day > startOfDay(new Date())) return res.status(400).json({ success: false, message: 'Cannot request regularization for a future date' });
+  if (day > startOfDay(new Date(), tz)) return res.status(400).json({ success: false, message: 'Cannot request regularization for a future date' });
 
-  const inTime = combine(day, checkIn);
-  const outTime = combine(day, checkOut);
+  const inTime = combine(day, checkIn, tz);
+  const outTime = combine(day, checkOut, tz);
   if (!inTime && !outTime) {
     return res.status(400).json({ success: false, message: 'Provide at least a check-in or check-out time' });
   }
@@ -79,7 +78,7 @@ const applyRegularization = asyncHandler(async (req, res) => {
       createNotification({
         user: a.id,
         title: 'Attendance regularization request',
-        message: `${emp.firstName} ${emp.lastName} requested a correction for ${toDateKey(day)}.`,
+        message: `${emp.firstName} ${emp.lastName} requested a correction for ${toDateKey(day, tz)}.`,
         type: 'attendance',
         link: '/admin/regularizations',
       })
@@ -103,13 +102,20 @@ const getRegularizations = asyncHandler(async (req, res) => {
   const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
   const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || 10, 1), 100);
   const { status, search, from, to } = req.query;
+  const { officeTimezone: tz = '' } = await getSettings();
 
   const where = {};
   if (status && ['Pending', 'Approved', 'Rejected'].includes(status)) where.status = status;
   if (from || to) {
     where.date = {};
-    if (from) where.date.gte = startOfDay(new Date(from));
-    if (to) where.date.lte = startOfDay(new Date(to));
+    if (from) {
+      const f = /^\d{4}-\d{2}-\d{2}$/.test(String(from)) ? parseDateKey(String(from), tz) : new Date(from);
+      if (!Number.isNaN(f.getTime())) where.date.gte = startOfDay(f, tz);
+    }
+    if (to) {
+      const t = /^\d{4}-\d{2}-\d{2}$/.test(String(to)) ? parseDateKey(String(to), tz) : new Date(to);
+      if (!Number.isNaN(t.getTime())) where.date.lte = startOfDay(t, tz);
+    }
   }
   if (search) {
     const emps = await prisma.employee.findMany({
@@ -153,6 +159,7 @@ async function reviewRegularization(req, res, status) {
 
   const adminNote = String(req.body.adminNote || '').trim();
   let attendance = null;
+  const { officeTimezone: tz = '' } = await getSettings();
 
   if (status === 'Approved') {
     let attendanceStatus = 'Present';
@@ -170,7 +177,7 @@ async function reviewRegularization(req, res, status) {
       attendanceStatus = await computeFinalStatus(row.requestedCheckIn, row.requestedCheckOut, attendanceStatus, empDoc);
     }
 
-    const day = startOfDay(row.date);
+    const day = startOfDay(row.date, tz);
     const existingAttendance = await prisma.attendance.findUnique({
       where: { employeeRefId_date: { employeeRefId: row.employeeRefId, date: day } },
     });
@@ -203,7 +210,7 @@ async function reviewRegularization(req, res, status) {
       employeeRefId: row.employeeRefId,
       employeeId: row.employeeId,
       date: day,
-      dayName: getDayName(day),
+      dayName: getDayName(day, tz),
       checkInTime: row.requestedCheckIn || null,
       checkOutTime: row.requestedCheckOut || null,
       status: attendanceStatus,
@@ -237,8 +244,8 @@ async function reviewRegularization(req, res, status) {
       user: user.id,
       title: approved ? 'Regularization approved' : 'Regularization rejected',
       message: approved
-        ? `Your attendance for ${toDateKey(row.date)} was updated.`
-        : `Your attendance correction for ${toDateKey(row.date)} was rejected.${adminNote ? ` Reason: ${adminNote}` : ''}`,
+        ? `Your attendance for ${toDateKey(row.date, tz)} was updated.`
+        : `Your attendance correction for ${toDateKey(row.date, tz)} was rejected.${adminNote ? ` Reason: ${adminNote}` : ''}`,
       type: approved ? 'success' : 'warning',
       link: '/employee/regularization',
     });

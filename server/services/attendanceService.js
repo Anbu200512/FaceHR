@@ -20,56 +20,7 @@ function normalizeTime(value, fallback) {
   return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
 }
 
-function normalizeTimezone(value, fallback = '') {
-  if (typeof value !== 'string') return fallback;
-  const tz = value.trim();
-  if (!tz) return fallback;
-  try {
-    Intl.DateTimeFormat('en-US', { timeZone: tz }).format(new Date());
-    return tz;
-  } catch {
-    return fallback;
-  }
-}
-
-function getZonedParts(date, timeZone) {
-  const fmt = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-  const parts = fmt.formatToParts(date);
-  const map = {};
-  parts.forEach((p) => {
-    map[p.type] = p.value;
-  });
-  return {
-    year: Number(map.year),
-    month: Number(map.month),
-    day: Number(map.day),
-    hour: map.hour === '24' ? 0 : Number(map.hour),
-    minute: Number(map.minute),
-    second: Number(map.second),
-  };
-}
-
-function zonedTimeToUtc({ year, month, day, hour, minute }, timeZone) {
-  let utc = Date.UTC(year, month - 1, day, hour, minute, 0);
-  for (let i = 0; i < 3; i++) {
-    const p = getZonedParts(new Date(utc), timeZone);
-    const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
-    const want = Date.UTC(year, month - 1, day, hour, minute, 0);
-    const diff = want - asUtc;
-    utc += diff;
-    if (diff === 0) break;
-  }
-  return new Date(utc);
-}
+const { normalizeTimezone, getZonedParts, zonedTimeToUtc } = require('../utils/date');
 
 async function getSettings() {
   const rows = await prisma.setting.findMany();

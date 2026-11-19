@@ -12,6 +12,7 @@ const {
   computeFinalStatus,
   getEffectiveOfficeSettings,
   calculateLateMinutes,
+  getSettings,
 } = require('../services/attendanceService');
 const {
   startOfDay,
@@ -29,11 +30,11 @@ const {
 
 const sanitizeString = (v, max = 200) => String(v || '').slice(0, max);
 
-// Manual marks may arrive either as a full ISO timestamp (preferred — the client
+// Manual marks may arrive either as a full ISO timestamp (preferred �?" the client
 // resolves the picked date + wall-clock time in the user's timezone) or as a
 // legacy "HH:MM" string. ISO values are stored untouched so the server timezone
 // never shifts the time the admin entered.
-function parseManualTimestamp(dayDate, raw) {
+function parseManualTimestamp(dayDate, raw, tz = '') {
   if (!raw) return null;
   const value = String(raw);
   if (value.includes('T')) {
@@ -42,7 +43,7 @@ function parseManualTimestamp(dayDate, raw) {
   }
   const minutes = parseTimeToMinutes(value);
   if (minutes === null) return null;
-  return combineDateWithMinutes(dayDate, minutes);
+  return combineDateWithMinutes(dayDate, minutes, tz);
 }
 
 // Parse an optional location payload (object or JSON string) sent by the client.
@@ -116,9 +117,9 @@ function evaluateGeofence(settings, location) {
 }
 
 // helper: build per-employee day status for all active employees on a date
-async function computeDayStatus(employees, date) {
-  const dayStart = startOfDay(date);
-  const dayEnd = endOfDay(date);
+async function computeDayStatus(employees, date, tz = '') {
+  const dayStart = startOfDay(date, tz);
+  const dayEnd = endOfDay(date, tz);
 
   const [records, leaves] = await Promise.all([
     prisma.attendance.findMany({ where: { date: { gte: dayStart, lt: dayEnd } } }),
@@ -135,8 +136,13 @@ async function computeDayStatus(employees, date) {
 
   return employees.map((emp) => {
     const rec = recMap.get(String(emp.id));
+    const onLeave = leaveSet.has(String(emp.id));
+    // If on approved leave and no actual punch, keep it as On Leave (avoid misleading Absent/manual-overwrite confusion).
+    if (onLeave && !(rec && (rec.checkInTime || rec.checkOutTime))) {
+      return { employee: emp, record: rec || null, status: 'On Leave' };
+    }
     if (rec) return { employee: emp, record: rec, status: rec.status };
-    if (leaveSet.has(String(emp.id))) return { employee: emp, record: null, status: 'On Leave' };
+    if (onLeave) return { employee: emp, record: null, status: 'On Leave' };
     return { employee: emp, record: null, status: 'Absent' };
   });
 }
@@ -153,13 +159,16 @@ const checkIn = asyncHandler(async (req, res) => {
   }
 
   const settings = await getEffectiveAttendanceSettings(empDoc);
+  const globalSettings = await getSettings();
+  const tz = globalSettings.officeTimezone || '';
   const requireFace = settings.faceEnabled !== false;
 
   if (requireFace && (!req.file || !req.file.buffer)) {
     return res.status(400).json({ success: false, message: 'A face photo is required to check in' });
   }
 
-  const today = startOfDay(new Date());
+  const now = new Date();
+  const today = startOfDay(now, tz);
   const existing = await prisma.attendance.findFirst({ where: { employeeRefId: employee, date: today } });
 
   if (existing) {
@@ -204,12 +213,11 @@ const checkIn = asyncHandler(async (req, res) => {
     }
   }
 
-  const now = new Date();
   const ext = req.file ? (req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg') : null;
   const checkInPhoto = req.file ? saveBuffer(req.file.buffer, ext) : null;
   const checkInDistanceFromCompany = geofence.distance;
 
-    const { status, lateMinutes } = await evaluateCheckInStatus(today, now, empDoc);
+  const { status, lateMinutes } = await evaluateCheckInStatus(today, now, empDoc);
 
   try {
     const record = await prisma.attendance.create({
@@ -217,7 +225,7 @@ const checkIn = asyncHandler(async (req, res) => {
         employeeRefId: employee,
         employeeId: empDoc.employeeId,
         date: today,
-        dayName: getDayName(today),
+        dayName: getDayName(today, tz),
         checkInTime: now,
         status,
         lateMinutes,
@@ -254,15 +262,21 @@ const checkOut = asyncHandler(async (req, res) => {
 
   const empDoc = await prisma.employee.findUnique({ where: { id: employee } });
   if (!empDoc) return res.status(404).json({ success: false, message: 'Employee profile not found' });
+  if (empDoc.status !== 'Active') {
+    return res.status(403).json({ success: false, message: 'Your account is inactive. Please contact HR.' });
+  }
 
   const settings = await getEffectiveAttendanceSettings(empDoc);
+  const globalSettings = await getSettings();
+  const tz = globalSettings.officeTimezone || '';
   const requireFace = settings.faceEnabled !== false;
 
   if (requireFace && (!req.file || !req.file.buffer)) {
     return res.status(400).json({ success: false, message: 'A face photo is required to check out' });
   }
 
-  const today = startOfDay(new Date());
+  const now = new Date();
+  const today = startOfDay(now, tz);
   const record = await prisma.attendance.findFirst({ where: { employeeRefId: employee, date: today } });
   if (!record || !record.checkInTime) {
     return res.status(400).json({
@@ -302,7 +316,6 @@ const checkOut = asyncHandler(async (req, res) => {
     }
   }
 
-  const now = new Date();
   const ext = req.file ? (req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg') : null;
   const checkOutPhoto = req.file ? saveBuffer(req.file.buffer, ext) : null;
 
@@ -335,10 +348,14 @@ const getRecords = asyncHandler(async (req, res) => {
   const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
   const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || 10, 1), 100);
   const { date, status, department, search } = req.query;
+  const { officeTimezone: tz = '' } = await getSettings();
 
   const where = {};
   if (date) {
-    where.date = { gte: startOfDay(new Date(date)), lt: endOfDay(new Date(date)) };
+    const dayDate = /^\d{4}-\d{2}-\d{2}$/.test(String(date)) ? parseDateKey(String(date), tz) : new Date(date);
+    if (!Number.isNaN(dayDate.getTime())) {
+      where.date = { gte: startOfDay(dayDate, tz), lt: endOfDay(dayDate, tz) };
+    }
   }
   if (status && !['Absent', 'On Leave'].includes(status)) where.status = status;
 
@@ -394,18 +411,22 @@ const getRecords = asyncHandler(async (req, res) => {
 
 // @route  GET /api/attendance/today  (admin + optionally employee view)
 const getToday = asyncHandler(async (req, res) => {
-  const today = new Date();
+  const { officeTimezone: tz = '' } = await getSettings();
+  const now = new Date();
 
   if (req.user.role === 'employee' && req.user.employee) {
     const employees = await prisma.employee.findMany({
       where: { id: req.user.employee },
       select: { id: true, firstName: true, lastName: true, employeeId: true, profilePhoto: true },
     });
-    const rows = await computeDayStatus(employees, today);
-    return res.json({ success: true, data: { date: toDateKey(today), rows } });
+    const rows = await computeDayStatus(employees, now, tz);
+    return res.json({ success: true, data: { date: toDateKey(now, tz), rows } });
   }
 
-  const reqDate = req.query.date ? new Date(req.query.date) : today;
+  const reqDate = req.query.date
+    ? (/^\d{4}-\d{2}-\d{2}$/.test(String(req.query.date)) ? parseDateKey(String(req.query.date), tz) : new Date(req.query.date))
+    : now;
+  if (Number.isNaN(reqDate.getTime())) return res.status(400).json({ success: false, message: 'Invalid date' });
   const department = req.query.department;
 
   const where = { status: 'Active' };
@@ -417,7 +438,7 @@ const getToday = asyncHandler(async (req, res) => {
     orderBy: { firstName: 'asc' },
   });
 
-  const rows = await computeDayStatus(employees, reqDate);
+  const rows = await computeDayStatus(employees, reqDate, tz);
 
   const summarize = (list) => list.reduce(
     (acc, r) => {
@@ -432,7 +453,7 @@ const getToday = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: {
-      date: toDateKey(reqDate),
+      date: toDateKey(reqDate, tz),
       totals: {
         totalEmployees: employees.length,
         present: counts.Present,
@@ -457,12 +478,18 @@ const getMonthly = asyncHandler(async (req, res) => {
     return res.status(403).json({ success: false, message: 'You can only view your own attendance' });
   }
 
+  const { officeTimezone: tz = '' } = await getSettings();
   const now = new Date();
   const yearParam = Number.parseInt(req.query.year, 10);
   const monthParam = Number.parseInt(req.query.month, 10);
   const y = Number.isInteger(yearParam) ? yearParam : now.getFullYear();
   const m = Number.isInteger(monthParam) && monthParam >= 0 && monthParam <= 11 ? monthParam : now.getMonth();
-  const { start, end } = monthRange(y, m);
+
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const firstDay = parseDateKey(`${y}-${String(m + 1).padStart(2, '0')}-01`, tz);
+  const lastDay = parseDateKey(`${y}-${String(m + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`, tz);
+  const start = startOfDay(firstDay, tz);
+  const end = endOfDay(lastDay, tz);
 
   const [records, leaves] = await Promise.all([
     prisma.attendance.findMany({
@@ -479,36 +506,39 @@ const getMonthly = asyncHandler(async (req, res) => {
     }),
   ]);
 
-  const recMap = new Map(records.map((r) => [toDateKey(r.date), r]));
+  const recMap = new Map(records.map((r) => [toDateKey(r.date, tz), r]));
   const leaveDays = new Set();
   leaves.forEach((l) => {
-    const leaveStart = startOfDay(l.startDate);
-    const leaveEnd = startOfDay(l.endDate);
+    const leaveStart = startOfDay(l.startDate, tz);
+    const leaveEnd = startOfDay(l.endDate, tz);
     const rangeStart = leaveStart < start ? start : leaveStart;
-    const rangeEnd = leaveEnd >= end ? new Date(end.getTime() - 86400000) : leaveEnd; // end is exclusive
-    const cursor = new Date(rangeStart);
+    const rangeEnd = leaveEnd >= startOfDay(lastDay, tz) ? startOfDay(lastDay, tz) : leaveEnd;
+    let cursor = rangeStart;
     while (cursor <= rangeEnd) {
-      if (!isWeekend(cursor)) leaveDays.add(toDateKey(cursor));
-      cursor.setDate(cursor.getDate() + 1);
+      if (!isWeekend(cursor, tz)) leaveDays.add(toDateKey(cursor, tz));
+      cursor = new Date(cursor.getTime() + 36 * 3600000);
+      cursor = startOfDay(cursor, tz);
     }
   });
 
-  const daysInMonth = new Date(y, m + 1, 0).getDate();
   const days = [];
   for (let d = 1; d <= daysInMonth; d++) {
-    const dayDate = new Date(y, m, d);
-    const key = toDateKey(dayDate);
+    const key = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const dayDate = parseDateKey(key, tz);
     const record = recMap.get(key) || null;
+    const weekend = isWeekend(dayDate, tz);
+    const onLeave = leaveDays.has(key);
     let status = 'Absent';
-    if (isWeekend(dayDate)) status = 'Weekend';
+    if (weekend) status = 'Weekend';
+    else if (onLeave && !(record && (record.checkInTime || record.checkOutTime))) status = 'On Leave';
     else if (record) status = record.status;
-    else if (leaveDays.has(key)) status = 'On Leave';
+    else if (onLeave) status = 'On Leave';
 
     days.push({
       date: key,
       day: d,
-      dayName: getDayName(dayDate),
-      isWeekend: isWeekend(dayDate),
+      dayName: getDayName(dayDate, tz),
+      isWeekend: weekend,
       status,
       record,
     });
@@ -562,6 +592,7 @@ async function performMarkAttendance(employeeId, mode, req) {
   const settings = await getEffectiveAttendanceSettings(empDoc);
   const requireFace = settings.faceEnabled !== false;
   const isAdminActor = req.user?.role === 'admin';
+  const requireFaceForThis = requireFace && !isAdminActor;
 
   const location = parseLocation(req.body.location);
 
@@ -576,11 +607,14 @@ async function performMarkAttendance(employeeId, mode, req) {
     distanceFromCompany = computeDistanceFromCompany(location, settings.location);
   }
 
-  if (requireFace && (!req.file || !req.file.buffer)) {
+  if (requireFaceForThis && (!req.file || !req.file.buffer)) {
     return { status: 400, message: 'A face photo is required to mark attendance' };
   }
 
-  const today = startOfDay(new Date());
+  const globalSettings = await getSettings();
+  const tz = globalSettings.officeTimezone || '';
+  const now = new Date();
+  const today = startOfDay(now, tz);
   const existing = await prisma.attendance.findFirst({ where: { employeeRefId: employeeId, date: today } });
 
   if (mode === 'check-in') {
@@ -605,7 +639,7 @@ async function performMarkAttendance(employeeId, mode, req) {
   }
 
   let verification = null;
-  if (requireFace) {
+  if (requireFaceForThis) {
     verification = await verifyAgainstProfile({
       employeeId,
       buffer: req.file.buffer,
@@ -616,24 +650,23 @@ async function performMarkAttendance(employeeId, mode, req) {
     }
   }
 
-  const faceVerified = requireFace;
+  const faceVerified = !!requireFaceForThis;
   const matchDistance = verification ? verification.distance : null;
   const photo = req.file
     ? saveBuffer(req.file.buffer, req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg')
     : null;
 
-  const now = new Date();
   const deviceInfo = { ...summarizeDevice(req), source: isAdminActor ? 'admin' : 'employee' };
 
   if (mode === 'check-in') {
-  const { status, lateMinutes } = await evaluateCheckInStatus(today, now, empDoc);
+    const { status, lateMinutes } = await evaluateCheckInStatus(today, now, empDoc);
     try {
       const record = await prisma.attendance.create({
         data: {
           employeeRefId: employeeId,
           employeeId: empDoc.employeeId,
           date: today,
-          dayName: getDayName(today),
+          dayName: getDayName(today, tz),
           checkInTime: now,
           status,
           lateMinutes,
@@ -723,11 +756,12 @@ const markAttendanceManual = asyncHandler(async (req, res) => {
     return respondAttendance(res, { status: 400, message: `Status must be one of: ${MANUAL_STATUSES.join(', ')}` });
   }
 
-  const dayDate = parseDateKey(String(date));
+  const { officeTimezone: tz = '' } = await getSettings();
+  const dayDate = parseDateKey(String(date), tz);
   if (Number.isNaN(dayDate.getTime())) {
     return respondAttendance(res, { status: 400, message: 'Invalid date' });
   }
-  if (dayDate > startOfDay(new Date())) {
+  if (dayDate > startOfDay(new Date(), tz)) {
     return respondAttendance(res, { status: 400, message: 'Attendance cannot be marked for a future date' });
   }
 
@@ -739,13 +773,13 @@ const markAttendanceManual = asyncHandler(async (req, res) => {
   let checkOutDate = null;
 
   if (hasTimes) {
-    checkInDate = parseManualTimestamp(dayDate, checkIn);
+    checkInDate = parseManualTimestamp(dayDate, checkIn, tz);
     if (!checkInDate) {
       return respondAttendance(res, { status: 400, message: 'Check-in time is required for this status' });
     }
 
     if (checkOut) {
-      checkOutDate = parseManualTimestamp(dayDate, checkOut);
+      checkOutDate = parseManualTimestamp(dayDate, checkOut, tz);
       if (!checkOutDate) {
         return respondAttendance(res, { status: 400, message: 'Check-out time must be a valid time (HH:MM)' });
       }
@@ -764,7 +798,7 @@ const markAttendanceManual = asyncHandler(async (req, res) => {
     // Prefer the wall-clock time the admin entered so the office-start
     // comparison stays correct even if the server runs in another timezone.
     const wallIn = parseTimeToMinutes(checkInLocal || (String(checkIn || '').includes('T') ? '' : checkIn));
-    const forLate = wallIn !== null ? combineDateWithMinutes(dayDate, wallIn) : checkInDate;
+    const forLate = wallIn !== null ? combineDateWithMinutes(dayDate, wallIn, tz) : checkInDate;
     const effective = await getEffectiveOfficeSettings(emp);
     lateMinutes = calculateLateMinutes(forLate, dayDate, effective);
   } else if (checkInDate && ['Present', 'Half Day'].includes(status)) {
@@ -774,7 +808,7 @@ const markAttendanceManual = asyncHandler(async (req, res) => {
 
   const data = {
     status,
-    dayName: getDayName(dayDate),
+    dayName: getDayName(dayDate, tz),
     note: note ? sanitizeString(note, 500) : null,
     faceVerified: false,
     checkInTime: checkInDate,
@@ -808,7 +842,7 @@ const markAttendanceManual = asyncHandler(async (req, res) => {
 
   return respondAttendance(res, {
     status: 200,
-    message: `Attendance for ${toDateKey(dayDate)} saved manually`,
+    message: `Attendance for ${toDateKey(dayDate, tz)} saved manually`,
     data: record,
   });
 });
