@@ -4,6 +4,7 @@ const config = require('../config/config');
 const DEFAULTS = {
   officeStartTime: config.officeStartTime || '09:30',
   officeEndTime: config.officeEndTime || '18:00',
+  officeTimezone: config.officeTimezone || '',
   halfDayThresholdHours: config.halfDayThresholdHours ?? 4,
   graceMinutes: 0,
   lateEnabled: true,
@@ -17,6 +18,57 @@ function normalizeTime(value, fallback) {
   const min = Number(m[2]);
   if (!Number.isInteger(h) || !Number.isInteger(min) || h < 0 || h > 23 || min < 0 || min > 59) return fallback;
   return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+function normalizeTimezone(value, fallback = '') {
+  if (typeof value !== 'string') return fallback;
+  const tz = value.trim();
+  if (!tz) return fallback;
+  try {
+    Intl.DateTimeFormat('en-US', { timeZone: tz }).format(new Date());
+    return tz;
+  } catch {
+    return fallback;
+  }
+}
+
+function getZonedParts(date, timeZone) {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  const parts = fmt.formatToParts(date);
+  const map = {};
+  parts.forEach((p) => {
+    map[p.type] = p.value;
+  });
+  return {
+    year: Number(map.year),
+    month: Number(map.month),
+    day: Number(map.day),
+    hour: map.hour === '24' ? 0 : Number(map.hour),
+    minute: Number(map.minute),
+    second: Number(map.second),
+  };
+}
+
+function zonedTimeToUtc({ year, month, day, hour, minute }, timeZone) {
+  let utc = Date.UTC(year, month - 1, day, hour, minute, 0);
+  for (let i = 0; i < 3; i++) {
+    const p = getZonedParts(new Date(utc), timeZone);
+    const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+    const want = Date.UTC(year, month - 1, day, hour, minute, 0);
+    const diff = want - asUtc;
+    utc += diff;
+    if (diff === 0) break;
+  }
+  return new Date(utc);
 }
 
 async function getSettings() {
@@ -34,6 +86,7 @@ async function getSettings() {
   return {
     officeStartTime: normalizeTime(map.officeStartTime, DEFAULTS.officeStartTime),
     officeEndTime: normalizeTime(map.officeEndTime, DEFAULTS.officeEndTime),
+    officeTimezone: normalizeTimezone(map.officeTimezone, DEFAULTS.officeTimezone),
     halfDayThresholdHours: Number.isFinite(threshold) && threshold > 0 ? threshold : DEFAULTS.halfDayThresholdHours,
     graceMinutes: Number.isFinite(grace) ? Math.max(0, Math.min(240, Math.round(grace))) : DEFAULTS.graceMinutes,
     lateEnabled,
@@ -52,6 +105,7 @@ async function updateSetting(key, value) {
   if (key === 'graceMinutes') parsed = Math.max(0, Math.min(240, Math.round(Number(value) || 0)));
   if (key === 'lateEnabled') parsed = value === true || value === 'true';
   if (key === 'officeStartTime' || key === 'officeEndTime') parsed = normalizeTime(value, DEFAULTS[key]);
+  if (key === 'officeTimezone') parsed = normalizeTimezone(value, DEFAULTS.officeTimezone);
 
   return prisma.setting.upsert({
     where: { key },
@@ -86,10 +140,28 @@ async function getEffectiveOfficeSettings(employee) {
   return {
     officeStartTime: ov.officeStartTime || global.officeStartTime,
     officeEndTime: ov.officeEndTime || global.officeEndTime,
+    officeTimezone: global.officeTimezone || '',
     halfDayThresholdHours: global.halfDayThresholdHours,
     graceMinutes: Number.isFinite(Number(ov.graceMinutes)) ? Number(ov.graceMinutes) : global.graceMinutes,
     lateEnabled: typeof ov.lateEnabled === 'boolean' ? ov.lateEnabled : global.lateEnabled,
   };
+}
+
+function getGraceCutoff(date, checkInDate, settings) {
+  const [h, m] = String(settings.officeStartTime || DEFAULTS.officeStartTime).split(':').map((p) => parseInt(p, 10));
+  const graceMs = (Number(settings.graceMinutes) || 0) * 60000;
+  const tz = normalizeTimezone(settings.officeTimezone, '');
+  if (tz) {
+    const basis = checkInDate instanceof Date ? checkInDate : new Date(checkInDate);
+    if (!Number.isNaN(basis.getTime())) {
+      const p = getZonedParts(basis, tz);
+      const startUtc = zonedTimeToUtc({ year: p.year, month: p.month, day: p.day, hour: h, minute: m }, tz);
+      return new Date(startUtc.getTime() + graceMs);
+    }
+  }
+  const start = new Date(date);
+  start.setHours(h, m, 0, 0);
+  return new Date(start.getTime() + graceMs);
 }
 
 /**
@@ -100,12 +172,10 @@ async function evaluateCheckInStatus(date, checkInDate, employee = null) {
   const settings = await getEffectiveOfficeSettings(employee);
   if (!settings.lateEnabled) return { status: 'Present', lateMinutes: 0, settings };
 
-  const start = new Date(date);
-  const [h, m] = settings.officeStartTime.split(':').map((p) => parseInt(p, 10));
-  start.setHours(h, m, 0, 0);
-  const graceCutoff = new Date(start.getTime() + (Number(settings.graceMinutes) || 0) * 60000);
-
+  const graceCutoff = getGraceCutoff(date, checkInDate, settings);
   const checkIn = checkInDate instanceof Date ? checkInDate : new Date(checkInDate);
+  if (Number.isNaN(checkIn.getTime())) return { status: 'Present', lateMinutes: 0, settings };
+
   if (checkIn > graceCutoff) {
     const lateMinutes = Math.max(1, Math.round((checkIn - graceCutoff) / 60000));
     return { status: 'Late', lateMinutes, settings };
@@ -122,10 +192,7 @@ async function computeFinalStatus(checkInDate, checkOutDate, status, employee = 
 }
 
 function calculateLateMinutes(checkInDate, date, settings) {
-  const start = new Date(date);
-  const [h, m] = String(settings.officeStartTime || DEFAULTS.officeStartTime).split(':').map((p) => parseInt(p, 10));
-  start.setHours(h, m, 0, 0);
-  const graceCutoff = new Date(start.getTime() + (Number(settings.graceMinutes) || 0) * 60000);
+  const graceCutoff = getGraceCutoff(date, checkInDate, settings);
   const checkIn = checkInDate instanceof Date ? checkInDate : new Date(checkInDate);
   if (Number.isNaN(checkIn.getTime())) return 0;
   if (checkIn > graceCutoff) {
@@ -134,4 +201,4 @@ function calculateLateMinutes(checkInDate, date, settings) {
   return 0;
 }
 
-module.exports = { getSettings, updateSetting, evaluateCheckInStatus, computeFinalStatus, getEffectiveOfficeSettings, calculateLateMinutes, normalizeTime, DEFAULTS };
+module.exports = { getSettings, updateSetting, evaluateCheckInStatus, computeFinalStatus, getEffectiveOfficeSettings, calculateLateMinutes, normalizeTime, normalizeTimezone, DEFAULTS };
