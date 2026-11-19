@@ -10,6 +10,8 @@ const {
 const {
   evaluateCheckInStatus,
   computeFinalStatus,
+  getEffectiveOfficeSettings,
+  calculateLateMinutes,
 } = require('../services/attendanceService');
 const {
   startOfDay,
@@ -763,8 +765,11 @@ const markAttendanceManual = asyncHandler(async (req, res) => {
     // comparison stays correct even if the server runs in another timezone.
     const wallIn = parseTimeToMinutes(checkInLocal || (String(checkIn || '').includes('T') ? '' : checkIn));
     const forLate = wallIn !== null ? combineDateWithMinutes(dayDate, wallIn) : checkInDate;
-    const evalResult = await evaluateCheckInStatus(dayDate, forLate, emp);
-    lateMinutes = evalResult.lateMinutes || 1;
+    const effective = await getEffectiveOfficeSettings(emp);
+    lateMinutes = calculateLateMinutes(forLate, dayDate, effective);
+  } else if (checkInDate && ['Present', 'Half Day'].includes(status)) {
+    // Manual overrides: if admin marks Present/Half Day, keep late minutes at 0.
+    lateMinutes = 0;
   }
 
   const data = {

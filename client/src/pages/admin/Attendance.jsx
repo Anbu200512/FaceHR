@@ -93,14 +93,14 @@ export default function Attendance() {
           <PencilLine className="h-4 w-4" /> Mark manually
         </Link>
         <Button variant="secondary" onClick={() => refetch()}><RefreshCw className="h-4 w-4" /> Refresh</Button>
-        <Button onClick={handleExport} disabled={!rows.length}><Download className="h-4 w-4" /> Export CSV</Button>
+        <Button onClick={handleExport} disabled={!rows.length}><Download className="h-4 w-4" /> Export Page CSV</Button>
       </PageHeader>
 
       <Card className="mb-5 p-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Employee or ID…" className="input pl-9" />
+            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Employee or ID" className="input pl-9" />
           </div>
           <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setPage(1); }} className="input" title="Date" />
           <select value={department} onChange={(e) => { setDepartment(e.target.value); setPage(1); }} className="input">

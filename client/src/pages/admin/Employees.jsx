@@ -132,11 +132,11 @@ export default function Employees() {
     setExportBusy(true);
     try {
       if (!rows.length) {
-        toast.error('No employees to export');
+        toast.error('No employees to export on this page');
         return;
       }
-      if (format === 'csv') exportEmployeesToCsv(rows, 'filtered');
-      else exportEmployeesToPdf(rows, 'filtered');
+      if (format === 'csv') exportEmployeesToCsv(rows, `page ${page}`);
+      else exportEmployeesToPdf(rows, `page ${page}`);
     } catch (err) {
       toast.error(extractError(err, 'Could not export employees'));
     } finally {
@@ -166,10 +166,10 @@ export default function Employees() {
         description="Manage your team, profiles and face registration."
       >
         <Button variant="secondary" onClick={() => handleExportAll('csv')} loading={exportBusy} disabled={exportBusy}>
-          <Download className="h-4 w-4" /> Export CSV
+          <Download className="h-4 w-4" /> Export Page CSV
         </Button>
         <Button variant="secondary" onClick={() => handleExportAll('pdf')} loading={exportBusy} disabled={exportBusy}>
-          <FileText className="h-4 w-4" /> Export PDF
+          <FileText className="h-4 w-4" /> Export Page PDF
         </Button>
         <Link to="/admin/employees/new">
           <Button>
@@ -186,7 +186,7 @@ export default function Employees() {
             <input
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              placeholder="Search by name, employee ID, email or phone…"
+              placeholder="Search by name, employee ID, email or phone"
               className="input pl-9"
             />
           </div>

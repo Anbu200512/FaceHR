@@ -76,6 +76,7 @@ export default function EmployeeProfile({ faceMode }) {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [todayTick, setTodayTick] = useState(0);
   const [accessBusy, setAccessBusy] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
 
   const { data, loading, refetch } = useApi(async () => {
     const { data } = await api.get(`/employees/${id}`);
@@ -182,6 +183,18 @@ export default function EmployeeProfile({ faceMode }) {
     }
   };
 
+  const handleExportProfile = async () => {
+    if (!emp) return;
+    setExportBusy(true);
+    try {
+      await exportEmployeeProfilePdf(emp);
+    } catch (err) {
+      toast.error(extractError(err, 'Could not export employee profile'));
+    } finally {
+      setExportBusy(false);
+    }
+  };
+
   if (loading) return <FullScreenLoader label="Loading employee profile…" />;
   const emp = data;
   if (!emp) return <EmptyState title="Employee not found" />;
@@ -223,7 +236,7 @@ export default function EmployeeProfile({ faceMode }) {
           <Button variant="ghost" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" /> Back
           </Button>
-          <Button variant="secondary" onClick={() => exportEmployeeProfilePdf(emp)}>
+          <Button variant="secondary" onClick={handleExportProfile} loading={exportBusy} disabled={exportBusy}>
             <Download className="h-4 w-4" /> Download Profile
           </Button>
           <Button variant="secondary" onClick={() => setSendOpen(true)}>

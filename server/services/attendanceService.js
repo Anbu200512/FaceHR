@@ -121,4 +121,17 @@ async function computeFinalStatus(checkInDate, checkOutDate, status, employee = 
   return status;
 }
 
-module.exports = { getSettings, updateSetting, evaluateCheckInStatus, computeFinalStatus, getEffectiveOfficeSettings, normalizeTime, DEFAULTS };
+function calculateLateMinutes(checkInDate, date, settings) {
+  const start = new Date(date);
+  const [h, m] = String(settings.officeStartTime || DEFAULTS.officeStartTime).split(':').map((p) => parseInt(p, 10));
+  start.setHours(h, m, 0, 0);
+  const graceCutoff = new Date(start.getTime() + (Number(settings.graceMinutes) || 0) * 60000);
+  const checkIn = checkInDate instanceof Date ? checkInDate : new Date(checkInDate);
+  if (Number.isNaN(checkIn.getTime())) return 0;
+  if (checkIn > graceCutoff) {
+    return Math.max(1, Math.round((checkIn - graceCutoff) / 60000));
+  }
+  return 0;
+}
+
+module.exports = { getSettings, updateSetting, evaluateCheckInStatus, computeFinalStatus, getEffectiveOfficeSettings, calculateLateMinutes, normalizeTime, DEFAULTS };
