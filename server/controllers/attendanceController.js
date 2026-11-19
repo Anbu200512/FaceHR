@@ -169,7 +169,10 @@ const checkIn = asyncHandler(async (req, res) => {
 
   const now = new Date();
   const today = startOfDay(now, tz);
-  const existing = await prisma.attendance.findFirst({ where: { employeeRefId: employee, date: today } });
+  const dayEnd = endOfDay(now, tz);
+  const existing = await prisma.attendance.findFirst({
+    where: { employeeRefId: employee, date: { gte: today, lt: dayEnd } },
+  });
 
   if (existing) {
     if (existing.checkInTime && existing.checkOutTime) {
@@ -277,7 +280,10 @@ const checkOut = asyncHandler(async (req, res) => {
 
   const now = new Date();
   const today = startOfDay(now, tz);
-  const record = await prisma.attendance.findFirst({ where: { employeeRefId: employee, date: today } });
+  const dayEnd = endOfDay(now, tz);
+  const record = await prisma.attendance.findFirst({
+    where: { employeeRefId: employee, date: { gte: today, lt: dayEnd } },
+  });
   if (!record || !record.checkInTime) {
     return res.status(400).json({
       success: false,
@@ -615,7 +621,10 @@ async function performMarkAttendance(employeeId, mode, req) {
   const tz = globalSettings.officeTimezone || '';
   const now = new Date();
   const today = startOfDay(now, tz);
-  const existing = await prisma.attendance.findFirst({ where: { employeeRefId: employeeId, date: today } });
+  const dayEnd = endOfDay(now, tz);
+  const existing = await prisma.attendance.findFirst({
+    where: { employeeRefId: employeeId, date: { gte: today, lt: dayEnd } },
+  });
 
   if (mode === 'check-in') {
     if (existing && existing.checkInTime && existing.checkOutTime) {
@@ -829,16 +838,27 @@ const markAttendanceManual = asyncHandler(async (req, res) => {
     }),
   };
 
-  const record = await prisma.attendance.upsert({
-    where: { employeeRefId_date: { employeeRefId: emp.id, date: dayDate } },
-    update: data,
-    create: {
-      employeeRefId: emp.id,
-      employeeId: emp.employeeId,
-      date: dayDate,
-      ...data,
-    },
+  const existing = await prisma.attendance.findFirst({
+    where: { employeeRefId: emp.id, date: { gte: startOfDay(dayDate, tz), lt: endOfDay(dayDate, tz) } },
   });
+
+  let record;
+  if (existing) {
+    record = await prisma.attendance.update({
+      where: { id: existing.id },
+      data: { ...data, date: dayDate, dayName: getDayName(dayDate, tz) },
+    });
+  } else {
+    record = await prisma.attendance.create({
+      data: {
+        employeeRefId: emp.id,
+        employeeId: emp.employeeId,
+        date: dayDate,
+        dayName: getDayName(dayDate, tz),
+        ...data,
+      },
+    });
+  }
 
   return respondAttendance(res, {
     status: 200,
