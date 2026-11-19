@@ -167,44 +167,48 @@ async function reviewRegularization(req, res, status) {
     let workingHoursMinutes = 0;
 
     const empDoc = await prisma.employee.findUnique({ where: { id: row.employeeRefId } });
-    if (row.requestedCheckIn) {
-      const evaluated = await evaluateCheckInStatus(row.date, row.requestedCheckIn, empDoc);
+    const existingAttendance = await prisma.attendance.findUnique({
+      where: { employeeRefId_date: { employeeRefId: row.employeeRefId, date: startOfDay(row.date, tz) } },
+    });
+
+    const effectiveCheckIn = row.requestedCheckIn || existingAttendance?.checkInTime || null;
+    const effectiveCheckOut = row.requestedCheckOut || existingAttendance?.checkOutTime || null;
+
+    if (effectiveCheckIn) {
+      const evaluated = await evaluateCheckInStatus(row.date, effectiveCheckIn, empDoc);
       attendanceStatus = evaluated.status;
       lateMinutes = evaluated.lateMinutes;
     }
-    if (row.requestedCheckIn && row.requestedCheckOut) {
-      workingHoursMinutes = Math.max(0, Math.round((row.requestedCheckOut - row.requestedCheckIn) / 60000));
-      attendanceStatus = await computeFinalStatus(row.requestedCheckIn, row.requestedCheckOut, attendanceStatus, empDoc);
+    if (effectiveCheckIn && effectiveCheckOut) {
+      workingHoursMinutes = Math.max(0, Math.round((effectiveCheckOut - effectiveCheckIn) / 60000));
+      attendanceStatus = await computeFinalStatus(effectiveCheckIn, effectiveCheckOut, attendanceStatus, empDoc);
     }
 
     const day = startOfDay(row.date, tz);
-    const existingAttendance = await prisma.attendance.findUnique({
-      where: { employeeRefId_date: { employeeRefId: row.employeeRefId, date: day } },
-    });
-    if (existingAttendance) {
-      const hasProof =
-        Boolean(existingAttendance.checkInPhoto || existingAttendance.checkOutPhoto || existingAttendance.faceVerified);
-      const hasPunch = Boolean(existingAttendance.checkInTime || existingAttendance.checkOutTime);
-      const force = req.body.force === true || req.body.force === 'true';
-      if (hasProof && hasPunch && !force) {
-        return res.status(409).json({
-          success: false,
-          message:
-            'Attendance already has face/photo-verified punch data for this day. Re-send approval with force=true to overwrite.',
-          code: 'OVERWRITE_CONFIRMATION_REQUIRED',
-        });
-      }
-    }
+    const regularizationMeta = { regularized: true, regularizationId: row.id };
 
     const updateData = {
       status: attendanceStatus,
       lateMinutes,
       workingHoursMinutes,
       note: adminNote ? `Regularized: ${adminNote}` : 'Regularized by admin',
-      deviceInfo: { regularized: true, regularizationId: row.id },
+      deviceInfo: regularizationMeta,
+      faceVerified: false,
     };
-    if (row.requestedCheckIn) updateData.checkInTime = row.requestedCheckIn;
-    if (row.requestedCheckOut) updateData.checkOutTime = row.requestedCheckOut;
+    if (row.requestedCheckIn) {
+      updateData.checkInTime = row.requestedCheckIn;
+      updateData.checkInPhoto = null;
+      updateData.checkInLocation = null;
+      updateData.checkInMatchDistance = null;
+      updateData.checkInDistanceFromCompany = null;
+    }
+    if (row.requestedCheckOut) {
+      updateData.checkOutTime = row.requestedCheckOut;
+      updateData.checkOutPhoto = null;
+      updateData.checkOutLocation = null;
+      updateData.checkOutMatchDistance = null;
+      updateData.checkOutDistanceFromCompany = null;
+    }
 
     const createData = {
       employeeRefId: row.employeeRefId,
@@ -217,7 +221,16 @@ async function reviewRegularization(req, res, status) {
       lateMinutes,
       workingHoursMinutes,
       note: adminNote ? `Regularized: ${adminNote}` : 'Regularized by admin',
-      deviceInfo: { regularized: true, regularizationId: row.id },
+      deviceInfo: regularizationMeta,
+      faceVerified: false,
+      checkInPhoto: null,
+      checkOutPhoto: null,
+      checkInLocation: null,
+      checkOutLocation: null,
+      checkInMatchDistance: null,
+      checkOutMatchDistance: null,
+      checkInDistanceFromCompany: null,
+      checkOutDistanceFromCompany: null,
     };
 
     attendance = await prisma.attendance.upsert({

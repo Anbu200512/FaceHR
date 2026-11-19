@@ -52,10 +52,10 @@ export default function MyRegularizations() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
-          <div className="border-b px-5 py-4 dark:border-slate-700">
+          <div className="border-b px-4 py-4 dark:border-slate-700 sm:px-5">
             <h2 className="font-bold text-slate-900 dark:text-slate-100">New Request</h2>
           </div>
-          <div className="space-y-4 p-5">
+          <div className="space-y-4 p-4 sm:p-5">
             <Input label="Date *" type="date" max={today} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Input label="Check-in" type="time" value={form.checkIn} onChange={(e) => setForm({ ...form, checkIn: e.target.value })} />
@@ -69,19 +69,19 @@ export default function MyRegularizations() {
         </Card>
 
         <Card className="lg:col-span-2">
-          <div className="border-b px-5 py-4 dark:border-slate-700">
+          <div className="border-b px-4 py-4 dark:border-slate-700 sm:px-5">
             <h2 className="font-bold text-slate-900 dark:text-slate-100">My Requests</h2>
           </div>
           {mine.loading && !mine.data ? (
-            <div className="space-y-3 p-5">
+            <div className="space-y-3 p-4 sm:p-5">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                  <Skeleton className="h-11 w-11 rounded-xl" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-48" />
+                <div key={i} className="flex items-start gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700 sm:items-center sm:gap-4">
+                  <Skeleton className="h-11 w-11 shrink-0 rounded-xl" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-4 w-32 max-w-full" />
+                    <Skeleton className="h-3 w-48 max-w-full" />
                   </div>
-                  <Skeleton className="h-6 w-16 rounded-full" />
+                  <Skeleton className="h-6 w-16 shrink-0 rounded-full" />
                 </div>
               ))}
             </div>
@@ -90,19 +90,25 @@ export default function MyRegularizations() {
           ) : (
             <ul className="divide-y dark:divide-slate-700">
               {mine.data.map((r) => (
-                <li key={r._id} className="flex items-center gap-4 px-5 py-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-400">
-                    <CalendarClock className="h-5 w-5" />
+                <li key={r._id} className="px-4 py-4 sm:px-5">
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-400">
+                      <CalendarClock className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-800 dark:text-slate-100">{formatDate(r.date)}</p>
+                          <p className="mt-0.5 break-words text-xs text-slate-400 dark:text-slate-300">
+                            In: {r.requestedCheckIn ? formatTime(r.requestedCheckIn) : '-'} {'·'} Out: {r.requestedCheckOut ? formatTime(r.requestedCheckOut) : '-'}
+                          </p>
+                        </div>
+                        <Badge tone={TONES[r.status] || 'slate'} className="shrink-0">{r.status}</Badge>
+                      </div>
+                      {r.reason && <p className="mt-2 break-words text-xs text-slate-500 dark:text-slate-300">{r.reason}</p>}
+                      {r.adminNote && <p className="mt-1 break-words text-xs font-medium text-rose-500">Note: {r.adminNote}</p>}
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-slate-800 dark:text-slate-100">{formatDate(r.date)}</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-300">
-                      In: {r.requestedCheckIn ? formatTime(r.requestedCheckIn) : '-'} • Out: {r.requestedCheckOut ? formatTime(r.requestedCheckOut) : '-'}
-                    </p>
-                    {r.reason && <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-300">{r.reason}</p>}
-                    {r.adminNote && <p className="mt-1 text-xs font-medium text-rose-500">Note: {r.adminNote}</p>}
-                  </div>
-                  <Badge tone={TONES[r.status] || 'slate'}>{r.status}</Badge>
                 </li>
               ))}
             </ul>
