@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { LogIn, LogOut, Clock3, MapPin, CheckCircle2, AlertCircle } from 'lucide-react';
 import api, { extractError } from '../../services/api';
 import { usePolling } from '../../hooks/useDebounce';
@@ -137,8 +137,8 @@ export default function FaceAttendance() {
   };
 
   const shiftLabel = office
-    ? `${formatClock(office.officeStartTime)} ΓÇô ${formatClock(office.officeEndTime)}`
-    : 'ΓÇö';
+    ? `${formatClock(office.officeStartTime)} – ${formatClock(office.officeEndTime)}`
+    : '—';
   const graceLabel = office
     ? (office.lateEnabled === false ? 'Late marking off' : `${Number(office.graceMinutes || 0)} min grace`)
     : null;
@@ -157,10 +157,10 @@ export default function FaceAttendance() {
               <Clock3 className="h-4.5 w-4.5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-300">TodayΓÇÖs shift window</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-300">Today’s shift window</p>
               <p className="mt-0.5 font-semibold text-slate-800 dark:text-slate-100">{shiftLabel}</p>
               <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-300">
-                {graceLabel}{office.lateEnabled !== false ? ' ΓÇó Check in after start + grace is marked late' : ''}
+                {graceLabel}{office.lateEnabled !== false ? ' • Check in after start + grace is marked late' : ''}
               </p>
             </div>
           </div>
@@ -191,7 +191,7 @@ export default function FaceAttendance() {
             <div className="text-sm text-slate-500 dark:text-slate-300">
               In: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatTime(rec.checkInTime)}</span>
               {rec.checkOutTime && (
-                <> ΓÇó Out: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatTime(rec.checkOutTime)}</span></>
+                <> • Out: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatTime(rec.checkOutTime)}</span></>
               )}
             </div>
           )}
@@ -224,7 +224,7 @@ export default function FaceAttendance() {
           <div className={`flex gap-2 rounded-xl border px-4 py-3 text-sm ${gateError.code === 'OUTSIDE_ALLOWED_AREA' ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400' : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'}`}>
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
-              <p className="font-medium">CouldnΓÇÖt mark attendance</p>
+              <p className="font-medium">Couldn’t mark attendance</p>
               <p className="mt-0.5">{gateError.message}</p>
             </div>
           </div>
@@ -251,7 +251,7 @@ export default function FaceAttendance() {
                     </>
                   )}
                   {punchResult.geo?.distance != null && punchResult.geo?.allowed != null ? (
-                    <p className="inline-flex items-start gap-1.5 sm:col-span-2"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>Location verified: {punchResult.geo.distance} m from site (allowed {punchResult.geo.allowed} m){punchResult.geo.name ? ` ΓÇó ${punchResult.geo.name}` : ''}</span></p>
+                    <p className="inline-flex items-start gap-1.5 sm:col-span-2"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>Location verified: {punchResult.geo.distance} m from site (allowed {punchResult.geo.allowed} m){punchResult.geo.name ? ` • ${punchResult.geo.name}` : ''}</span></p>
                   ) : settings?.geoEnabled === false ? (
                     <p className="text-emerald-700/80 dark:text-emerald-300/80 sm:col-span-2">Location verification not required.</p>
                   ) : null}
@@ -278,9 +278,9 @@ export default function FaceAttendance() {
               return (
                 <div className="mx-auto max-w-sm space-y-1 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-left text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
                   {mode === 'checkin' ? (
-                    <p>Check-in: <span className="font-semibold">{formatTime(data?.checkInTime)}</span> ΓÇó <span className="font-semibold">{data?.status === 'Late' ? `Late${data?.lateMinutes ? ` by ${data.lateMinutes} min` : ''}` : 'On time'}</span></p>
+                    <p>Check-in: <span className="font-semibold">{formatTime(data?.checkInTime)}</span> • <span className="font-semibold">{data?.status === 'Late' ? `Late${data?.lateMinutes ? ` by ${data.lateMinutes} min` : ''}` : 'On time'}</span></p>
                   ) : (
-                    <p>Check-out: <span className="font-semibold">{formatTime(data?.checkOutTime)}</span> ΓÇó Total <span className="font-semibold">{formatDuration(data?.workingHoursMinutes)}</span></p>
+                    <p>Check-out: <span className="font-semibold">{formatTime(data?.checkOutTime)}</span> • Total <span className="font-semibold">{formatDuration(data?.workingHoursMinutes)}</span></p>
                   )}
                   {geo?.distance != null && geo?.allowed != null && (
                     <p className="inline-flex items-start gap-1.5"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />Location verified: {geo.distance} m (allowed {geo.allowed} m)</p>

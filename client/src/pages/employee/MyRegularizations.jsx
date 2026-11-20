@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { CalendarClock, Send } from 'lucide-react';
 import api, { extractError } from '../../services/api';
 import { useApi } from '../../hooks/useApi';

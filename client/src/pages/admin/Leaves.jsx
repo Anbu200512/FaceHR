@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Search, Check, X, StickyNote, MessageSquareText } from 'lucide-react';
 import api from '../../services/api';
 import { useApi } from '../../hooks/useApi';

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -8,15 +8,15 @@ export default function NotificationBell({ admin }) {
   const navigate = useNavigate();
   const to = admin ? '/admin/notifications' : '/employee/notifications';
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (typeof document !== 'undefined' && document.hidden) return;
     try {
-      const { data } = await api.get('/notifications/summary?limit=1');
+      const { data } = await api.get('/notifications/summary?limit=1', { noCache: true });
       setUnread(Number(data?.data?.unread || 0));
     } catch (_e) {
       /* silent */
     }
-  };
+  }, []);
 
   useEffect(() => {
     load();
@@ -24,12 +24,17 @@ export default function NotificationBell({ admin }) {
     const onVisible = () => {
       if (!document.hidden) load();
     };
+    const onUpdated = () => load();
     document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onUpdated);
+    window.addEventListener('notifications-updated', onUpdated);
     return () => {
       clearInterval(t);
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onUpdated);
+      window.removeEventListener('notifications-updated', onUpdated);
     };
-  }, []);
+  }, [load]);
 
   return (
     <button

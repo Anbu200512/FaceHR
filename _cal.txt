@@ -1,4 +1,4 @@
-﻿4: import api from '../../services/api';
+4: import api from '../../services/api';
 9: import Badge from '../ui/Badge';
 11: 
 12: const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

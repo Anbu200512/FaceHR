@@ -30,7 +30,7 @@ const {
 
 const sanitizeString = (v, max = 200) => String(v || '').slice(0, max);
 
-// Manual marks may arrive either as a full ISO timestamp (preferred �?" the client
+// Manual marks may arrive either as a full ISO timestamp (preferred — the client
 // resolves the picked date + wall-clock time in the user's timezone) or as a
 // legacy "HH:MM" string. ISO values are stored untouched so the server timezone
 // never shifts the time the admin entered.

@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Mail, Phone, CalendarDays, Briefcase, Lock, ScanFace, LockKeyhole, Download } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';

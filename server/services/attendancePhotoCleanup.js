@@ -1,4 +1,4 @@
-﻿const fs = require('fs').promises;
+const fs = require('fs').promises;
 const path = require('path');
 const prisma = require('../config/prisma');
 const { uploadsDir } = require('../middleware/upload');

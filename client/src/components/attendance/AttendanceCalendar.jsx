@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarCheck, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import api from '../../services/api';
@@ -86,8 +86,8 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
       <div className="px-5 pt-4">
         {office && (
           <div className="mb-3 text-xs text-slate-500 dark:text-slate-300">
-            Shift: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatClock(office.officeStartTime)} ΓÇô {formatClock(office.officeEndTime)}</span>
-            <span className="text-slate-400 dark:text-slate-300"> ΓÇó </span>
+            Shift: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatClock(office.officeStartTime)} – {formatClock(office.officeEndTime)}</span>
+            <span className="text-slate-400 dark:text-slate-300"> • </span>
             {office.lateEnabled === false ? 'Late marking off' : `${Number(office.graceMinutes || 0)} min grace`}
           </div>
         )}
@@ -245,7 +245,7 @@ export default function AttendanceCalendar({ className, showFooterLink = true })
           </div>
           {showFooterLink && (
             <Link to="/employee/history" className="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">
-              Full history ΓåÆ
+              Full history →
             </Link>
           )}
         </div>

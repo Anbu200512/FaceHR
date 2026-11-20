@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Bell, Check, CheckCheck, Trash2, ExternalLink } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Bell, Check, Trash2, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api, { extractError } from '../services/api';
 import { useApi } from '../hooks/useApi';
@@ -16,39 +16,45 @@ export default function NotificationsPage() {
   const toast = useToast();
   const navigate = useNavigate();
   const [busyId, setBusyId] = useState(null);
-  const [bulkBusy, setBulkBusy] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const autoMarkedRef = useRef(false);
 
   const list = useApi(async () => {
-    const { data } = await api.get('/notifications?limit=100');
+    const { data } = await api.get('/notifications?limit=100', { noCache: true });
     return Array.isArray(data.data) ? data.data : [];
   }, []);
 
   const items = list.data || [];
   const unreadCount = items.filter((n) => !n.read).length;
 
+  useEffect(() => {
+    if (list.loading || !list.data || autoMarkedRef.current) return;
+    autoMarkedRef.current = true;
+    const hasUnread = list.data.some((n) => !n.read);
+    if (hasUnread) {
+      api.put('/notifications/read-all')
+        .then(async () => {
+          await list.refetch();
+          window.dispatchEvent(new Event('notifications-updated'));
+        })
+        .catch(() => {
+          window.dispatchEvent(new Event('notifications-updated'));
+        });
+    } else {
+      window.dispatchEvent(new Event('notifications-updated'));
+    }
+  }, [list.loading, list.data, list.refetch]);
+
   const markRead = async (id) => {
     setBusyId(id);
     try {
       await api.put(`/notifications/${id}/read`);
       await list.refetch();
+      window.dispatchEvent(new Event('notifications-updated'));
     } catch (err) {
       toast.error(extractError(err, 'Could not mark notification as read'));
     } finally {
       setBusyId(null);
-    }
-  };
-
-  const markAllRead = async () => {
-    setBulkBusy(true);
-    try {
-      await api.put('/notifications/read-all');
-      toast.success('All notifications marked as read');
-      await list.refetch();
-    } catch (err) {
-      toast.error(extractError(err, 'Could not mark all as read'));
-    } finally {
-      setBulkBusy(false);
     }
   };
 
@@ -59,6 +65,7 @@ export default function NotificationsPage() {
       toast.success('Notification deleted');
       setDeleteTarget(null);
       await list.refetch();
+      window.dispatchEvent(new Event('notifications-updated'));
     } catch (err) {
       toast.error(extractError(err, 'Could not delete notification'));
     } finally {
@@ -69,24 +76,21 @@ export default function NotificationsPage() {
   const openItem = async (n) => {
     const nid = n.id || n._id;
     if (!n.read && nid) {
-      try { await api.put(`/notifications/${nid}/read`); } catch (_e) { /* ignore */ }
+      try {
+        await api.put(`/notifications/${nid}/read`);
+        window.dispatchEvent(new Event('notifications-updated'));
+      } catch (_e) { /* ignore */ }
     }
     if (n.link) {
       navigate(n.link);
     } else {
-      list.refetch();
+      await list.refetch();
     }
   };
 
   return (
     <div>
-      <PageHeader title="Notifications" description="Stay updated with attendance, leave, and account activity.">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="secondary" onClick={markAllRead} loading={bulkBusy} disabled={unreadCount === 0 || list.loading}>
-            <CheckCheck className="h-4 w-4" /> Mark all read
-          </Button>
-        </div>
-      </PageHeader>
+      <PageHeader title="Notifications" description="Stay updated with attendance, leave, and account activity." />
 
       {list.loading && !list.data ? (
         <div className="space-y-3">
@@ -136,11 +140,11 @@ export default function NotificationsPage() {
                   </button>
                   <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
                     {!n.read && (
-                      <Button size="xs" variant="secondary" onClick={() => markRead(nid)} loading={busy} disabled={bulkBusy || !nid}>
+                      <Button size="xs" variant="secondary" onClick={() => markRead(nid)} loading={busy} disabled={!nid}>
                         <Check className="h-3.5 w-3.5" /> Mark read
                       </Button>
                     )}
-                    <Button size="xs" variant="ghost" onClick={() => setDeleteTarget(n)} loading={busy} disabled={bulkBusy || !nid} className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-500/10">
+                    <Button size="xs" variant="ghost" onClick={() => setDeleteTarget(n)} loading={busy} disabled={!nid} className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-500/10">
                       <Trash2 className="h-3.5 w-3.5" /> Delete
                     </Button>
                   </div>

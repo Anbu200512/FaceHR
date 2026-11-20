@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Save, MapPin, MapPinned, ScanFace, LocateFixed, RefreshCw } from 'lucide-react';
 import { extractError } from '../../services/api';
 import { useToast } from '../../context/ToastContext';

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   UserRound,
   Landmark,
@@ -831,7 +831,7 @@ function WeekOffEditor({ emp, ctx, onSaved, readOnly = false }) {
   }
 
   return (
-    <SectionCard title="Week Off" subtitle="Configure the employeeΓÇÖs weekly off days and working days." icon={CalendarDays}>
+    <SectionCard title="Week Off" subtitle="Configure the employee’s weekly off days and working days." icon={CalendarDays}>
       <FieldGrid>
         <Select
           label="Weekly Off Day"
@@ -1221,7 +1221,7 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
               {emp.profilePhoto ? 'Profile photo uploaded' : 'No profile photo yet'}
             </p>
-            <p className="mt-0.5 text-xs text-slate-400">Allowed: JPG, PNG, WebP ΓÇó Max 5 MB</p>
+            <p className="mt-0.5 text-xs text-slate-400">Allowed: JPG, PNG, WebP • Max 5 MB</p>
             <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
               <label className={`btn-secondary text-xs ${photoBusy || removePhotoBusy ? 'pointer-events-none cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
                 <Camera className="h-4 w-4" /> {emp.profilePhoto ? 'Replace photo' : 'Upload photo'}
@@ -1265,7 +1265,7 @@ function DocumentsEditor({ emp, ctx, onSaved }) {
               </label>
             </div>
           </div>
-          <p className="mt-3 text-xs text-slate-400">Any file type supported by the server ΓÇó Max 10 MB</p>
+          <p className="mt-3 text-xs text-slate-400">Any file type supported by the server • Max 10 MB</p>
           <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
             {form.file && <p className="min-w-0 flex-1 truncate text-xs text-slate-400">{form.file.name}</p>}
             <Button type="button" size="sm" onClick={onUpload} loading={uploading} disabled={uploading || !form.file}>

@@ -1,4 +1,4 @@
-﻿1: import { useEffect, useState } from 'react';
+1: import { useEffect, useState } from 'react';
 2: import { Link } from 'react-router-dom';
 3: import { LogIn, LogOut, CalendarDays, History, Plane, Briefcase, Clock3 } from 'lucide-react';
 4: import api, { extractError } from '../../services/api';

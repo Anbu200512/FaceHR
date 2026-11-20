@@ -1,4 +1,4 @@
-﻿11: import PageHeader from '../../components/PageHeader';
+11: import PageHeader from '../../components/PageHeader';
 13: import Badge from '../../components/ui/Badge';
 14: import Button from '../../components/ui/Button';
 15: import Avatar from '../../components/Avatar';

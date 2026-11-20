@@ -1,4 +1,4 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const repl = [
   [/ \uFFFD\?" /g, ' - '],
   [/\uFFFD\?" /g, '- '],
