@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LogIn, LogOut, CalendarDays, History, Plane, Briefcase, Clock3, MapPin, CheckCircle2, AlertCircle } from 'lucide-react';
 import api, { extractError } from '../../services/api';
@@ -162,7 +162,7 @@ export default function EmployeeHome() {
       ? formatDuration(liveMinutes)
       : '-';
 
-  const shiftLabel = office ? `${formatClock(office.officeStartTime)} – ${formatClock(office.officeEndTime)}` : null;
+  const shiftLabel = office ? `${formatClock(office.officeStartTime)} ΓÇô ${formatClock(office.officeEndTime)}` : null;
   const graceLabel = office ? (office.lateEnabled === false ? 'Late marking off' : `${Number(office.graceMinutes || 0)} min grace`) : null;
 
   return (
@@ -184,8 +184,8 @@ export default function EmployeeHome() {
                   {[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(' ') || user?.name}
                 </p>
                 <p className="break-words text-xs text-slate-400 dark:text-slate-300">
-                  {emp.designation?.name || '-'} • {emp.department?.name || '-'}
-                  {emp.employmentType ? ` • ${emp.employmentType}` : ''}
+                  {emp.designation?.name || '-'} ΓÇó {emp.department?.name || '-'}
+                  {emp.employmentType ? ` ΓÇó ${emp.employmentType}` : ''}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {rec?.status ? <Badge>{rec.status}</Badge> : <Badge>Not Checked In</Badge>}
@@ -284,7 +284,7 @@ export default function EmployeeHome() {
         >
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            <p className="font-medium">Couldn’t mark attendance</p>
+            <p className="font-medium">CouldnΓÇÖt mark attendance</p>
             <p className="mt-0.5">{punchError.message}</p>
           </div>
         </div>
@@ -309,7 +309,7 @@ export default function EmployeeHome() {
                   </>
                 )}
                 {punchResult.geo?.distance != null && punchResult.geo?.allowed != null ? (
-                  <p className="inline-flex items-start gap-1.5 sm:col-span-2"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>Location verified: {punchResult.geo.distance} m from site (allowed {punchResult.geo.allowed} m){punchResult.geo.name ? ` • ${punchResult.geo.name}` : ''}</span></p>
+                  <p className="inline-flex items-start gap-1.5 sm:col-span-2"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>Location verified: {punchResult.geo.distance} m from site (allowed {punchResult.geo.allowed} m){punchResult.geo.name ? ` ΓÇó ${punchResult.geo.name}` : ''}</span></p>
                 ) : null}
               </div>
             </div>
@@ -331,9 +331,9 @@ export default function EmployeeHome() {
             successExtra={(data) => (
               <div className="mx-auto max-w-sm space-y-1 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-left text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
                 {punchMode === 'checkin' ? (
-                  <p>Check-in: <span className="font-semibold">{formatTime(data?.checkInTime)}</span> • <span className="font-semibold">{data?.status === 'Late' ? `Late${data?.lateMinutes ? ` by ${data.lateMinutes} min` : ''}` : 'On time'}</span></p>
+                  <p>Check-in: <span className="font-semibold">{formatTime(data?.checkInTime)}</span> ΓÇó <span className="font-semibold">{data?.status === 'Late' ? `Late${data?.lateMinutes ? ` by ${data.lateMinutes} min` : ''}` : 'On time'}</span></p>
                 ) : (
-                  <p>Check-out: <span className="font-semibold">{formatTime(data?.checkOutTime)}</span> • Total <span className="font-semibold">{formatDuration(data?.workingHoursMinutes)}</span></p>
+                  <p>Check-out: <span className="font-semibold">{formatTime(data?.checkOutTime)}</span> ΓÇó Total <span className="font-semibold">{formatDuration(data?.workingHoursMinutes)}</span></p>
                 )}
                 {punchMeta?.distance != null && punchMeta?.allowed != null && (
                   <p className="inline-flex items-start gap-1.5"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />Location verified: {punchMeta.distance} m (allowed {punchMeta.allowed} m)</p>
@@ -367,7 +367,7 @@ export default function EmployeeHome() {
             </div>
           )}
           <div className="flex justify-end border-t px-5 py-3 dark:border-slate-700">
-            <Link to="/employee/history" className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">View full history →</Link>
+            <Link to="/employee/history" className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">View full history ΓåÆ</Link>
           </div>
         </Card>
 

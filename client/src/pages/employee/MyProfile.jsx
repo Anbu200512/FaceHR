@@ -74,7 +74,7 @@ export default function MyProfile() {
     refetch();
   };
 
-  if (loading && !data) return <FullScreenLoader label="Loading my profileΓÇª" />;
+  if (loading && !data) return <FullScreenLoader label="Loading my profile…" />;
 
   const fullName = [emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(' ') || user?.name;
   const mobile = emp.contact?.mobileNumber || emp.phone || '-';
@@ -108,7 +108,7 @@ export default function MyProfile() {
             <p className="font-mono text-xs font-semibold text-brand-600 dark:text-brand-400">{emp.employeeId}</p>
             <RoleBadges roles={emp.roles} className="mt-1.5" />
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {emp.designation?.name || 'No designation'} ┬╖ {emp.department?.name || 'No department'}{emp.office?.name ? ` ┬╖ ${emp.office.name}` : ''}
+              {emp.designation?.name || 'No designation'} · {emp.department?.name || 'No department'}{emp.office?.name ? ` · ${emp.office.name}` : ''}
             </p>
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
               <span className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
@@ -150,7 +150,7 @@ export default function MyProfile() {
             </p>
             <p className="text-xs text-slate-400">
               {emp.face
-                ? `Linked to faceId ${emp.face.faceId?.slice(0, 8)}ΓÇª ┬╖ ${formatDate(emp.face.updatedAt)}`
+                ? `Linked to faceId ${emp.face.faceId?.slice(0, 8)}… · ${formatDate(emp.face.updatedAt)}`
                 : 'Ask your HR admin to register your face to use face attendance.'}
             </p>
           </div>

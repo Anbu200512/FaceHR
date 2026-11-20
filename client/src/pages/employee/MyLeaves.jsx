@@ -116,7 +116,7 @@ export default function MyLeaves() {
               </div>
               <div>
                 <label className="label">Reason</label>
-                <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={3} className="input" placeholder="Brief reason for the requestâ€¦" />
+                <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={3} className="input" placeholder="Brief reason for the request..." />
               </div>
               <Button className="w-full" onClick={apply} loading={submitting}>
                 <CalendarPlus className="h-4 w-4" /> Submit Request
@@ -153,7 +153,7 @@ export default function MyLeaves() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-slate-800 dark:text-slate-100">{l.leaveType}</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-300">{formatDate(l.startDate)} â†’ {formatDate(l.endDate)} Â· {l.days} day(s)</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-300">{formatDate(l.startDate)} → {formatDate(l.endDate)} · {l.days} day(s)</p>
                     {l.reason && <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-300">{l.reason}</p>}
                     {l.adminNote && <p className="mt-1 text-xs text-rose-500">{l.adminNote}</p>}
                   </div>

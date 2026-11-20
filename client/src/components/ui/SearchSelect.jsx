@@ -8,7 +8,7 @@ export default function SearchSelect({
   value,
   onChange,
   options = [],
-  placeholder = 'SearchΓÇª',
+  placeholder = 'Search…',
   error,
   hint,
   disabled,

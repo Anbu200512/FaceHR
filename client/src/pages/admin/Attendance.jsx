@@ -124,7 +124,7 @@ export default function Attendance() {
         </div>
         {derivedStatus && !date && (
           <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
-            “{status}” is computed per day. Select a date to see who was {status.toLowerCase()} on that day.
+            "{status}" is computed per day. Select a date to see who was {status.toLowerCase()} on that day.
           </p>
         )}
       </Card>
