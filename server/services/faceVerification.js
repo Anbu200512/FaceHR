@@ -59,29 +59,109 @@ async function verifyAgainstProfile({ employeeId, buffer, clientDescriptor }) {
     };
   }
 
+  const faceCount = await faceService.countFaces(buffer);
+  if (faceCount === 0) {
+    return {
+      ok: false,
+      code: 'NO_FACE_DETECTED',
+      message: 'No face detected. Please face the camera clearly with good lighting and only one person in frame.',
+      faceCount: 0,
+    };
+  }
+  if (faceCount !== null && faceCount > 1) {
+    return {
+      ok: false,
+      code: 'MULTIPLE_FACES',
+      message: 'Multiple faces detected. Please ensure only your face is visible and try again.',
+      faceCount,
+    };
+  }
+
   const resolved = await resolveDescriptor(buffer, clientDescriptor);
   if (!resolved) {
     return {
       ok: false,
       code: 'NO_DESCRIPTOR',
-      message: 'Could not detect your face clearly. Please try again in good lighting, face the camera directly, keep only one person in frame, and remove masks or glare if possible.',
+      message: 'Face not clear enough for verification. Please try again in good lighting, face the camera directly, and keep only one person in frame.',
+      faceCount,
     };
   }
 
-  const distance = faceService.euclideanDistance(resolved.descriptor, profile.descriptor);
   const threshold = config.faceMatchThreshold;
-  const matched = distance <= threshold;
+  const targetDistance = faceService.euclideanDistance(resolved.descriptor, profile.descriptor);
+
+  // Security: compare against all active registered faces to prevent one person
+  // being matched/used for another employee account.
+  const profiles = await prisma.faceProfile.findMany({
+    where: { active: true },
+    select: { employeeRefId: true, descriptor: true },
+  });
+  let best = null;
+  let secondBest = null;
+  for (const p of profiles) {
+    if (!faceService.descriptorIsValid(p.descriptor)) continue;
+    const d = faceService.euclideanDistance(resolved.descriptor, p.descriptor);
+    if (!best || d < best.distance) {
+      secondBest = best;
+      best = { employeeRefId: p.employeeRefId, distance: d };
+    } else if (!secondBest || d < secondBest.distance) {
+      secondBest = { employeeRefId: p.employeeRefId, distance: d };
+    }
+  }
+
+  if (!best) {
+    return { ok: false, code: 'NO_FACE', message: 'No registered face profiles available for verification.' };
+  }
+
+  const targetIsBest = String(best.employeeRefId) === String(employeeId);
+  const matched = targetIsBest && targetDistance <= threshold;
+
+  // If another employee's face is a closer/better match, block it.
+  if (!targetIsBest && best.distance <= threshold) {
+    return {
+      ok: false,
+      code: 'FACE_MISMATCH',
+      distance: targetDistance,
+      bestDistance: best.distance,
+      threshold,
+      source: resolved.source,
+      faceCount: faceCount ?? resolved.faceCount ?? null,
+      message: 'Face does not match this employee. Only the registered employee can check in/out.',
+    };
+  }
+
+  // Ambiguous match: block only when another employee is also near the
+  // threshold and the gap is too small to confidently identify target.
+  const AMBIGUITY_GAP = 0.08;
+  if (
+    matched &&
+    secondBest &&
+    String(secondBest.employeeRefId) !== String(employeeId) &&
+    secondBest.distance <= threshold + 0.05 &&
+    (secondBest.distance - targetDistance) < AMBIGUITY_GAP
+  ) {
+    return {
+      ok: false,
+      code: 'AMBIGUOUS_FACE',
+      distance: targetDistance,
+      secondBestDistance: secondBest.distance,
+      threshold,
+      source: resolved.source,
+      faceCount: faceCount ?? resolved.faceCount ?? null,
+      message: 'Face match is ambiguous. Please re-register this employee with a clear front-facing photo (good light, one person, no glasses/glare).',
+    };
+  }
 
   return {
     ok: matched,
     code: matched ? 'MATCHED' : 'NO_MATCH',
-    distance,
+    distance: targetDistance,
     threshold,
     source: resolved.source,
-    faceCount: resolved.faceCount ?? null,
+    faceCount: faceCount ?? resolved.faceCount ?? null,
     message: matched
       ? 'Face verified'
-      : 'Face not recognized. Please try again with good lighting, face the camera directly, keep your face centered, and ensure only one person is in frame. If it still fails, contact HR/admin.',
+      : 'Face not recognized for this employee. Only the registered face can be used for check-in/check-out.',
   };
 }
 

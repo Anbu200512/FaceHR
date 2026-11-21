@@ -3,7 +3,12 @@ const path = require('path');
 const prisma = require('../config/prisma');
 const { uploadsDir } = require('../middleware/upload');
 
-const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+const DEFAULT_RETENTION_HOURS = 24 * 30;
+const retentionHoursRaw = Number(process.env.ATTENDANCE_PHOTO_RETENTION_HOURS);
+const RETENTION_HOURS = Number.isFinite(retentionHoursRaw) && retentionHoursRaw >= 0
+  ? retentionHoursRaw
+  : DEFAULT_RETENTION_HOURS;
+const RETENTION_MS = RETENTION_HOURS * 60 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 30 * 60 * 1000;
 
 async function removeUploadFile(fileName) {
@@ -17,7 +22,8 @@ async function removeUploadFile(fileName) {
 }
 
 async function cleanupAttendancePhotos() {
-  const cutoff = new Date(Date.now() - TWELVE_HOURS_MS);
+  if (RETENTION_HOURS === 0) return 0;
+  const cutoff = new Date(Date.now() - RETENTION_MS);
 
   const records = await prisma.attendance.findMany({
     where: {
@@ -57,12 +63,18 @@ async function cleanupAttendancePhotos() {
 }
 
 function startAttendancePhotoCleanup() {
+  if (RETENTION_HOURS === 0) {
+    console.log('[AttendancePhotoCleanup] Disabled (ATTENDANCE_PHOTO_RETENTION_HOURS=0).');
+    return;
+  }
+
   const run = () => {
     cleanupAttendancePhotos().catch((err) => {
       console.error('[AttendancePhotoCleanup] Failed:', err.message);
     });
   };
 
+  console.log(`[AttendancePhotoCleanup] Enabled (retention: ${RETENTION_HOURS}h).`);
   run();
   setInterval(run, CLEANUP_INTERVAL_MS).unref();
 }

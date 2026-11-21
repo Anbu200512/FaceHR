@@ -221,6 +221,10 @@ const checkIn = asyncHandler(async (req, res) => {
   const checkInDistanceFromCompany = geofence.distance;
 
   const { status, lateMinutes } = await evaluateCheckInStatus(today, now, empDoc);
+  const deviceInfo = summarizeDevice(req);
+  if (!checkInPhoto) {
+    console.warn('[Attendance] Check-in saved without photo', { employeeId: empDoc.employeeId, hasFile: !!req.file });
+  }
 
   try {
     const record = await prisma.attendance.create({
@@ -237,7 +241,7 @@ const checkIn = asyncHandler(async (req, res) => {
         ...(checkInDistanceFromCompany !== null ? { checkInDistanceFromCompany } : {}),
         ...(verification ? { checkInMatchDistance: verification.distance } : {}),
         faceVerified: requireFace,
-        deviceInfo: summarizeDevice(req),
+        deviceInfo,
       },
     });
 
@@ -324,6 +328,9 @@ const checkOut = asyncHandler(async (req, res) => {
 
   const ext = req.file ? (req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg') : null;
   const checkOutPhoto = req.file ? saveBuffer(req.file.buffer, ext) : null;
+  if (!checkOutPhoto) {
+    console.warn('[Attendance] Check-out saved without photo', { employeeId: empDoc.employeeId, hasFile: !!req.file });
+  }
 
   const workingHoursMinutes = Math.max(0, Math.round((now - record.checkInTime) / 60000));
   const status = await computeFinalStatus(record.checkInTime, now, record.status, empDoc);
@@ -598,7 +605,7 @@ async function performMarkAttendance(employeeId, mode, req) {
   const settings = await getEffectiveAttendanceSettings(empDoc);
   const requireFace = settings.faceEnabled !== false;
   const isAdminActor = req.user?.role === 'admin';
-  const requireFaceForThis = requireFace && !isAdminActor;
+  const requireFaceForThis = requireFace;
 
   const location = parseLocation(req.body.location);
 
@@ -665,7 +672,11 @@ async function performMarkAttendance(employeeId, mode, req) {
     ? saveBuffer(req.file.buffer, req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg')
     : null;
 
-  const deviceInfo = { ...summarizeDevice(req), source: isAdminActor ? 'admin' : 'employee' };
+  const deviceInfo = {
+    ...summarizeDevice(req),
+    source: isAdminActor ? 'admin' : 'employee',
+    ...(isAdminActor ? { markedByUserId: String(req.user?.id || ''), markedForEmployeeId: String(employeeId) } : {}),
+  };
 
   if (mode === 'check-in') {
     const { status, lateMinutes } = await evaluateCheckInStatus(today, now, empDoc);

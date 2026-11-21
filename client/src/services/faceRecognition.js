@@ -19,7 +19,7 @@ let detectionRunning = false;
 
 const getFaceapi = () => (faceapiPromise ||= import('face-api.js'));
 const getDefaultOptions = (faceapi) =>
-  new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.45 });
+  new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 });
 
 /** Load the face-api models exactly once. Resolves true/false. */
 export async function loadFaceModels() {
@@ -115,28 +115,39 @@ export function mapToDisplay(detection, videoEl) {
  * the face guide oval on screen. `guideRect` should be the CSS rect of the
  * guide oval area (center + size).
  */
-export function guidanceFromFace(mapped, guideRect, aim) {
-  if (!mapped) return { message: 'No face detected', tone: 'warn' };
+export function guidanceFromFace(mapped, guideRect, aim, score = 0) {
+  if (!mapped) return { message: 'No face detected. Position your face inside the frame.', tone: 'warn' };
 
-  const minWidth = guideRect.width * 0.38;
-  const centerTol = guideRect.width * 0.18;
+  const minWidth = guideRect.width * 0.32;
+  const maxWidth = guideRect.width * 0.92;
+  const centerTol = guideRect.width * 0.16;
+  const verticalTol = guideRect.height * 0.18;
 
+  if (score > 0 && score < 0.55) {
+    return { message: 'Face not clear. Improve lighting and face the camera.', tone: 'warn' };
+  }
   if (mapped.width < minWidth) {
-    return { message: 'Move closer', tone: 'warn' };
+    return { message: 'Move closer to the camera.', tone: 'warn' };
+  }
+  if (mapped.width > maxWidth) {
+    return { message: 'Move slightly back from the camera.', tone: 'warn' };
   }
   if (mapped.centerX < guideRect.cx - centerTol) {
-    return { message: 'Move slightly right', tone: 'warn' };
+    return { message: 'Move slightly right.', tone: 'warn' };
   }
   if (mapped.centerX > guideRect.cx + centerTol) {
-    return { message: 'Move slightly left', tone: 'warn' };
+    return { message: 'Move slightly left.', tone: 'warn' };
   }
-  if (Math.abs(mapped.centerY - guideRect.cy) > centerTol * 1.6) {
-    return { message: 'Keep your face in the frame', tone: 'warn' };
+  if (mapped.centerY < guideRect.cy - verticalTol) {
+    return { message: 'Move slightly down.', tone: 'warn' };
+  }
+  if (mapped.centerY > guideRect.cy + verticalTol) {
+    return { message: 'Move slightly up.', tone: 'warn' };
   }
   if (aim === 'register') {
-    return { message: 'Face ready to capture', tone: 'good' };
+    return { message: 'Face detected clearly. Hold still to capture.', tone: 'good' };
   }
-  return { message: 'Keeping your face straight', tone: 'good' };
+  return { message: 'Face detected clearly. Hold still for verification.', tone: 'good' };
 }
 
 /** Draw the detection box onto a canvas for a live overlay (cover-crop aware). */

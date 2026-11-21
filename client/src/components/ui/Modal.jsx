@@ -10,7 +10,7 @@ const SIZES = {
   xl: 'max-w-5xl',
 };
 
-export default function Modal({ open, onClose, title, subtitle, children, footer, size = 'md' }) {
+export default function Modal({ open, onClose, title, subtitle, children, footer, size = 'md', bodyClassName = '', panelClassName = '' }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => e.key === 'Escape' && onClose?.();
@@ -25,12 +25,13 @@ export default function Modal({ open, onClose, title, subtitle, children, footer
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       <div
         className={clsx(
-          'relative z-10 flex max-h-[92dvh] w-full flex-col rounded-t-2xl bg-white shadow-lift animate-slide-up dark:bg-slate-900 sm:max-h-[90vh] sm:w-[calc(100%-2rem)] sm:rounded-2xl',
-          SIZES[size] || SIZES.md
+          'relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full flex-col rounded-2xl bg-white shadow-lift animate-slide-up dark:bg-slate-900 sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100%-2rem)]',
+          SIZES[size] || SIZES.md,
+          panelClassName
         )}
       >
         <div className="flex items-start justify-between gap-4 border-b px-5 py-4 dark:border-slate-700">
@@ -46,7 +47,7 @@ export default function Modal({ open, onClose, title, subtitle, children, footer
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-5">{children}</div>
+        <div className={clsx('min-h-0 overflow-y-auto', !/(?:^|\s)!?p[xytrbl]?-\S+/.test(bodyClassName) && 'px-4 py-4 sm:px-5', bodyClassName)}>{children}</div>
         {footer && <div className="border-t px-5 py-4 dark:border-slate-700">{footer}</div>}
       </div>
     </div>,

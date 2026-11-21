@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { CalendarDays, Clock, LogIn, LogOut, MapPin } from 'lucide-react';
 import clsx from 'clsx';
 import { Card } from '../ui/Card';
@@ -27,10 +28,23 @@ function Detail({ icon: Icon, label, value }) {
 
 function Photo({ src, label }) {
   const url = src ? resolveAsset(src) : null;
+  const [broken, setBroken] = useState(false);
   if (!url) return null;
   return (
     <div className="min-w-0 flex-1">
-      <img src={url} alt={label} loading="lazy" className="h-28 w-full rounded-xl object-cover" />
+      {broken ? (
+        <div className="flex h-28 w-full items-center justify-center rounded-xl bg-slate-100 text-xs text-slate-400 dark:bg-slate-800 dark:text-slate-400">
+          Photo unavailable
+        </div>
+      ) : (
+        <img
+          src={url}
+          alt={label}
+          loading="lazy"
+          className="h-28 w-full rounded-xl object-cover"
+          onError={() => setBroken(true)}
+        />
+      )}
       <p className="mt-1 text-xs font-medium text-slate-400 dark:text-slate-300">{label}</p>
     </div>
   );

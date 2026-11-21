@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const config = require('../config/config');
 const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 const { saveBuffer } = require('../middleware/upload');
@@ -45,7 +46,50 @@ const registerFace = asyncHandler(async (req, res) => {
     return res.status(400).json({
       success: false,
       message:
-        'Could not extract a valid face descriptor from this photo. Please retake the photo with better lighting and a clear, front-facing view.',
+        'No clear face was detected. Please retake with one person, good lighting, and a front-facing view.',
+    });
+  }
+
+  const faceCount = await faceService.countFaces(req.file.buffer);
+  if (faceCount === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'No face detected in the photo. Please retake and make sure your face is clearly visible.',
+    });
+  }
+  if (faceCount !== null && faceCount > 1) {
+    return res.status(400).json({
+      success: false,
+      message: 'Multiple faces detected. Please register with only one person in frame.',
+    });
+  }
+
+  // Prevent registering a face that already belongs to another active employee.
+  const otherProfiles = await prisma.faceProfile.findMany({
+    where: { active: true, employeeRefId: { not: employee.id } },
+    select: { employeeRefId: true, descriptor: true, employee: { select: { employeeId: true, firstName: true, lastName: true } } },
+  });
+  const duplicateThreshold = Math.min(Number(config.faceMatchThreshold) || 0.45, 0.4);
+  let conflict = null;
+  for (const p of otherProfiles) {
+    if (!faceService.descriptorIsValid(p.descriptor)) continue;
+    const d = faceService.euclideanDistance(finalDescriptor, p.descriptor);
+    if (d <= duplicateThreshold && (!conflict || d < conflict.distance)) {
+      conflict = {
+        distance: d,
+        employeeId: p.employee?.employeeId,
+        name: [p.employee?.firstName, p.employee?.lastName].filter(Boolean).join(' ').trim(),
+      };
+    }
+  }
+  if (conflict) {
+    return res.status(409).json({
+      success: false,
+      code: 'FACE_ALREADY_REGISTERED',
+      message: conflict.name
+        ? `This face closely matches another registered employee (${conflict.name} - ${conflict.employeeId}). Register only that employee's own face, or remove/re-register the conflicting face if it was registered incorrectly.`
+        : 'This face matches another registered employee. A face can only be registered to one employee.',
+      data: conflict,
     });
   }
 
@@ -100,7 +144,10 @@ const verifyFace = asyncHandler(async (req, res) => {
   }
 
   let employeeId = req.user.employee;
-  if (req.user.role === 'admin' && req.body.employeeId) {
+  if (req.user.role === 'admin') {
+    if (!req.body.employeeId) {
+      return res.status(400).json({ success: false, message: 'employeeId is required for admin verification' });
+    }
     if (!UUID_RE.test(String(req.body.employeeId))) {
       return res.status(400).json({ success: false, message: 'Invalid employee reference' });
     }

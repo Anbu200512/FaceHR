@@ -44,7 +44,7 @@ const config = {
   // disabled by default so free-tier instances start fast and stay light. The
   // client still computes descriptors, so face attendance keeps working.
   faceServerEnabled: process.env.FACE_SERVER_ENABLED === 'true',
-  faceMatchThreshold: parseFloat(process.env.FACE_MATCH_THRESHOLD) || 0.6,
+  faceMatchThreshold: parseFloat(process.env.FACE_MATCH_THRESHOLD) || 0.45,
   faceModelsPath: process.env.FACE_MODELS_PATH || 'face-models',
   // Read-through cache TTLs (milliseconds) for hot, read-only endpoints.
   dashboardCacheTtlMs: parseInt(process.env.DASHBOARD_CACHE_TTL_MS, 10) || 60000,

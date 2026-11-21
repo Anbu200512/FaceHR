@@ -380,25 +380,25 @@ export default function EmployeeProfile({ faceMode }) {
         onClose={() => setActionMode(null)}
         title={actionMode === 'checkin' ? 'Face Check In' : 'Face Check Out'}
         subtitle={`Mark ${fullName} (${emp.employeeId}) - the employee needs to face this camera so their identity is verified.`}
+        panelClassName="sm:max-h-[calc(100dvh-2rem)]"
+        bodyClassName="p-3 sm:p-4"
       >
         <FaceCapture
           key={`admin-${actionMode}-${todayTick}`}
           mode="attendance"
+          embedded
           onCaptured={submitAttendance}
           onClose={() => setActionMode(null)}
           successExtra={(data) => (
             <div className="mx-auto max-w-sm rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
               {actionMode === 'checkin' ? (
-                <>Checked in at <span className="font-mono font-bold">{formatTime(data?.checkInTime)}</span> · {data?.status === 'Late' ? 'Marked Late' : 'On time'}.</>
+                <>Checked in at <span className="font-mono font-bold">{formatTime(data?.checkInTime)}</span> - {data?.status === 'Late' ? 'Marked Late' : 'On time'}.</>
               ) : (
-                <>Checked out at <span className="font-mono font-bold">{formatTime(data?.checkOutTime)}</span> · Total <span className="font-bold">{formatDuration(data?.workingHoursMinutes)}</span>.</>
+                <>Checked out at <span className="font-mono font-bold">{formatTime(data?.checkOutTime)}</span> - Total <span className="font-bold">{formatDuration(data?.workingHoursMinutes)}</span>.</>
               )}
             </div>
           )}
         />
-        <p className="mt-3 text-center text-xs text-slate-400">
-          The server re-checks the company geofence and face record before attendance is accepted - a device outside the allowed radius is blocked.
-        </p>
       </Modal>
 
       <ConfirmDialog

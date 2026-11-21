@@ -14,6 +14,7 @@ import Button from '../../components/ui/Button';
 import Avatar from '../../components/Avatar';
 import { Skeleton } from '../../components/ui/Skeleton';
 import FaceCapture from '../../components/FaceCapture';
+import Modal from '../../components/ui/Modal';
 
 function formatClock(hhmm) {
   if (!hhmm || typeof hhmm !== 'string') return '-';
@@ -259,90 +260,89 @@ export default function EmployeeHome() {
         ))}
       </div>
 
-      {punchStatus && !punchError && (
-        <div
-          className={`mt-4 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${
-            punchStatus.stage === 'verified'
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400'
-              : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300'
-          }`}
-        >
-          {punchStatus.stage === 'verifying' && (
-            <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          )}
-          <span>{punchStatus.message}</span>
-        </div>
-      )}
-
-      {punchError && (
-        <div
-          className={`mt-4 flex gap-2 rounded-xl border px-4 py-3 text-sm ${
-            punchError.code === 'OUTSIDE_ALLOWED_AREA'
-              ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400'
-              : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'
-          }`}
-        >
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <div>
-            <p className="font-medium">Couldn’t mark attendance</p>
-            <p className="mt-0.5">{punchError.message}</p>
+            <Modal
+        open={(!inlineCapture && !!punchStatus) || !!punchError || (!!punchResult?.ok && !inlineCapture)}
+        onClose={() => {
+          if (punchStatus?.stage === 'verifying') return;
+          setPunchError(null);
+          setPunchResult(null);
+          setPunchStatus(null);
+        }}
+        title={punchError ? "Couldn't mark attendance" : punchResult?.ok ? 'Attendance marked' : punchStatus?.stage === 'verified' ? 'Location verified' : 'Verifying location'}
+        size="sm"
+      >
+        {punchStatus && !punchError && !punchResult?.ok && (
+          <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${punchStatus.stage === 'verified' ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400' : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300'}`}>
+            {punchStatus.stage === 'verifying' && <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />}
+            {punchStatus.stage === 'verified' && <CheckCircle2 className="h-4 w-4 shrink-0" />}
+            <span>{punchStatus.message}</span>
           </div>
-        </div>
-      )}
-
-      {punchResult?.ok && (
-        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
-          <div className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold">{punchResult.message || 'Attendance marked successfully.'}</p>
-              <div className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
-                {punchResult.mode === 'checkin' ? (
-                  <>
-                    <p>Check-in time: <span className="font-semibold">{formatTime(punchResult.data?.checkInTime)}</span></p>
-                    <p>Status: <span className="font-semibold">{punchResult.data?.status === 'Late' ? `Late${punchResult.data?.lateMinutes ? ` by ${punchResult.data.lateMinutes} min` : ''}` : 'On time'}</span></p>
-                  </>
-                ) : (
-                  <>
-                    <p>Check-out time: <span className="font-semibold">{formatTime(punchResult.data?.checkOutTime)}</span></p>
-                    <p>Total worked: <span className="font-semibold">{formatDuration(punchResult.data?.workingHoursMinutes)}</span></p>
-                  </>
-                )}
-                {punchResult.geo?.distance != null && punchResult.geo?.allowed != null ? (
-                  <p className="inline-flex items-start gap-1.5 sm:col-span-2"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>Location verified: {punchResult.geo.distance} m from site (allowed {punchResult.geo.allowed} m){punchResult.geo.name ? ` • ${punchResult.geo.name}` : ''}</span></p>
-                ) : null}
+        )}
+        {punchError && (
+          <div className={`flex gap-2 rounded-xl border px-4 py-3 text-sm ${punchError.code === 'OUTSIDE_ALLOWED_AREA' ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400' : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'}`}>
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div><p className="font-medium">Couldn't mark attendance</p><p className="mt-0.5">{punchError.message}</p></div>
+          </div>
+        )}
+        {punchResult?.ok && !punchError && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">{punchResult.message || 'Attendance marked successfully.'}</p>
+                <div className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
+                  {punchResult.mode === 'checkin' ? (
+                    <><p>Check-in: <span className="font-semibold">{formatTime(punchResult.data?.checkInTime)}</span></p><p>Status: <span className="font-semibold">{punchResult.data?.status === 'Late' ? `Late${punchResult.data?.lateMinutes ? ` by ${punchResult.data.lateMinutes} min` : ''}` : 'On time'}</span></p></>
+                  ) : (
+                    <><p>Check-out: <span className="font-semibold">{formatTime(punchResult.data?.checkOutTime)}</span></p><p>Total worked: <span className="font-semibold">{formatDuration(punchResult.data?.workingHoursMinutes)}</span></p></>
+                  )}
+                  {punchResult.geo?.distance != null && punchResult.geo?.allowed != null && (
+                    <p className="inline-flex items-start gap-1.5 sm:col-span-2"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>Location verified: {punchResult.geo.distance} m (allowed {punchResult.geo.allowed} m){punchResult.geo.name ? ` - ${punchResult.geo.name}` : ''}</span></p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
-      {inlineCapture && (
-        <div className="mt-4">
-          <FaceCapture
-            key={`${punchMode}-${captureKey}`}
-            mode="attendance"
-            onCaptured={submitPunch}
-            onClose={() => {
-              setInlineCapture(false);
-              setPunchStatus(null);
-              today.refetch();
-            }}
-            successExtra={(data) => (
-              <div className="mx-auto max-w-sm space-y-1 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-left text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
-                {punchMode === 'checkin' ? (
-                  <p>Check-in: <span className="font-semibold">{formatTime(data?.checkInTime)}</span> • <span className="font-semibold">{data?.status === 'Late' ? `Late${data?.lateMinutes ? ` by ${data.lateMinutes} min` : ''}` : 'On time'}</span></p>
-                ) : (
-                  <p>Check-out: <span className="font-semibold">{formatTime(data?.checkOutTime)}</span> • Total <span className="font-semibold">{formatDuration(data?.workingHoursMinutes)}</span></p>
-                )}
-                {punchMeta?.distance != null && punchMeta?.allowed != null && (
-                  <p className="inline-flex items-start gap-1.5"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />Location verified: {punchMeta.distance} m (allowed {punchMeta.allowed} m)</p>
-                )}
-              </div>
-            )}
-          />
-        </div>
-      )}
+<Modal
+        open={inlineCapture}
+        onClose={() => {
+          setInlineCapture(false);
+          setPunchStatus(null);
+          today.refetch();
+        }}
+        title={punchMode === 'checkout' ? 'Check Out' : 'Check In'}
+        subtitle="Look at the camera. Your face will be verified automatically."
+        size="md"
+        panelClassName="sm:max-h-[calc(100dvh-2rem)]"
+        bodyClassName="p-3 sm:p-4"
+      >
+        <FaceCapture
+          key={`${punchMode}-${captureKey}`}
+          mode="attendance"
+          embedded
+          onCaptured={submitPunch}
+          onClose={() => {
+            setInlineCapture(false);
+            setPunchStatus(null);
+            today.refetch();
+          }}
+          successExtra={(data) => (
+            <div className="mx-auto max-w-sm space-y-1 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-left text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
+              {punchMode === 'checkin' ? (
+                <p>Check-in: <span className="font-semibold">{formatTime(data?.checkInTime)}</span> - <span className="font-semibold">{data?.status === 'Late' ? `Late${data?.lateMinutes ? ` by ${data.lateMinutes} min` : ''}` : 'On time'}</span></p>
+              ) : (
+                <p>Check-out: <span className="font-semibold">{formatTime(data?.checkOutTime)}</span> - Total <span className="font-semibold">{formatDuration(data?.workingHoursMinutes)}</span></p>
+              )}
+              {punchMeta?.distance != null && punchMeta?.allowed != null && (
+                <p className="inline-flex items-start gap-1.5"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />Location verified: {punchMeta.distance} m (allowed {punchMeta.allowed} m)</p>
+              )}
+            </div>
+          )}
+        />
+      </Modal>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">

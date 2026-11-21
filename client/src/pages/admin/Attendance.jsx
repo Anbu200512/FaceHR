@@ -231,19 +231,38 @@ export default function Attendance() {
       </div>
 
       <Modal open={!!view} onClose={() => setView(null)} title={view?.label} size="sm">
-        {view && <img src={view.src} alt={view.label} className="w-full rounded-xl object-contain" loading="lazy" decoding="async" />}
+        {view && <ModalPhoto src={view.src} label={view.label} />}
       </Modal>
     </div>
   );
 }
 
 function PhotoThumb({ src, label, onView }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) {
+    return <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-[10px] text-slate-400 ring-1 ring-black/5 dark:bg-slate-800 dark:text-slate-400">N/A</span>;
+  }
   return (
     <button onClick={onView} title={label} className="group relative">
-      <img src={src} alt={label} className="h-9 w-9 rounded-lg object-cover ring-1 ring-black/5" loading="lazy" decoding="async" />
+      <img
+        src={src}
+        alt={label}
+        className="h-9 w-9 rounded-lg object-cover ring-1 ring-black/5"
+        loading="lazy"
+        decoding="async"
+        onError={() => setBroken(true)}
+      />
       <span className="absolute inset-0 hidden items-center justify-center rounded-lg bg-black/40 group-hover:flex">
         <Eye className="h-3.5 w-3.5 text-white" />
       </span>
     </button>
   );
+}
+
+function ModalPhoto({ src, label }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) {
+    return <div className="flex h-56 items-center justify-center rounded-xl bg-slate-100 text-sm text-slate-400 dark:bg-slate-800 dark:text-slate-400">Photo unavailable</div>;
+  }
+  return <img src={src} alt={label} className="w-full rounded-xl object-contain" loading="lazy" decoding="async" onError={() => setBroken(true)} />;
 }

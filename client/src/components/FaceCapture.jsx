@@ -16,13 +16,16 @@ const GUIDE = { cx: 0, cy: 0, width: 280, height: 350 };
 
 const CAMERA_MESSAGES = {
   requesting: { title: 'Starting camera…', desc: 'Please allow camera access when your browser asks.', tone: 'info' },
-  denied: { title: 'Camera permission blocked', desc: 'Camera access is required for face attendance. Please allow camera permission for this site in your browser settings, then retry.', tone: 'error' },
-  unavailable: { title: 'Camera not available', desc: 'No usable camera was found. Please check that your camera is connected/enabled, close other apps using it, and try again.', tone: 'error' },
+  denied: { title: 'Camera permission blocked', desc: 'Camera access is required. Allow camera permission for this site in browser settings, then retry.', tone: 'error' },
+  unavailable: { title: 'Camera not available', desc: 'No usable camera was found. Check camera connection, privacy settings, or try another browser/device.', tone: 'error' },
+  inuse: { title: 'Camera is in use', desc: 'Another app/tab may be using the camera. Close it and retry.', tone: 'error' },
+  insecure: { title: 'Secure connection required', desc: 'Camera works on HTTPS or localhost. Open the app on a secure URL and retry.', tone: 'error' },
   modelsError: { title: 'Face recognition could not start', desc: 'Face recognition models could not be loaded. Check your internet connection and retry.', tone: 'error' },
 };
 
-export default function FaceCapture({ mode, onCaptured, onClose, successExtra, failureExtra }) {
-  const [cameraState, setCameraState] = useState('idle'); // idle | requesting | ready | denied | unavailable
+export default function FaceCapture({ mode, onCaptured, onClose, successExtra, failureExtra, embedded = false }) {
+  const [cameraState, setCameraState] = useState('idle'); // idle | requesting | ready | denied | unavailable | inuse | insecure
+  const [cameraErrorDetail, setCameraErrorDetail] = useState('');
   const [modelState, setModelState] = useState('loading'); // loading | ready | error
   const [faceStatus, setFaceStatus] = useState('Searching for your face…');
   const [faceTone, setFaceTone] = useState('warn');
@@ -31,6 +34,13 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null); // { ok, message, data, code }
   const [capturingAuto, setCapturingAuto] = useState(false);
+  const capturedRef = useRef(null);
+  const submittingRef = useRef(false);
+  const capturingAutoRef = useRef(false);
+
+  useEffect(() => { capturedRef.current = captured; }, [captured]);
+  useEffect(() => { submittingRef.current = submitting; }, [submitting]);
+  useEffect(() => { capturingAutoRef.current = capturingAuto; }, [capturingAuto]);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -71,24 +81,48 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
   }, [startModels]);
 
   const startCamera = useCallback(async () => {
+    stopCamera();
+    setCameraErrorDetail('');
     if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraState('unavailable');
+      setCameraState(window.isSecureContext ? 'unavailable' : 'insecure');
       return;
     }
     setCameraState('requesting');
+    const tryStream = async (constraints) => navigator.mediaDevices.getUserMedia(constraints);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-        audio: false,
-      });
+      let stream;
+      try {
+        stream = await tryStream({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+      } catch (_e) {
+        stream = await tryStream({ video: true, audio: false });
+      }
+      if (!mounted.current) {
+        stream?.getTracks?.().forEach((t) => t.stop());
+        return;
+      }
+      if (!stream?.getVideoTracks?.().length) {
+        stream?.getTracks?.().forEach((t) => t.stop());
+        setCameraState('unavailable');
+        return;
+      }
       streamRef.current = stream;
       setCameraState('ready');
     } catch (err) {
       if (!mounted.current) return;
-      if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') setCameraState('denied');
-      else setCameraState('unavailable');
+      setCameraErrorDetail(err?.name ? `${err.name}${err.message ? `: ${err.message}` : ''}` : 'Camera error');
+      if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError' || err?.name === 'SecurityError') {
+        setCameraState('denied');
+      } else if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
+        setCameraState('unavailable');
+      } else if (err?.name === 'NotReadableError' || err?.name === 'TrackStartError') {
+        setCameraState('inuse');
+      } else if (!window.isSecureContext) {
+        setCameraState('insecure');
+      } else {
+        setCameraState('unavailable');
+      }
     }
-  }, []);
+  }, [stopCamera]);
 
   // The <video> element is only rendered once the camera state is 'ready', so
   // attach the already-acquired stream whenever the video mounts (including
@@ -109,16 +143,19 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
   // detection loop (runs while camera ready + not captured/submitting)
   const runDetection = useCallback(() => {
     const tick = async () => {
-      if (busyRef.current) return;
+      if (!mounted.current) return;
+      if (busyRef.current || capturedRef.current || submittingRef.current || capturingAutoRef.current) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
       const video = videoRef.current;
       if (video && video.videoWidth) {
         busyRef.current = true;
         try {
           const result = await analyzeVideo(video);
-          if (!mounted.current) return;
+          if (!mounted.current || capturedRef.current || submittingRef.current) return;
           if (result && result.detection) {
             const mapped = mapToDisplay(result.detection, video);
-            // multi-face check (throttled by busy flag)
             let faces = 1;
             if (goodFramesRef.current % 5 === 0) {
               faces = await countFaces(video);
@@ -129,7 +166,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
               width: Math.min(video.clientWidth, 280),
               height: Math.min(video.clientHeight, 350),
             };
-            const g = guidanceFromFace(mapped, guide, isRegister ? 'register' : 'attendance');
+            const g = guidanceFromFace(mapped, guide, isRegister ? 'register' : 'attendance', result.score || 0);
             setFaceStatus(g.message);
             setFaceTone(g.tone);
             setMultipleFaces(faces > 1);
@@ -138,20 +175,19 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
             } else {
               goodFramesRef.current = 0;
             }
-            // overlay box
             const ov = overlayRef.current;
             if (ov) {
               const ctx = ov.getContext('2d');
               ov.width = video.clientWidth;
               ov.height = video.clientHeight;
               ctx.clearRect(0, 0, ov.width, ov.height);
-              ctx.strokeStyle = g.tone === 'good' ? '#34d399' : '#fbbf24';
+              ctx.strokeStyle = g.tone === 'good' && faces === 1 ? '#34d399' : '#fbbf24';
               ctx.lineWidth = 3;
               ctx.strokeRect(mapped.x, mapped.y, mapped.width, mapped.height);
             }
-            // auto-capture for attendance mode
-            if (!isRegister && !capturingAuto && g.tone === 'good' && faces === 1 && goodFramesRef.current >= 3) {
+            if (!isRegister && !capturingAutoRef.current && g.tone === 'good' && faces === 1 && goodFramesRef.current >= 6) {
               goodFramesRef.current = 0;
+              capturingAutoRef.current = true;
               setCapturingAuto(true);
               captureNow(video);
             }
@@ -160,6 +196,8 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
             setFaceTone('warn');
             setMultipleFaces(false);
             goodFramesRef.current = 0;
+            const ov = overlayRef.current;
+            if (ov) ov.getContext('2d').clearRect(0, 0, ov.width, ov.height);
           }
         } finally {
           busyRef.current = false;
@@ -168,24 +206,23 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
       rafRef.current = requestAnimationFrame(tick);
     };
     tick();
-  }, [isRegister, capturingAuto]);
+  }, [isRegister]);
 
   useEffect(() => {
-    if (cameraState === 'ready' && modelState === 'ready') {
-      rafRef.current = requestAnimationFrame(tickWrapper);
+    if (cameraState === 'ready' && modelState === 'ready' && !captured && !submitResult) {
+      rafRef.current = requestAnimationFrame(() => runDetection());
     }
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cameraState, modelState]);
-
-  const tickWrapper = () => { runDetection(); };
+  }, [cameraState, modelState, captured, submitResult, runDetection]);
 
   const captureNow = useCallback(
     (sourceVideo) => {
       const video = sourceVideo || videoRef.current;
-      if (!video || !video.videoWidth) return;
+      if (!video || !video.videoWidth || submitting || captured) return;
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
       const maxW = 900;
       const scale = Math.min(1, maxW / video.videoWidth);
       const w = Math.round(video.videoWidth * scale);
@@ -195,36 +232,58 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
       canvas.height = h;
       canvas.getContext('2d').drawImage(video, 0, 0, w, h);
       canvas.toBlob(async (blob) => {
-        let descriptor = getLastDescriptor();
-        if (!descriptor || descriptor.length !== 128) {
-          descriptor = await descriptorFromCanvas(canvas);
-        }
-        const url = URL.createObjectURL(blob);
-        if (descriptor && descriptor.length === 128) {
+        try {
+          if (!blob) throw new Error('capture failed');
+          const faces = await countFaces(video);
+          if (faces !== 1) {
+            goodFramesRef.current = 0;
+            setCapturingAuto(false);
+            setFaceStatus(faces > 1 ? 'Multiple faces detected. Only one person should be visible.' : 'No face detected clearly. Please try again.');
+            setFaceTone('warn');
+            return;
+          }
+          let descriptor = getLastDescriptor();
+          if (!descriptor || descriptor.length !== 128) {
+            descriptor = await descriptorFromCanvas(canvas);
+          }
+          if (!descriptor || descriptor.length !== 128) {
+            goodFramesRef.current = 0;
+            setCapturingAuto(false);
+            setFaceStatus('Face not clear enough for verification. Please try again in good lighting.');
+            setFaceTone('warn');
+            return;
+          }
+          const url = URL.createObjectURL(blob);
           setCaptured({ blob, descriptor, url });
-          setFaceStatus('Face detected. Please keep still.');
+          setFaceStatus('Face detected clearly. Please keep still.');
           setFaceTone('good');
-          // auto-submit for attendance mode
+
           if (!isRegister) {
             setSubmitting(true);
             try {
               const result = await onCaptured({ blob, descriptor });
               if (mounted.current) setSubmitResult(result);
             } catch (err) {
-              if (mounted.current) setSubmitResult({ ok: false, message: err?.userMessage || err?.response?.data?.message || 'Verification failed. Please try again.', code: err?.response?.data?.code });
+              if (mounted.current) {
+                setSubmitResult({
+                  ok: false,
+                  message: err?.userMessage || err?.response?.data?.message || 'Verification failed. Please try again.',
+                  code: err?.response?.data?.code,
+                });
+              }
             } finally {
               if (mounted.current) setSubmitting(false);
             }
           }
-        } else {
+        } catch (_err) {
           goodFramesRef.current = 0;
           setCapturingAuto(false);
-          setFaceStatus('Could not fully analyze your face. Please try again.');
+          setFaceStatus('Could not validate your face. Please try again.');
           setFaceTone('warn');
         }
-      }, 'image/jpeg', 0.9);
+      }, 'image/jpeg', 0.92);
     },
-    [isRegister, onCaptured]
+    [isRegister, onCaptured, submitting, captured]
   );
 
   const retake = () => {
@@ -251,10 +310,12 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
   const modelReady = modelState === 'ready';
 
   // ----- RENDER -----
+  const shellClass = embedded ? 'mx-auto w-full max-w-lg animate-slide-up' : 'card mx-auto max-w-lg animate-slide-up';
+
   if (submitResult) {
     const ok = submitResult.ok;
     return (
-      <div className="card mx-auto max-w-lg animate-slide-up">
+      <div className={shellClass}>
         <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
           {ok ? (
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/20">
@@ -290,7 +351,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
 
   if (captured && !isRegister) {
     return (
-      <div className="card mx-auto max-w-lg animate-slide-up">
+      <div className={shellClass}>
         <div className="flex flex-col items-center gap-4 px-6 py-12 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
             <Loader2 className="h-8 w-8 animate-spin" />
@@ -308,7 +369,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
 
   if (captured) {
     return (
-      <div className="card mx-auto max-w-lg animate-slide-up">
+      <div className={shellClass}>
         <div className="overflow-hidden">
           <img src={captured.url} alt="Captured face preview" className="mx-auto max-h-80 w-full object-contain" />
         </div>
@@ -331,29 +392,31 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
   }
 
   const camMsg = CAMERA_MESSAGES[cameraState] || {};
-  const cameraIssue = cameraState === 'denied' || cameraState === 'unavailable';
+  const cameraIssue = cameraState === 'denied' || cameraState === 'unavailable' || cameraState === 'inuse' || cameraState === 'insecure';
 
   return (
-    <div className="card mx-auto max-w-lg animate-slide-up">
-      <div className="border-b px-5 py-4 dark:border-slate-700">
-        <div className="flex items-center gap-2">
-          <ScanFace className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-          <h3 className="font-bold text-slate-900 dark:text-slate-100">
-            {isRegister ? 'Face Registration' : 'Face Attendance'}
-          </h3>
+    <div className={shellClass}>
+      {!embedded && (
+        <div className="border-b px-5 py-4 dark:border-slate-700">
+          <div className="flex items-center gap-2">
+            <ScanFace className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+            <h3 className="font-bold text-slate-900 dark:text-slate-100">
+              {isRegister ? 'Face Registration' : 'Face Attendance'}
+            </h3>
+          </div>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
+            {isRegister
+              ? 'Please look at the camera. Your face photo and biometric data are used only for attendance.'
+              : 'Please look at the camera. Your face will be verified automatically.'}
+          </p>
         </div>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-          {isRegister
-            ? 'Please look at the camera. Your face photo and biometric data are used only for attendance.'
-            : 'Please look at the camera. Your face will be verified automatically.'}
-        </p>
-      </div>
+      )}
 
-      <div className="p-5">
+      <div className={embedded ? '' : 'p-5'}>
         {modelState === 'error' ? (
           <ErrorPanel msg={CAMERA_MESSAGES.modelsError} onRetry={startModels} />
         ) : cameraIssue ? (
-          <ErrorPanel msg={camMsg} onRetry={startCamera} />
+          <ErrorPanel msg={{ ...camMsg, detail: cameraErrorDetail }} onRetry={startCamera} />
         ) : cameraState === 'idle' || cameraState === 'requesting' ? (
           <div className="flex flex-col items-center gap-4 py-10 text-center">
             {cameraState === 'requesting' ? (
@@ -375,7 +438,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
           </div>
         ) : (
           <>
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-black sm:aspect-[4/3]">
+            <div className="relative mx-auto aspect-[4/3] max-h-[52dvh] w-full max-w-full overflow-hidden rounded-xl bg-black sm:max-h-[56dvh]">
               <video
                 ref={attachVideo}
                 autoPlay
@@ -384,7 +447,6 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
                 className="h-full w-full object-cover"
               />
               <canvas ref={overlayRef} className="absolute inset-0 h-full w-full" />
-              {/* face guide */}
               <div className="face-guide">
                 <div className={`oval ${faceTone === 'good' && !multipleFaces ? 'good' : ''} ${multipleFaces ? 'border-rose-400' : ''}`} />
               </div>
@@ -415,11 +477,15 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
 
             {isRegister && !capturingAuto && (
               <div className="mt-4">
-                <Button className="w-full" onClick={() => captureNow()} disabled={faceTone !== 'good'}>
+                <Button className="w-full" onClick={() => captureNow()} disabled={faceTone !== 'good' || multipleFaces}>
                   <Camera className="h-4 w-4" /> Capture Face
                 </Button>
                 <p className="mt-2 text-center text-[11px] text-slate-400 dark:text-slate-300">
-                  {faceTone !== 'good' ? 'Face must be centered and clear to enable capture.' : 'Center your face and tap capture.'}
+                  {multipleFaces
+                    ? 'Only one face must be visible to capture.'
+                    : faceTone !== 'good'
+                      ? 'Face must be centered, clear, and properly lit before capture.'
+                      : 'Face is ready. Tap capture when you are still.'}
                 </p>
               </div>
             )}
@@ -444,6 +510,7 @@ function ErrorPanel({ msg, onRetry }) {
         <p className="font-bold text-slate-900 dark:text-slate-100">{msg.title}</p>
         <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-300">{msg.desc}</p>
       </div>
+      {msg.detail ? <p className="max-w-sm text-[11px] text-slate-400 dark:text-slate-400">{msg.detail}</p> : null}
       <Button variant="secondary" onClick={onRetry}>
         <RefreshCcw className="h-4 w-4" /> Retry
       </Button>
