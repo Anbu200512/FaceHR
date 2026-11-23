@@ -217,14 +217,22 @@ const checkIn = asyncHandler(async (req, res) => {
   }
 
   const ext = req.file ? (req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg') : null;
-  const checkInPhoto = req.file ? saveBuffer(req.file.buffer, ext) : null;
+  let checkInPhoto = null;
+  if (req.file?.buffer) {
+    try {
+      checkInPhoto = saveBuffer(req.file.buffer, ext);
+    } catch (err) {
+      console.error('[Attendance] Failed to save check-in photo', { employeeId: empDoc.employeeId, err: err.message });
+      return res.status(500).json({ success: false, message: 'Failed to save attendance photo. Please try again.' });
+    }
+  }
+  if (req.file && !checkInPhoto) {
+    return res.status(500).json({ success: false, message: 'Failed to save attendance photo. Please try again.' });
+  }
   const checkInDistanceFromCompany = geofence.distance;
 
   const { status, lateMinutes } = await evaluateCheckInStatus(today, now, empDoc);
   const deviceInfo = summarizeDevice(req);
-  if (!checkInPhoto) {
-    console.warn('[Attendance] Check-in saved without photo', { employeeId: empDoc.employeeId, hasFile: !!req.file });
-  }
 
   try {
     const record = await prisma.attendance.create({
@@ -327,9 +335,17 @@ const checkOut = asyncHandler(async (req, res) => {
   }
 
   const ext = req.file ? (req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg') : null;
-  const checkOutPhoto = req.file ? saveBuffer(req.file.buffer, ext) : null;
-  if (!checkOutPhoto) {
-    console.warn('[Attendance] Check-out saved without photo', { employeeId: empDoc.employeeId, hasFile: !!req.file });
+  let checkOutPhoto = null;
+  if (req.file?.buffer) {
+    try {
+      checkOutPhoto = saveBuffer(req.file.buffer, ext);
+    } catch (err) {
+      console.error('[Attendance] Failed to save check-out photo', { employeeId: empDoc.employeeId, err: err.message });
+      return res.status(500).json({ success: false, message: 'Failed to save attendance photo. Please try again.' });
+    }
+  }
+  if (req.file && !checkOutPhoto) {
+    return res.status(500).json({ success: false, message: 'Failed to save attendance photo. Please try again.' });
   }
 
   const workingHoursMinutes = Math.max(0, Math.round((now - record.checkInTime) / 60000));
@@ -668,9 +684,18 @@ async function performMarkAttendance(employeeId, mode, req) {
 
   const faceVerified = !!requireFaceForThis;
   const matchDistance = verification ? verification.distance : null;
-  const photo = req.file
-    ? saveBuffer(req.file.buffer, req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg')
-    : null;
+  let photo = null;
+  if (req.file?.buffer) {
+    try {
+      photo = saveBuffer(req.file.buffer, req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg');
+    } catch (err) {
+      console.error('[Attendance] Failed to save admin punch photo', { employeeId, mode, err: err.message });
+      return { status: 500, message: 'Failed to save attendance photo. Please try again.' };
+    }
+  }
+  if (req.file && !photo) {
+    return { status: 500, message: 'Failed to save attendance photo. Please try again.' };
+  }
 
   const deviceInfo = {
     ...summarizeDevice(req),

@@ -37,8 +37,15 @@ const uploadDocument = multer({
   limits: { fileSize: MAX_DOC_SIZE, files: 1 },
 }).single('file');
 
+function ensureUploadsDir() {
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 function saveBuffer(buffer, ext) {
-  const name = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext || 'jpg'}`;
+  if (!buffer) return null;
+  ensureUploadsDir();
+  const safeExt = String(ext || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const name = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${safeExt}`;
   const fullPath = path.join(uploadsDir, name);
   fs.writeFileSync(fullPath, buffer);
   return `/uploads/${name}`;

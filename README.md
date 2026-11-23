@@ -214,6 +214,7 @@ This starts **both** the API (`http://localhost:5000`) and the Vite client (`htt
 | `CLIENT_URL` | Allowed CORS origin(s) | `http://localhost:5173` |
 | `UPLOAD_BASE_URL` | Public base for uploaded photos | `http://localhost:5000` |
 | `UPLOAD_DIR` | Where uploads are written (use a disk on Render) | `server/uploads` |
+| `ATTENDANCE_PHOTO_RETENTION_HOURS` | Auto-delete check-in/out photos after N hours (`0` disables cleanup) | `12` |
 | `FACE_MATCH_THRESHOLD` | Euclidean distance threshold (lower = stricter) | `0.6` |
 | `FACE_MODELS_PATH` | (Optional) server-side model dir | `face-models` |
 | `OFFICE_START_TIME` | Late cutoff (24h) | `09:30` |
