@@ -24,7 +24,7 @@ const CAMERA_MESSAGES = {
   modelsError: { title: 'Face recognition could not start', desc: 'Face recognition models could not be loaded. Check your internet connection and retry.', tone: 'error' },
 };
 
-export default function FaceCapture({ mode, onCaptured, onClose, successExtra, failureExtra, embedded = false }) {
+export default function FaceCapture({ mode, onCaptured, onClose, successExtra, failureExtra, embedded = false, autoCloseOnSuccess = false }) {
   const [cameraState, setCameraState] = useState('idle'); // idle | requesting | ready | denied | unavailable | inuse | insecure
   const [cameraErrorDetail, setCameraErrorDetail] = useState('');
   const [modelState, setModelState] = useState('loading'); // loading | ready | error
@@ -35,6 +35,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null); // { ok, message, data, code }
   const [capturingAuto, setCapturingAuto] = useState(false);
+  const [verifySlow, setVerifySlow] = useState(false);
   const capturedRef = useRef(null);
   const submittingRef = useRef(false);
   const capturingAutoRef = useRef(false);
@@ -206,7 +207,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
               ctx.lineWidth = 3;
               ctx.strokeRect(mapped.x, mapped.y, mapped.width, mapped.height);
             }
-            if (!isRegister && !capturingAutoRef.current && g.tone === 'good' && !multi && goodFramesRef.current >= 1 && result.descriptor) {
+            if (!isRegister && !capturingAutoRef.current && g.tone === 'good' && !multi && goodFramesRef.current >= 3 && result.descriptor) {
               goodFramesRef.current = 0;
               capturingAutoRef.current = true;
               setCapturingAuto(true);
@@ -292,9 +293,14 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
 
           if (!isRegister) {
             setSubmitting(true);
+            setVerifySlow(false);
+            const slowTimer = setTimeout(() => { if (mounted.current) setVerifySlow(true); }, 5000);
             try {
               const result = await onCaptured({ blob, descriptor });
-              if (mounted.current) setSubmitResult(result);
+              if (mounted.current) {
+                if (result?.ok && (autoCloseOnSuccess || !isRegister) && onClose) onClose(result);
+                else setSubmitResult(result);
+              }
             } catch (err) {
               if (mounted.current) {
                 setSubmitResult({
@@ -304,7 +310,8 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
                 });
               }
             } finally {
-              if (mounted.current) setSubmitting(false);
+              clearTimeout(slowTimer);
+              if (mounted.current) { setSubmitting(false); setVerifySlow(false); }
             }
           }
         } catch (_err) {
@@ -317,7 +324,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
         }
       }, 'image/jpeg', 0.88);
     },
-    [isRegister, onCaptured, submitting, captured, runDetection]
+    [isRegister, onCaptured, submitting, captured, runDetection, autoCloseOnSuccess, onClose]
   );
 
   useEffect(() => {
@@ -402,7 +409,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Verifying face…</h3>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
-              Please keep still. This only takes a moment.
+              {verifySlow ? 'Still verifying — check your connection if this continues.' : 'Please keep still. This only takes a moment.'}
             </p>
           </div>
         </div>
@@ -456,7 +463,13 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
       )}
 
       <div className={embedded ? '' : 'p-5'}>
-        {modelState === 'error' ? (
+        {modelState === 'loading' ? (
+          <div className="flex flex-col items-center gap-4 py-10 text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
+            <p className="font-medium text-slate-700 dark:text-slate-200">Loading face recognition…</p>
+            <p className="text-sm text-slate-400 dark:text-slate-300">This may take a moment on first use.</p>
+          </div>
+        ) : modelState === 'error' ? (
           <ErrorPanel msg={CAMERA_MESSAGES.modelsError} onRetry={startModels} />
         ) : cameraIssue ? (
           <ErrorPanel msg={{ ...camMsg, detail: cameraErrorDetail }} onRetry={startCamera} />
@@ -473,7 +486,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
                   <Camera className="h-8 w-8" />
                 </div>
-                <Button onClick={startCamera} disabled={modelState !== 'ready'}>
+                <Button onClick={startCamera}>
                   <Camera className="h-4 w-4" /> Start Camera
                 </Button>
               </>

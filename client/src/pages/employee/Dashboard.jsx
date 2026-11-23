@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { LogIn, LogOut, CalendarDays, History, Plane, Briefcase, Clock3, MapPin, CheckCircle2, AlertCircle } from 'lucide-react';
+import { LogIn, LogOut, CalendarDays, History, Plane, Briefcase, Clock3, CheckCircle2, AlertCircle } from 'lucide-react';
 import api, { extractError } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../hooks/useApi';
 import { usePolling } from '../../hooks/useDebounce';
 import { greeting, formatDate, formatTime, formatDuration, resolveAsset } from '../../services/format';
 import { fetchMyAttendanceSettings, resolveGeoGate } from '../../services/attendanceSettings';
+import { useToast } from '../../context/ToastContext';
 import PageHeader from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -29,6 +30,7 @@ function formatClock(hhmm) {
 
 export default function EmployeeHome() {
   const { user } = useAuth();
+  const toast = useToast();
   const emp = user?.employeeData || {};
   const now = new Date();
 
@@ -53,7 +55,6 @@ export default function EmployeeHome() {
   const [punchStatus, setPunchStatus] = useState(null);
   const [punchLocation, setPunchLocation] = useState(null);
   const [punchMeta, setPunchMeta] = useState(null);
-  const [punchResult, setPunchResult] = useState(null);
   const [inlineCapture, setInlineCapture] = useState(false);
   const [captureKey, setCaptureKey] = useState(0);
   const [liveNow, setLiveNow] = useState(Date.now());
@@ -91,7 +92,6 @@ export default function EmployeeHome() {
     setPunchStatus(null);
     setPunchLocation(null);
     setPunchMeta(null);
-    setPunchResult(null);
     setInlineCapture(false);
     setPunching(true);
     try {
@@ -111,10 +111,14 @@ export default function EmployeeHome() {
         const endpoint = nextMode === 'checkin' ? 'check-in' : 'check-out';
         const { data } = await api.post(`/attendance/${endpoint}`, { location: geo.location });
         setPunchStatus(null);
-        setPunchResult({ ok: true, data: data.data, message: data.message, mode: nextMode, geo: meta });
         await today.refetch();
+        const d = data.data || {};
+        const msg = nextMode === 'checkin'
+          ? `Checked in ${formatTime(d.checkInTime)}${d.status === 'Late' ? ` • Late${d.lateMinutes ? ` by ${d.lateMinutes} min` : ''}` : ' • On time'}`
+          : `Checked out ${formatTime(d.checkOutTime)} • ${formatDuration(d.workingHoursMinutes)}`;
+        toast.success(msg);
       } else {
-        setPunchStatus({ stage: 'verified', message: s.geoEnabled === false ? 'Opening camera…' : `Location verified${geo.distance != null ? ` (${geo.distance} m from site)` : ''}. Opening camera…` });
+        setPunchStatus(null);
         setCaptureKey((k) => k + 1);
         setInlineCapture(true);
       }
@@ -139,7 +143,6 @@ export default function EmployeeHome() {
     try {
       const endpoint = punchMode === 'checkin' ? 'check-in' : 'check-out';
       const { data } = await api.post(`/attendance/${endpoint}`, fd);
-      setPunchResult({ ok: true, data: data.data, message: data.message, mode: punchMode, geo: punchMeta });
       await today.refetch();
       return { ok: true, message: data.message, data: data.data, summary: data.summary };
     } catch (err) {
@@ -261,20 +264,18 @@ export default function EmployeeHome() {
       </div>
 
             <Modal
-        open={(!inlineCapture && !!punchStatus) || !!punchError || (!!punchResult?.ok && !inlineCapture)}
+        open={(!inlineCapture && !!punchStatus && punchStatus.stage === 'verifying') || !!punchError}
         onClose={() => {
           if (punchStatus?.stage === 'verifying') return;
           setPunchError(null);
-          setPunchResult(null);
           setPunchStatus(null);
         }}
-        title={punchError ? "Couldn't mark attendance" : punchResult?.ok ? 'Attendance marked' : punchStatus?.stage === 'verified' ? 'Location verified' : 'Verifying location'}
+        title={punchError ? "Couldn't mark attendance" : 'Verifying location'}
         size="sm"
       >
-        {punchStatus && !punchError && !punchResult?.ok && (
-          <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${punchStatus.stage === 'verified' ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400' : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300'}`}>
-            {punchStatus.stage === 'verifying' && <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />}
-            {punchStatus.stage === 'verified' && <CheckCircle2 className="h-4 w-4 shrink-0" />}
+        {punchStatus?.stage === 'verifying' && !punchError && (
+          <div className="flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300">
+            <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
             <span>{punchStatus.message}</span>
           </div>
         )}
@@ -282,26 +283,6 @@ export default function EmployeeHome() {
           <div className={`flex gap-2 rounded-xl border px-4 py-3 text-sm ${punchError.code === 'OUTSIDE_ALLOWED_AREA' ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400' : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'}`}>
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <div><p className="font-medium">Couldn't mark attendance</p><p className="mt-0.5">{punchError.message}</p></div>
-          </div>
-        )}
-        {punchResult?.ok && !punchError && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold">{punchResult.message || 'Attendance marked successfully.'}</p>
-                <div className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
-                  {punchResult.mode === 'checkin' ? (
-                    <><p>Check-in: <span className="font-semibold">{formatTime(punchResult.data?.checkInTime)}</span></p><p>Status: <span className="font-semibold">{punchResult.data?.status === 'Late' ? `Late${punchResult.data?.lateMinutes ? ` by ${punchResult.data.lateMinutes} min` : ''}` : 'On time'}</span></p></>
-                  ) : (
-                    <><p>Check-out: <span className="font-semibold">{formatTime(punchResult.data?.checkOutTime)}</span></p><p>Total worked: <span className="font-semibold">{formatDuration(punchResult.data?.workingHoursMinutes)}</span></p></>
-                  )}
-                  {punchResult.geo?.distance != null && punchResult.geo?.allowed != null && (
-                    <p className="inline-flex items-start gap-1.5 sm:col-span-2"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>Location verified: {punchResult.geo.distance} m (allowed {punchResult.geo.allowed} m){punchResult.geo.name ? ` - ${punchResult.geo.name}` : ''}</span></p>
-                  )}
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </Modal>
@@ -323,24 +304,20 @@ export default function EmployeeHome() {
           key={`${punchMode}-${captureKey}`}
           mode="attendance"
           embedded
+          autoCloseOnSuccess
           onCaptured={submitPunch}
-          onClose={() => {
+          onClose={(result) => {
             setInlineCapture(false);
             setPunchStatus(null);
             today.refetch();
+            if (result?.ok) {
+              const d = result.data || {};
+              const msg = punchMode === 'checkin'
+                ? `Checked in ${formatTime(d.checkInTime)}${d.status === 'Late' ? ` • Late${d.lateMinutes ? ` by ${d.lateMinutes} min` : ''}` : ' • On time'}`
+                : `Checked out ${formatTime(d.checkOutTime)} • ${formatDuration(d.workingHoursMinutes)}`;
+              toast.success(msg);
+            }
           }}
-          successExtra={(data) => (
-            <div className="mx-auto max-w-sm space-y-1 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-left text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
-              {punchMode === 'checkin' ? (
-                <p>Check-in: <span className="font-semibold">{formatTime(data?.checkInTime)}</span> - <span className="font-semibold">{data?.status === 'Late' ? `Late${data?.lateMinutes ? ` by ${data.lateMinutes} min` : ''}` : 'On time'}</span></p>
-              ) : (
-                <p>Check-out: <span className="font-semibold">{formatTime(data?.checkOutTime)}</span> - Total <span className="font-semibold">{formatDuration(data?.workingHoursMinutes)}</span></p>
-              )}
-              {punchMeta?.distance != null && punchMeta?.allowed != null && (
-                <p className="inline-flex items-start gap-1.5"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />Location verified: {punchMeta.distance} m (allowed {punchMeta.allowed} m)</p>
-              )}
-            </div>
-          )}
         />
       </Modal>
 

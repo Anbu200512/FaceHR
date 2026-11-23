@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { LogIn, LogOut, Clock3, MapPin, CheckCircle2, AlertCircle } from 'lucide-react';
+import { LogIn, LogOut, Clock3, CheckCircle2, AlertCircle } from 'lucide-react';
 import api, { extractError } from '../../services/api';
 import { usePolling } from '../../hooks/useDebounce';
 import { formatTime, formatDuration } from '../../services/format';
 import { fetchMyAttendanceSettings, resolveGeoGate } from '../../services/attendanceSettings';
+import { useToast } from '../../context/ToastContext';
 import PageHeader from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -23,6 +24,7 @@ function formatClock(hhmm) {
 }
 
 export default function FaceAttendance() {
+  const toast = useToast();
   const [mode, setMode] = useState(null);
   const [record, setRecord] = useState(null);
   const [dupHint, setDupHint] = useState(null);
@@ -34,7 +36,6 @@ export default function FaceAttendance() {
   const [gateStatus, setGateStatus] = useState(null);
   const [capturedLocation, setCapturedLocation] = useState(null);
   const [gateMeta, setGateMeta] = useState(null);
-  const [punchResult, setPunchResult] = useState(null);
   const [captureKey, setCaptureKey] = useState(0);
 
   const loadSettings = useCallback(async () => {
@@ -71,9 +72,8 @@ export default function FaceAttendance() {
     setGateStatus(null);
     setCapturedLocation(null);
     setGateMeta(null);
-    setPunchResult(null);
-    setInlineCapture(false);
-    setGating(true);
+      setInlineCapture(false);
+      setGating(true);
     try {
       const s = await fetchMyAttendanceSettings();
       setSettings(s);
@@ -95,10 +95,14 @@ export default function FaceAttendance() {
         const { data } = await api.post(`/attendance/${endpoint}`, { location: geo.location });
         setRecord(data.data || null);
         setGateStatus(null);
-        setPunchResult({ ok: true, data: data.data, message: data.message, mode: nextMode, geo: meta });
         today.refetch?.();
+        const d = data.data || {};
+        const msg = nextMode === 'checkin'
+          ? `Checked in ${formatTime(d.checkInTime)}${d.status === 'Late' ? ` • Late${d.lateMinutes ? ` by ${d.lateMinutes} min` : ''}` : ' • On time'}`
+          : `Checked out ${formatTime(d.checkOutTime)} • ${formatDuration(d.workingHoursMinutes)}`;
+        toast.success(msg);
       } else {
-        setGateStatus({ stage: 'verified', message: s.geoEnabled === false ? 'Opening camera…' : `Location verified${geo.distance != null ? ` (${geo.distance} m from site)` : ''}. Opening camera…` });
+        setGateStatus(null);
         setCaptureKey((k) => k + 1);
         setInlineCapture(true);
       }
@@ -124,7 +128,6 @@ export default function FaceAttendance() {
       const endpoint = mode === 'checkin' ? 'check-in' : 'check-out';
       const { data } = await api.post(`/attendance/${endpoint}`, fd);
       setRecord(data.data || null);
-      setPunchResult({ ok: true, data: data.data, message: data.message, summary: data.summary, mode, geo: gateMeta });
       today.refetch?.();
       return { ok: true, message: data.message, data: data.data, summary: data.summary };
     } catch (err) {
@@ -211,21 +214,19 @@ export default function FaceAttendance() {
         </div>
       </Card>
 
-            <Modal
-        open={(!inlineCapture && !!gateStatus) || !!gateError || (!!punchResult?.ok && !inlineCapture)}
+      <Modal
+        open={(!inlineCapture && !!gateStatus && gateStatus.stage === 'verifying') || !!gateError}
         onClose={() => {
           if (gateStatus?.stage === 'verifying') return;
           setGateError(null);
-          setPunchResult(null);
           setGateStatus(null);
         }}
-        title={gateError ? "Couldn't mark attendance" : punchResult?.ok ? 'Attendance marked' : gateStatus?.stage === 'verified' ? 'Location verified' : 'Verifying location'}
+        title={gateError ? "Couldn't mark attendance" : 'Verifying location'}
         size="sm"
       >
-        {gateStatus && !gateError && !punchResult?.ok && (
-          <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${gateStatus.stage === 'verified' ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400' : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300'}`}>
-            {gateStatus.stage === 'verifying' && <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />}
-            {gateStatus.stage === 'verified' && <CheckCircle2 className="h-4 w-4 shrink-0" />}
+        {gateStatus?.stage === 'verifying' && !gateError && (
+          <div className="flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300">
+            <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
             <span>{gateStatus.message}</span>
           </div>
         )}
@@ -233,26 +234,6 @@ export default function FaceAttendance() {
           <div className={`flex gap-2 rounded-xl border px-4 py-3 text-sm ${gateError.code === 'OUTSIDE_ALLOWED_AREA' ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400' : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400'}`}>
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <div><p className="font-medium">Couldn't mark attendance</p><p className="mt-0.5">{gateError.message}</p></div>
-          </div>
-        )}
-        {punchResult?.ok && !gateError && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold">{punchResult.message || 'Attendance marked successfully.'}</p>
-                <div className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
-                  {punchResult.mode === 'checkin' ? (
-                    <><p>Check-in: <span className="font-semibold">{formatTime(punchResult.data?.checkInTime)}</span></p><p>Status: <span className="font-semibold">{punchResult.data?.status === 'Late' ? `Late${punchResult.data?.lateMinutes ? ` by ${punchResult.data.lateMinutes} min` : ''}` : 'On time'}</span></p></>
-                  ) : (
-                    <><p>Check-out: <span className="font-semibold">{formatTime(punchResult.data?.checkOutTime)}</span></p><p>Total worked: <span className="font-semibold">{formatDuration(punchResult.data?.workingHoursMinutes)}</span></p></>
-                  )}
-                  {punchResult.geo?.distance != null && punchResult.geo?.allowed != null && (
-                    <p className="inline-flex items-start gap-1.5 sm:col-span-2"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>Location verified: {punchResult.geo.distance} m (allowed {punchResult.geo.allowed} m){punchResult.geo.name ? ` - ${punchResult.geo.name}` : ''}</span></p>
-                  )}
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </Modal>
@@ -274,26 +255,19 @@ export default function FaceAttendance() {
           key={`${mode}-${captureKey}`}
           mode="attendance"
           embedded
+          autoCloseOnSuccess
           onCaptured={submit}
-          onClose={() => {
+          onClose={(result) => {
             setInlineCapture(false);
             setGateStatus(null);
             today.refetch?.();
-          }}
-          successExtra={(data) => {
-            const geo = gateMeta;
-            return (
-              <div className="mx-auto max-w-sm space-y-1 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-left text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
-                {mode === 'checkin' ? (
-                  <p>Check-in: <span className="font-semibold">{formatTime(data?.checkInTime)}</span> - <span className="font-semibold">{data?.status === 'Late' ? `Late${data?.lateMinutes ? ` by ${data.lateMinutes} min` : ''}` : 'On time'}</span></p>
-                ) : (
-                  <p>Check-out: <span className="font-semibold">{formatTime(data?.checkOutTime)}</span> - Total <span className="font-semibold">{formatDuration(data?.workingHoursMinutes)}</span></p>
-                )}
-                {geo?.distance != null && geo?.allowed != null && (
-                  <p className="inline-flex items-start gap-1.5"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />Location verified: {geo.distance} m (allowed {geo.allowed} m)</p>
-                )}
-              </div>
-            );
+            if (result?.ok) {
+              const d = result.data || {};
+              const msg = mode === 'checkin'
+                ? `Checked in ${formatTime(d.checkInTime)}${d.status === 'Late' ? ` • Late${d.lateMinutes ? ` by ${d.lateMinutes} min` : ''}` : ' • On time'}`
+                : `Checked out ${formatTime(d.checkOutTime)} • ${formatDuration(d.workingHoursMinutes)}`;
+              toast.success(msg);
+            }
           }}
           failureExtra={({ code }) =>
             dupHint && code === dupHint.code ? (
