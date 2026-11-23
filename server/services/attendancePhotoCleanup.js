@@ -3,7 +3,7 @@ const path = require('path');
 const prisma = require('../config/prisma');
 const { uploadsDir } = require('../middleware/upload');
 
-const DEFAULT_RETENTION_HOURS = 24 * 30;
+const DEFAULT_RETENTION_HOURS = 12;
 const retentionHoursRaw = Number(process.env.ATTENDANCE_PHOTO_RETENTION_HOURS);
 const RETENTION_HOURS = Number.isFinite(retentionHoursRaw) && retentionHoursRaw >= 0
   ? retentionHoursRaw
