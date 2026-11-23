@@ -9,6 +9,7 @@ import {
   mapToDisplay,
   guidanceFromFace,
   getLastDescriptor,
+  clearDescriptor,
   descriptorFromCanvas,
 } from '../services/faceRecognition';
 
@@ -50,6 +51,10 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
   const goodFramesRef = useRef(0);
   const busyRef = useRef(false);
   const mounted = useRef(true);
+  const lastDetectAtRef = useRef(0);
+  const lastFaceCountAtRef = useRef(0);
+  const lastFacesRef = useRef(1);
+  const captureNowRef = useRef(null);
 
   const isRegister = mode === 'register';
 
@@ -57,13 +62,16 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
     mounted.current = true;
     return () => {
       mounted.current = false;
+      clearDescriptor();
     };
   }, []);
 
   const stopCamera = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
+    busyRef.current = false;
   }, []);
 
   useEffect(() => () => stopCamera(), [stopCamera]);
@@ -142,23 +150,35 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
 
   // detection loop (runs while camera ready + not captured/submitting)
   const runDetection = useCallback(() => {
-    const tick = async () => {
+    const tick = async (ts = 0) => {
       if (!mounted.current) return;
-      if (busyRef.current || capturedRef.current || submittingRef.current || capturingAutoRef.current) {
+      if (capturedRef.current || submittingRef.current || capturingAutoRef.current) return;
+      if (busyRef.current) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      if (ts - lastDetectAtRef.current < 90) {
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
       const video = videoRef.current;
       if (video && video.videoWidth) {
+        lastDetectAtRef.current = ts;
         busyRef.current = true;
         try {
-          const result = await analyzeVideo(video);
+          const result = await analyzeVideo(video, {
+            withDescriptor: !isRegister,
+            inputSize: isRegister ? 160 : 224,
+            scoreThreshold: 0.45,
+          });
           if (!mounted.current || capturedRef.current || submittingRef.current) return;
           if (result && result.detection) {
             const mapped = mapToDisplay(result.detection, video);
-            let faces = 1;
-            if (goodFramesRef.current % 5 === 0) {
-              faces = await countFaces(video);
+            let faces = lastFacesRef.current ?? 1;
+            if (ts - lastFaceCountAtRef.current > 1600) {
+              lastFaceCountAtRef.current = ts;
+              faces = await countFaces(video, { inputSize: 160, scoreThreshold: 0.45 });
+              lastFacesRef.current = faces;
             }
             const guide = {
               cx: video.clientWidth / 2,
@@ -167,10 +187,11 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
               height: Math.min(video.clientHeight, 350),
             };
             const g = guidanceFromFace(mapped, guide, isRegister ? 'register' : 'attendance', result.score || 0);
-            setFaceStatus(g.message);
-            setFaceTone(g.tone);
-            setMultipleFaces(faces > 1);
-            if (g.tone === 'good' && faces === 1) {
+            const multi = faces > 1;
+            setFaceStatus(multi ? 'Multiple faces detected. Please make sure only one person is visible.' : g.message);
+            setFaceTone(multi ? 'warn' : g.tone);
+            setMultipleFaces(multi);
+            if (g.tone === 'good' && !multi) {
               goodFramesRef.current += 1;
             } else {
               goodFramesRef.current = 0;
@@ -181,21 +202,24 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
               ov.width = video.clientWidth;
               ov.height = video.clientHeight;
               ctx.clearRect(0, 0, ov.width, ov.height);
-              ctx.strokeStyle = g.tone === 'good' && faces === 1 ? '#34d399' : '#fbbf24';
+              ctx.strokeStyle = g.tone === 'good' && !multi ? '#34d399' : '#fbbf24';
               ctx.lineWidth = 3;
               ctx.strokeRect(mapped.x, mapped.y, mapped.width, mapped.height);
             }
-            if (!isRegister && !capturingAutoRef.current && g.tone === 'good' && faces === 1 && goodFramesRef.current >= 6) {
+            if (!isRegister && !capturingAutoRef.current && g.tone === 'good' && !multi && goodFramesRef.current >= 1 && result.descriptor) {
               goodFramesRef.current = 0;
               capturingAutoRef.current = true;
               setCapturingAuto(true);
-              captureNow(video);
+              captureNowRef.current?.(video, result.descriptor, faces);
+              return;
             }
           } else {
             setFaceStatus('No face detected. Please position your face inside the frame.');
             setFaceTone('warn');
             setMultipleFaces(false);
             goodFramesRef.current = 0;
+            lastFacesRef.current = 0;
+            lastFaceCountAtRef.current = ts;
             const ov = overlayRef.current;
             if (ov) ov.getContext('2d').clearRect(0, 0, ov.width, ov.height);
           }
@@ -205,7 +229,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
       }
       rafRef.current = requestAnimationFrame(tick);
     };
-    tick();
+    rafRef.current = requestAnimationFrame(tick);
   }, [isRegister]);
 
   useEffect(() => {
@@ -219,11 +243,11 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
   }, [cameraState, modelState, captured, submitResult, runDetection]);
 
   const captureNow = useCallback(
-    (sourceVideo) => {
+    (sourceVideo, knownDescriptor = null, knownFaceCount = null) => {
       const video = sourceVideo || videoRef.current;
       if (!video || !video.videoWidth || submitting || captured) return;
       if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
-      const maxW = 900;
+      const maxW = 560;
       const scale = Math.min(1, maxW / video.videoWidth);
       const w = Math.round(video.videoWidth * scale);
       const h = Math.round(video.videoHeight * scale);
@@ -234,27 +258,35 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
       canvas.toBlob(async (blob) => {
         try {
           if (!blob) throw new Error('capture failed');
-          const faces = await countFaces(video);
-          if (faces !== 1) {
+          let descriptor = knownDescriptor || getLastDescriptor();
+          const hasFreshDescriptor = descriptor && descriptor.length === 128;
+          if (!hasFreshDescriptor || knownFaceCount !== 1) {
+            const faces = knownFaceCount === 1 ? 1 : await countFaces(video, { inputSize: 160, scoreThreshold: 0.45 });
+            if (faces !== 1) {
+              goodFramesRef.current = 0;
+              setCapturingAuto(false);
+              capturingAutoRef.current = false;
+              lastFacesRef.current = faces;
+              setFaceStatus(faces > 1 ? 'Multiple faces detected. Only one person should be visible.' : 'No face detected clearly. Please try again.');
+              setFaceTone('warn');
+              if (mounted.current && !capturedRef.current && !submittingRef.current) runDetection();
+              return;
+            }
+          }
+          if (!hasFreshDescriptor) descriptor = await descriptorFromCanvas(canvas);
+          if (!descriptor || descriptor.length !== 128) {
             goodFramesRef.current = 0;
             setCapturingAuto(false);
-            setFaceStatus(faces > 1 ? 'Multiple faces detected. Only one person should be visible.' : 'No face detected clearly. Please try again.');
-            setFaceTone('warn');
-            return;
-          }
-          let descriptor = getLastDescriptor();
-          if (!descriptor || descriptor.length !== 128) {
-            descriptor = await descriptorFromCanvas(canvas);
-          }
-          if (!descriptor || descriptor.length !== 128) {
-            goodFramesRef.current = 0;
-            setCapturingAuto(false);
+            capturingAutoRef.current = false;
             setFaceStatus('Face not clear enough for verification. Please try again in good lighting.');
             setFaceTone('warn');
+            if (mounted.current && !capturedRef.current && !submittingRef.current) runDetection();
             return;
           }
           const url = URL.createObjectURL(blob);
           setCaptured({ blob, descriptor, url });
+          setCapturingAuto(false);
+          capturingAutoRef.current = false;
           setFaceStatus('Face detected clearly. Please keep still.');
           setFaceTone('good');
 
@@ -278,20 +310,31 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
         } catch (_err) {
           goodFramesRef.current = 0;
           setCapturingAuto(false);
+          capturingAutoRef.current = false;
           setFaceStatus('Could not validate your face. Please try again.');
           setFaceTone('warn');
+          if (mounted.current && !capturedRef.current && !submittingRef.current) runDetection();
         }
-      }, 'image/jpeg', 0.92);
+      }, 'image/jpeg', 0.88);
     },
-    [isRegister, onCaptured, submitting, captured]
+    [isRegister, onCaptured, submitting, captured, runDetection]
   );
+
+  useEffect(() => {
+    captureNowRef.current = captureNow;
+  }, [captureNow]);
 
   const retake = () => {
     if (captured?.url) URL.revokeObjectURL(captured.url);
+    clearDescriptor();
     setCaptured(null);
     setSubmitResult(null);
     setCapturingAuto(false);
+    capturingAutoRef.current = false;
     goodFramesRef.current = 0;
+    lastFacesRef.current = 1;
+    lastFaceCountAtRef.current = 0;
+    lastDetectAtRef.current = 0;
   };
 
   const saveFace = async () => {

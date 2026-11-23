@@ -18,8 +18,8 @@ let lastDescriptor = null;
 let detectionRunning = false;
 
 const getFaceapi = () => (faceapiPromise ||= import('face-api.js'));
-const getDefaultOptions = (faceapi) =>
-  new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 });
+const getDetectorOptions = (faceapi, { inputSize = 224, scoreThreshold = 0.45 } = {}) =>
+  new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold });
 
 /** Load the face-api models exactly once. Resolves true/false. */
 export async function loadFaceModels() {
@@ -32,6 +32,17 @@ export async function loadFaceModels() {
       faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL),
       faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL),
     ]);
+    // Warm up TFJS/WebGL and JIT kernels to avoid first-frame stall.
+    try {
+      const warm = document.createElement('canvas');
+      warm.width = 64;
+      warm.height = 64;
+      const warmOpts = getDetectorOptions(faceapi, { inputSize: 128, scoreThreshold: 0.5 });
+      await faceapi.detectSingleFace(warm, warmOpts);
+      await faceapi.detectSingleFace(warm, warmOpts).withFaceLandmarks().withFaceDescriptor().catch(() => null);
+    } catch (_e) {
+      // warmup failure should not block app
+    }
     modelsLoaded = true;
     return true;
   } catch (err) {
@@ -46,24 +57,23 @@ export function faceModelsState() {
 }
 
 /**
- * Runs detection + landmarks + descriptor on a video element.
- * Returns { detection, landmarks, descriptor, score } or null.
- * `descriptor` is a Float32Array (128 dims).
+ * Fast face tracking for live video. Computes descriptor only when requested.
+ * Smaller inputSize keeps the camera loop responsive; capture uses higher quality.
  */
-export async function analyzeVideo(videoEl) {
+export async function analyzeVideo(videoEl, { withDescriptor = false, inputSize = 224, scoreThreshold = 0.45 } = {}) {
   if (!videoEl || !videoEl.videoWidth) return null;
   try {
     const faceapi = await getFaceapi();
-    const result = await faceapi
-      .detectSingleFace(videoEl, getDefaultOptions(faceapi))
-      .withFaceLandmarks()
-      .withFaceDescriptor();
+    const options = getDetectorOptions(faceapi, { inputSize, scoreThreshold });
+    let task = faceapi.detectSingleFace(videoEl, options);
+    if (withDescriptor) task = task.withFaceLandmarks().withFaceDescriptor();
+    const result = await task;
     if (!result) return null;
-    lastDescriptor = result.descriptor;
+    if (result.descriptor) lastDescriptor = result.descriptor;
     return {
       detection: result.detection,
-      landmarks: result.landmarks,
-      descriptor: result.descriptor,
+      landmarks: result.landmarks || null,
+      descriptor: result.descriptor || null,
       score: result.detection ? result.detection.score : 0,
     };
   } catch (err) {
@@ -73,13 +83,13 @@ export async function analyzeVideo(videoEl) {
 }
 
 /** Multi-face count on the current video frame. */
-export async function countFaces(videoEl) {
+export async function countFaces(videoEl, { inputSize = 224, scoreThreshold = 0.45 } = {}) {
   if (!videoEl || !videoEl.videoWidth) return 0;
   try {
     const faceapi = await getFaceapi();
-    const dets = await faceapi.detectAllFaces(videoEl, getDefaultOptions(faceapi));
+    const dets = await faceapi.detectAllFaces(videoEl, getDetectorOptions(faceapi, { inputSize, scoreThreshold }));
     return dets.length;
-  } catch (err) {
+  } catch (_err) {
     return 0;
   }
 }
@@ -168,14 +178,28 @@ export function getLastDescriptor() {
   return lastDescriptor;
 }
 
+export function clearDescriptor() {
+  lastDescriptor = null;
+}
+
 /** Refresh descriptor derived from a captured canvas image (for re-verification). */
 export async function descriptorFromCanvas(canvas) {
   const faceapi = await getFaceapi();
-  const result = await faceapi
-    .detectSingleFace(canvas, getDefaultOptions(faceapi))
-    .withFaceLandmarks()
-    .withFaceDescriptor();
-  return result ? result.descriptor : null;
+  const attempts = [
+    { inputSize: 224, scoreThreshold: 0.45 },
+    { inputSize: 320, scoreThreshold: 0.4 },
+  ];
+  for (const opts of attempts) {
+    const result = await faceapi
+      .detectSingleFace(canvas, getDetectorOptions(faceapi, opts))
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    if (result?.descriptor) {
+      lastDescriptor = result.descriptor;
+      return result.descriptor;
+    }
+  }
+  return null;
 }
 
 /** Start/stop internal detection flag helper for components that throttle frames. */
@@ -197,5 +221,6 @@ export default {
   guidanceFromFace,
   drawOverlay,
   getLastDescriptor,
+  clearDescriptor,
   descriptorFromCanvas,
 };
