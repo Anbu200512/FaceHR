@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 const { saveBuffer } = require('../middleware/upload');
+const { markUploadStorageUnhealthy } = require('../utils/storageHealth');
 const { haversineDistanceMeters } = require('../utils/geo');
 const { getEffectiveAttendanceSettings } = require('../services/attendanceSettingsService');
 const {
@@ -222,11 +223,25 @@ const checkIn = asyncHandler(async (req, res) => {
     try {
       checkInPhoto = saveBuffer(req.file.buffer, ext);
     } catch (err) {
-      console.error('[Attendance] Failed to save check-in photo', { employeeId: empDoc.employeeId, err: err.message });
+      markUploadStorageUnhealthy(err);
+      console.error('[Attendance] Failed to save attendance photo', {
+        event: 'attendance.photo_save_failed',
+        mode: 'check-in',
+        employeeId: empDoc.employeeId,
+        code: err.code,
+        path: err.path,
+        err: err.message,
+      });
       return res.status(500).json({ success: false, message: 'Failed to save attendance photo. Please try again.' });
     }
   }
   if (req.file && !checkInPhoto) {
+    console.error('[Attendance] Failed to save attendance photo', {
+      event: 'attendance.photo_save_failed',
+      mode: 'check-in',
+      employeeId: empDoc.employeeId,
+      reason: 'empty_save_result',
+    });
     return res.status(500).json({ success: false, message: 'Failed to save attendance photo. Please try again.' });
   }
   const checkInDistanceFromCompany = geofence.distance;
@@ -340,11 +355,25 @@ const checkOut = asyncHandler(async (req, res) => {
     try {
       checkOutPhoto = saveBuffer(req.file.buffer, ext);
     } catch (err) {
-      console.error('[Attendance] Failed to save check-out photo', { employeeId: empDoc.employeeId, err: err.message });
+      markUploadStorageUnhealthy(err);
+      console.error('[Attendance] Failed to save attendance photo', {
+        event: 'attendance.photo_save_failed',
+        mode: 'check-out',
+        employeeId: empDoc.employeeId,
+        code: err.code,
+        path: err.path,
+        err: err.message,
+      });
       return res.status(500).json({ success: false, message: 'Failed to save attendance photo. Please try again.' });
     }
   }
   if (req.file && !checkOutPhoto) {
+    console.error('[Attendance] Failed to save attendance photo', {
+      event: 'attendance.photo_save_failed',
+      mode: 'check-out',
+      employeeId: empDoc.employeeId,
+      reason: 'empty_save_result',
+    });
     return res.status(500).json({ success: false, message: 'Failed to save attendance photo. Please try again.' });
   }
 
@@ -689,11 +718,25 @@ async function performMarkAttendance(employeeId, mode, req) {
     try {
       photo = saveBuffer(req.file.buffer, req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg');
     } catch (err) {
-      console.error('[Attendance] Failed to save admin punch photo', { employeeId, mode, err: err.message });
+      markUploadStorageUnhealthy(err);
+      console.error('[Attendance] Failed to save attendance photo', {
+        event: 'attendance.photo_save_failed',
+        mode: `admin-${mode}`,
+        employeeId,
+        code: err.code,
+        path: err.path,
+        err: err.message,
+      });
       return { status: 500, message: 'Failed to save attendance photo. Please try again.' };
     }
   }
   if (req.file && !photo) {
+    console.error('[Attendance] Failed to save attendance photo', {
+      event: 'attendance.photo_save_failed',
+      mode: `admin-${mode}`,
+      employeeId,
+      reason: 'empty_save_result',
+    });
     return { status: 500, message: 'Failed to save attendance photo. Please try again.' };
   }
 

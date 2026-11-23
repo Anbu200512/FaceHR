@@ -77,12 +77,32 @@ app.get('/api/health', async (req, res) => {
   } catch (e) {
     db = 'down';
   }
-  res.status(db === 'down' ? 503 : 200).json({
-    success: db === 'up',
-    message: db === 'up' ? 'FaceHR API is running' : 'Database unreachable',
+  const storage = await require('./utils/storageHealth').getUploadStorageHealth();
+  const ok = db === 'up' && storage.ok;
+  const message = ok
+    ? 'FaceHR API is running'
+    : db !== 'up'
+      ? 'Database unreachable'
+      : 'Upload storage unavailable';
+  if (!storage.ok) {
+    console.error('[Health] Upload storage unhealthy', {
+      event: 'storage.health_unhealthy',
+      uploadsDir: storage.uploadsDir,
+      error: storage.error?.message,
+      code: storage.error?.code,
+    });
+  }
+  res.status(ok ? 200 : 503).json({
+    success: ok,
+    message,
     timestamp: new Date().toISOString(),
     db,
     face: faceService.status(),
+    storage: {
+      ok: storage.ok,
+      uploadsDir: storage.uploadsDir,
+      ...(storage.error ? { error: storage.error } : {}),
+    },
   });
 });
 
