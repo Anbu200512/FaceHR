@@ -69,38 +69,36 @@ async function cleanupAttendancePhotos() {
     if (rec.checkInPhoto) {
       const expiredPhoto = rec.checkInTime ? rec.checkInTime < cutoff : true;
       const exists = await fileExists(rec.checkInPhoto);
-      if (expiredPhoto || !exists) {
+      if (expiredPhoto) {
         if (exists) await removeUploadFile(rec.checkInPhoto);
         data.checkInPhoto = null;
-        if (expiredPhoto) expired += 1;
-        else {
-          missing += 1;
-          console.warn('[AttendancePhotoCleanup] Missing check-in photo file, cleared DB ref', {
-            event: 'attendance.photo_missing',
-            attendanceId: rec.id,
-            employeeId: rec.employeeId,
-            photo: rec.checkInPhoto,
-          });
-        }
+        expired += 1;
+      } else if (!exists) {
+        missing += 1;
+        console.warn('[AttendancePhotoCleanup] Missing check-in photo file (DB ref kept for visibility)', {
+          event: 'attendance.photo_missing',
+          attendanceId: rec.id,
+          employeeId: rec.employeeId,
+          photo: rec.checkInPhoto,
+        });
       }
     }
 
     if (rec.checkOutPhoto) {
       const expiredPhoto = rec.checkOutTime ? rec.checkOutTime < cutoff : true;
       const exists = await fileExists(rec.checkOutPhoto);
-      if (expiredPhoto || !exists) {
+      if (expiredPhoto) {
         if (exists) await removeUploadFile(rec.checkOutPhoto);
         data.checkOutPhoto = null;
-        if (expiredPhoto) expired += 1;
-        else {
-          missing += 1;
-          console.warn('[AttendancePhotoCleanup] Missing check-out photo file, cleared DB ref', {
-            event: 'attendance.photo_missing',
-            attendanceId: rec.id,
-            employeeId: rec.employeeId,
-            photo: rec.checkOutPhoto,
-          });
-        }
+        expired += 1;
+      } else if (!exists) {
+        missing += 1;
+        console.warn('[AttendancePhotoCleanup] Missing check-out photo file (DB ref kept for visibility)', {
+          event: 'attendance.photo_missing',
+          attendanceId: rec.id,
+          employeeId: rec.employeeId,
+          photo: rec.checkOutPhoto,
+        });
       }
     }
 
