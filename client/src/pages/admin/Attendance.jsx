@@ -18,7 +18,7 @@ import Pagination from '../../components/ui/Pagination';
 import { Skeleton, SkeletonRow } from '../../components/ui/Skeleton';
 import Modal from '../../components/ui/Modal';
 
-const STATUS = ['Present', 'Late', 'Half Day', 'Absent', 'On Leave'];
+const STATUS = ['Present', 'Late', 'Half Day', 'Absent', 'On Leave', 'Not Arrived'];
 
 export default function Attendance() {
   const [date, setDate] = useState('');
@@ -36,8 +36,8 @@ export default function Attendance() {
     return data.data;
   });
 
-  // Absent / On Leave are computed at read-time, so they only work against a single date.
-  const derivedStatus = status === 'Absent' || status === 'On Leave';
+  // Absent / On Leave / Not Arrived are computed at read-time, so they only work against a single date.
+  const derivedStatus = ['Absent', 'On Leave', 'Not Arrived'].includes(status);
   const effectiveStatus = derivedStatus ? undefined : status;
 
   const { data, loading, refetch } = useApi(async () => {

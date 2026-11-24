@@ -5,6 +5,7 @@ export const STATUS_STYLES = {
   'Half Day': 'bg-purple-50 text-purple-700 ring-purple-600/20 dark:bg-purple-500/10 dark:text-purple-400',
   'On Leave': 'bg-sky-50 text-sky-700 ring-sky-600/20 dark:bg-sky-500/10 dark:text-sky-400',
   Leave: 'bg-sky-50 text-sky-700 ring-sky-600/20 dark:bg-sky-500/10 dark:text-sky-400',
+  'Not Arrived': 'bg-orange-50 text-orange-700 ring-orange-600/20 dark:bg-orange-500/10 dark:text-orange-400',
   Weekend: 'bg-slate-100 text-slate-500 dark:text-slate-300 ring-slate-500/20 dark:bg-slate-700/40',
   Active: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400',
   Inactive: 'bg-slate-100 text-slate-600 ring-slate-500/20 dark:bg-slate-700/40 dark:text-slate-300',
@@ -25,7 +26,7 @@ export const STATUS_STYLES = {
 export const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract', 'Intern'];
 export const LEAVE_TYPES = ['Casual Leave', 'Sick Leave', 'Earned Leave', 'Maternity Leave', 'Paternity Leave', 'Unpaid Leave', 'Other'];
 export const LEAVE_STATUSES = ['Pending', 'Approved', 'Rejected'];
-export const ATTENDANCE_STATUSES = ['Present', 'Late', 'Absent', 'Half Day', 'On Leave'];
+export const ATTENDANCE_STATUSES = ['Present', 'Late', 'Absent', 'Half Day', 'On Leave', 'Not Arrived'];
 export const RESIGNATION_REASONS = ['Salary', 'Better Opportunity', 'Personal Reason', 'Relocation', 'Other'];
 export const RESIGNATION_STATUSES = ['Pending', 'Approved', 'Rejected'];
 export const HOLIDAY_TYPES = ['Public', 'Optional', 'Restricted'];

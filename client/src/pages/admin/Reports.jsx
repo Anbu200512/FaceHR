@@ -16,7 +16,7 @@ import { SkeletonGrid } from '../../components/ui/Skeleton';
 
 const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6'];
 
-const STATUS_TONES = { Present: 'emerald', Late: 'amber', 'Half Day': 'violet', Absent: 'rose', 'On Leave': 'sky' };
+const STATUS_TONES = { Present: 'emerald', Late: 'amber', 'Half Day': 'violet', Absent: 'rose', 'On Leave': 'sky', 'Not Arrived': 'orange' };
 
 export default function Reports() {
   const toast = useToast();

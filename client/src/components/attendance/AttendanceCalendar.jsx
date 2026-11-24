@@ -11,8 +11,8 @@ import Badge from '../ui/Badge';
 import { Skeleton } from '../ui/Skeleton';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const TONES = { Present: 'emerald', Late: 'amber', 'Half Day': 'violet', Absent: 'rose', 'On Leave': 'sky', Weekend: 'slate' };
-const STATUS_LIST = ['Present', 'Late', 'Half Day', 'Absent', 'On Leave', 'Weekend'];
+const TONES = { Present: 'emerald', Late: 'amber', 'Half Day': 'violet', Absent: 'rose', 'On Leave': 'sky', 'Not Arrived': 'orange', Weekend: 'slate' };
+const STATUS_LIST = ['Present', 'Late', 'Half Day', 'Absent', 'On Leave', 'Not Arrived', 'Weekend'];
 
 function dot(status) {
   const map = { Present: 'bg-emerald-500', Late: 'bg-amber-500', 'Half Day': 'bg-violet-500', Absent: 'bg-rose-500', 'On Leave': 'bg-sky-500', Leave: 'bg-sky-500' };

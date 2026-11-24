@@ -13,7 +13,7 @@ import TimeInput from '../../components/ui/TimeInput';
 import { SkeletonRow } from '../../components/ui/Skeleton';
 import { ATTENDANCE_STATUSES } from '../../services/static';
 
-const NO_TIMES = ['Absent', 'On Leave'];
+const NO_TIMES = ['Absent', 'On Leave', 'Not Arrived'];
 const pad = (n) => String(n).padStart(2, '0');
 
 function isoToTimeKey(iso) {
@@ -288,6 +288,9 @@ export default function ManualAttendance() {
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
+                {status === 'Not Arrived' && (
+                  <p className="mt-1.5 text-xs text-orange-600 dark:text-orange-400">Use for today when the employee has not arrived yet. Future dates are not allowed.</p>
+                )}
               </div>
 
               {!hideTimes && (

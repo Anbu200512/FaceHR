@@ -175,7 +175,9 @@ const checkIn = asyncHandler(async (req, res) => {
     where: { employeeRefId: employee, date: { gte: today, lt: dayEnd } },
   });
 
-  if (existing) {
+  const resettableManual = existing && !existing.checkInTime && !existing.checkOutTime && !existing.faceVerified
+    && ['Not Arrived', 'Absent', 'On Leave'].includes(existing.status);
+  if (existing && !resettableManual) {
     if (existing.checkInTime && existing.checkOutTime) {
       return res.status(409).json({
         success: false,
@@ -252,26 +254,35 @@ const checkIn = asyncHandler(async (req, res) => {
   const { status, lateMinutes } = await evaluateCheckInStatus(today, now, empDoc);
   const deviceInfo = summarizeDevice(req);
 
-  try {
-    const record = await prisma.attendance.create({
-      data: {
-        employeeRefId: employee,
-        employeeId: empDoc.employeeId,
-        date: today,
-        dayName: getDayName(today, tz),
-        checkInTime: now,
-        status,
-        lateMinutes,
-        ...(checkInPhoto ? { checkInPhoto } : {}),
-        ...(checkInLocation ? { checkInLocation } : {}),
-        ...(checkInDistanceFromCompany !== null ? { checkInDistanceFromCompany } : {}),
-        ...(verification ? { checkInMatchDistance: verification.distance } : {}),
-        faceVerified: requireFace,
-        deviceInfo,
-      },
-    });
+  const checkInData = {
+    employeeRefId: employee,
+    employeeId: empDoc.employeeId,
+    date: today,
+    dayName: getDayName(today, tz),
+    checkInTime: now,
+    checkOutTime: null,
+    status,
+    lateMinutes,
+    workingHoursMinutes: 0,
+    checkInPhoto: checkInPhoto || null,
+    checkInLocation: checkInLocation || null,
+    checkInDistanceFromCompany: checkInDistanceFromCompany !== null ? checkInDistanceFromCompany : null,
+    checkInMatchDistance: verification ? verification.distance : null,
+    checkOutPhoto: null,
+    checkOutLocation: null,
+    checkOutDistanceFromCompany: null,
+    checkOutMatchDistance: null,
+    faceVerified: requireFace,
+    deviceInfo,
+    note: null,
+  };
 
-    return res.status(201).json({
+  try {
+    const record = resettableManual
+      ? await prisma.attendance.update({ where: { id: existing.id }, data: checkInData })
+      : await prisma.attendance.create({ data: checkInData });
+
+    return res.status(resettableManual ? 200 : 201).json({
       success: true,
       message: status === 'Late' ? `Check-in successful. You are late by ${lateMinutes} minutes.` : 'Check-in successful',
       data: record,
@@ -421,7 +432,7 @@ const getRecords = asyncHandler(async (req, res) => {
       where.date = { gte: startOfDay(dayDate, tz), lt: endOfDay(dayDate, tz) };
     }
   }
-  if (status && !['Absent', 'On Leave'].includes(status)) where.status = status;
+  if (status && !['Absent', 'On Leave', 'Not Arrived'].includes(status)) where.status = status;
 
   const employeeWhere = {};
   if (department) employeeWhere.departmentId = department;
@@ -504,13 +515,14 @@ const getToday = asyncHandler(async (req, res) => {
 
   const rows = await computeDayStatus(employees, reqDate, tz);
 
-  const summarize = (list) => list.reduce(
-    (acc, r) => {
-      if (r.status in acc) acc[r.status] += 1;
-      return acc;
-    },
-    { Present: 0, Late: 0, Absent: 0, 'On Leave': 0, 'Half Day': 0 }
-  );
+    const summarize = (list) => list.reduce(
+      (acc, r) => {
+        if (!(r.status in acc)) acc[r.status] = 0;
+        acc[r.status] += 1;
+        return acc;
+      },
+      { Present: 0, Late: 0, Absent: 0, 'On Leave': 0, 'Half Day': 0, 'Not Arrived': 0 }
+    );
 
   const counts = summarize(rows);
 
@@ -525,6 +537,7 @@ const getToday = asyncHandler(async (req, res) => {
         absent: counts.Absent,
         onLeave: counts['On Leave'],
         halfDay: counts['Half Day'],
+        notArrived: counts['Not Arrived'] || 0,
       },
       rows,
     },
@@ -597,6 +610,7 @@ const getMonthly = asyncHandler(async (req, res) => {
     else if (onLeave && !(record && (record.checkInTime || record.checkOutTime))) status = 'On Leave';
     else if (record) status = record.status;
     else if (onLeave) status = 'On Leave';
+    else if (status === 'Absent' && toDateKey(dayDate, tz) === toDateKey(new Date(), tz)) status = 'Not Arrived';
 
     days.push({
       date: key,
@@ -684,17 +698,21 @@ async function performMarkAttendance(employeeId, mode, req) {
     where: { employeeRefId: employeeId, date: { gte: today, lt: dayEnd } },
   });
 
+  const resettableManual = existing && !existing.checkInTime && !existing.checkOutTime && !existing.faceVerified
+    && ['Not Arrived', 'Absent', 'On Leave'].includes(existing.status);
   if (mode === 'check-in') {
-    if (existing && existing.checkInTime && existing.checkOutTime) {
-      return { status: 409, message: 'Today\'s attendance is already completed.', code: 'COMPLETED', data: existing };
-    }
-    if (existing && existing.checkInTime) {
-      return {
-        status: 409,
-        message: `Already checked in today at ${new Date(existing.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Would you like to check out?`,
-        code: 'ALREADY_CHECKED_IN',
-        data: existing,
-      };
+    if (existing && !resettableManual) {
+      if (existing.checkInTime && existing.checkOutTime) {
+        return { status: 409, message: 'Today\'s attendance is already completed.', code: 'COMPLETED', data: existing };
+      }
+      if (existing.checkInTime) {
+        return {
+          status: 409,
+          message: `Already checked in today at ${new Date(existing.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Would you like to check out?`,
+          code: 'ALREADY_CHECKED_IN',
+          data: existing,
+        };
+      }
     }
   } else {
     if (!existing || !existing.checkInTime) {
@@ -757,26 +775,34 @@ async function performMarkAttendance(employeeId, mode, req) {
 
   if (mode === 'check-in') {
     const { status, lateMinutes } = await evaluateCheckInStatus(today, now, empDoc);
+    const checkInData = {
+      employeeRefId: employeeId,
+      employeeId: empDoc.employeeId,
+      date: today,
+      dayName: getDayName(today, tz),
+      checkInTime: now,
+      checkOutTime: null,
+      status,
+      lateMinutes,
+      workingHoursMinutes: 0,
+      checkInPhoto: photo || null,
+      checkInLocation: location || null,
+      checkInDistanceFromCompany: distanceFromCompany !== null ? distanceFromCompany : null,
+      checkInMatchDistance: matchDistance !== null ? matchDistance : null,
+      checkOutPhoto: null,
+      checkOutLocation: null,
+      checkOutDistanceFromCompany: null,
+      checkOutMatchDistance: null,
+      faceVerified,
+      deviceInfo,
+      note: null,
+    };
     try {
-      const record = await prisma.attendance.create({
-        data: {
-          employeeRefId: employeeId,
-          employeeId: empDoc.employeeId,
-          date: today,
-          dayName: getDayName(today, tz),
-          checkInTime: now,
-          status,
-          lateMinutes,
-          ...(photo ? { checkInPhoto: photo } : {}),
-          ...(location ? { checkInLocation: location } : {}),
-          ...(distanceFromCompany !== null ? { checkInDistanceFromCompany: distanceFromCompany } : {}),
-          ...(matchDistance !== null ? { checkInMatchDistance: matchDistance } : {}),
-          faceVerified,
-          deviceInfo,
-        },
-      });
+      const record = resettableManual
+        ? await prisma.attendance.update({ where: { id: existing.id }, data: checkInData })
+        : await prisma.attendance.create({ data: checkInData });
       return {
-        status: 201,
+        status: resettableManual ? 200 : 201,
         message: status === 'Late' ? `Check-in successful. You are late by ${lateMinutes} minutes.` : 'Check-in successful',
         data: record,
       };
@@ -833,7 +859,7 @@ const adminCheckOut = asyncHandler(async (req, res) => {
   return respondAttendance(res, result);
 });
 
-const MANUAL_STATUSES = ['Present', 'Late', 'Half Day', 'Absent', 'On Leave'];
+const MANUAL_STATUSES = ['Present', 'Late', 'Half Day', 'Absent', 'On Leave', 'Not Arrived'];
 
 /**
  * @route  PUT /api/attendance/admin/:employeeId/mark  (admin only)
@@ -861,11 +887,14 @@ const markAttendanceManual = asyncHandler(async (req, res) => {
   if (dayDate > startOfDay(new Date(), tz)) {
     return respondAttendance(res, { status: 400, message: 'Attendance cannot be marked for a future date' });
   }
+  if (status === 'Not Arrived' && toDateKey(dayDate, tz) !== toDateKey(new Date(), tz)) {
+    return respondAttendance(res, { status: 400, message: '"Not Arrived" can only be marked for today' });
+  }
 
   const emp = await prisma.employee.findUnique({ where: { id: employeeId } });
   if (!emp) return respondAttendance(res, { status: 404, message: 'Employee profile not found' });
 
-  const hasTimes = status !== 'Absent' && status !== 'On Leave';
+  const hasTimes = !['Absent', 'On Leave', 'Not Arrived'].includes(status);
   let checkInDate = null;
   let checkOutDate = null;
 
