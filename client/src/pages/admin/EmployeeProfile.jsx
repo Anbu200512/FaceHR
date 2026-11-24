@@ -387,17 +387,18 @@ export default function EmployeeProfile({ faceMode }) {
           key={`admin-${actionMode}-${todayTick}`}
           mode="attendance"
           embedded
+          autoCloseOnSuccess
           onCaptured={submitAttendance}
-          onClose={() => setActionMode(null)}
-          successExtra={(data) => (
-            <div className="mx-auto max-w-sm rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
-              {actionMode === 'checkin' ? (
-                <>Checked in at <span className="font-mono font-bold">{formatTime(data?.checkInTime)}</span> - {data?.status === 'Late' ? 'Marked Late' : 'On time'}.</>
-              ) : (
-                <>Checked out at <span className="font-mono font-bold">{formatTime(data?.checkOutTime)}</span> - Total <span className="font-bold">{formatDuration(data?.workingHoursMinutes)}</span>.</>
-              )}
-            </div>
-          )}
+          onClose={(result) => {
+            setActionMode(null);
+            if (result?.ok) {
+              const d = result.data || {};
+              const msg = actionMode === 'checkin'
+                ? `Checked in ${formatTime(d.checkInTime)}${d.status === 'Late' ? ` • Late${d.lateMinutes ? ` by ${d.lateMinutes} min` : ''}` : ' • On time'}`
+                : `Checked out ${formatTime(d.checkOutTime)} • ${formatDuration(d.workingHoursMinutes)}`;
+              toast.success(msg);
+            }
+          }}
         />
       </Modal>
 

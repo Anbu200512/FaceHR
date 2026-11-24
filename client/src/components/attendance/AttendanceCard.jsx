@@ -33,8 +33,8 @@ function Photo({ src, label }) {
   return (
     <div className="min-w-0 flex-1">
       {broken ? (
-        <div className="flex h-28 w-full items-center justify-center rounded-xl bg-slate-100 text-xs text-slate-400 dark:bg-slate-800 dark:text-slate-400">
-          Photo unavailable
+        <div className="flex h-28 w-full items-center justify-center rounded-xl bg-amber-50 text-xs text-amber-600 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/30">
+          Photo missing on server
         </div>
       ) : (
         <img

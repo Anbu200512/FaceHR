@@ -298,7 +298,7 @@ export default function FaceCapture({ mode, onCaptured, onClose, successExtra, f
             try {
               const result = await onCaptured({ blob, descriptor });
               if (mounted.current) {
-                if (result?.ok && (autoCloseOnSuccess || !isRegister) && onClose) onClose(result);
+                if (result?.ok && autoCloseOnSuccess && onClose) onClose(result);
                 else setSubmitResult(result);
               }
             } catch (err) {

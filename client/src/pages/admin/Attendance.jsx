@@ -68,7 +68,26 @@ export default function Attendance() {
     return data;
   }, [page, pageSize, date, department, effectiveStatus, status, search, derivedStatus]);
 
-  const rows = data?.data || [];
+  const normalizeRow = (r) => {
+    const rec = r.record && typeof r.record === 'object' ? r.record : r;
+    return {
+      ...rec,
+      employee: r.employee || rec.employee,
+      status: r.status || rec.status,
+      date: rec.date || r.date,
+      checkInTime: rec.checkInTime,
+      checkOutTime: rec.checkOutTime,
+      checkInPhoto: rec.checkInPhoto,
+      checkOutPhoto: rec.checkOutPhoto,
+      workingHoursMinutes: rec.workingHoursMinutes,
+      lateMinutes: rec.lateMinutes,
+      faceVerified: rec.faceVerified,
+      employeeId: rec.employeeId || r.employee?.employeeId,
+      _id: rec._id || rec.id || r._id || r.id,
+    };
+  };
+
+  const rows = (data?.data || []).map(normalizeRow);
   const meta = data?.meta || { page: 1, pageSize, totalPages: 1, total: rows.length };
 
   const handleExport = async () => {
@@ -172,7 +191,7 @@ export default function Attendance() {
                       <div className="flex justify-end gap-1.5">
                         {r.checkInPhoto && <PhotoThumb src={resolveAsset(r.checkInPhoto)} label={`Check-in · ${formatTime(r.checkInTime)}`} onView={() => setView({ src: resolveAsset(r.checkInPhoto), label: `Check-in · ${formatTime(r.checkInTime)}` })} />}
                         {r.checkOutPhoto && <PhotoThumb src={resolveAsset(r.checkOutPhoto)} label={`Check-out · ${formatTime(r.checkOutTime)}`} onView={() => setView({ src: resolveAsset(r.checkOutPhoto), label: `Check-out · ${formatTime(r.checkOutTime)}` })} />}
-                        {!r.checkInPhoto && !r.checkOutPhoto && <span className="text-xs text-slate-300 dark:text-slate-300">-</span>}
+                        {!r.checkInPhoto && !r.checkOutPhoto && <span className="text-xs text-slate-400 dark:text-slate-400" title={r.faceVerified ? 'Photo expired or not captured' : 'No photo for this record'}>{r.faceVerified ? 'Expired' : 'No photo'}</span>}
                       </div>
                     </td>
                   </tr>
@@ -240,7 +259,7 @@ export default function Attendance() {
 function PhotoThumb({ src, label, onView }) {
   const [broken, setBroken] = useState(false);
   if (broken) {
-    return <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-[10px] text-slate-400 ring-1 ring-black/5 dark:bg-slate-800 dark:text-slate-400">N/A</span>;
+    return <span title={`${label} (file missing)`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-[10px] font-medium text-amber-600 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/30">N/A</span>;
   }
   return (
     <button onClick={onView} title={label} className="group relative">
@@ -262,7 +281,7 @@ function PhotoThumb({ src, label, onView }) {
 function ModalPhoto({ src, label }) {
   const [broken, setBroken] = useState(false);
   if (broken) {
-    return <div className="flex h-56 items-center justify-center rounded-xl bg-slate-100 text-sm text-slate-400 dark:bg-slate-800 dark:text-slate-400">Photo unavailable</div>;
+    return <div className="flex h-56 items-center justify-center rounded-xl bg-slate-100 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-300">Photo file missing on server. New punches save photos; files auto-delete after 12h.</div>;
   }
   return <img src={src} alt={label} className="w-full rounded-xl object-contain" loading="lazy" decoding="async" onError={() => setBroken(true)} />;
 }

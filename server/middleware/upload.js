@@ -47,7 +47,20 @@ function saveBuffer(buffer, ext) {
   const safeExt = String(ext || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
   const name = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${safeExt}`;
   const fullPath = path.join(uploadsDir, name);
-  fs.writeFileSync(fullPath, buffer);
+  const tmpPath = `${fullPath}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmpPath, buffer);
+  try {
+    fs.renameSync(tmpPath, fullPath);
+  } catch (err) {
+    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    throw err;
+  }
+  if (!fs.existsSync(fullPath)) {
+    const err = new Error('Attendance photo file missing after save');
+    err.code = 'PHOTO_PERSIST_FAILED';
+    err.path = fullPath;
+    throw err;
+  }
   return `/uploads/${name}`;
 }
 
