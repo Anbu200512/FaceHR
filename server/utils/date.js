@@ -174,16 +174,19 @@ function diffDays(a, b, tz) {
   return Math.round((startOfDay(b) - startOfDay(a)) / msDay) + 1;
 }
 
-function isWeekend(date, tz) {
+function isSunday(date, tz) {
   const timeZone = normalizeTimezone(tz, '');
   if (timeZone) {
     const p = getZonedParts(date, timeZone);
     const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
     const day = map[p.weekday] ?? new Date(`${toDateKey(date, timeZone)}T12:00:00Z`).getUTCDay();
-    return day === 0 || day === 6;
+    return day === 0;
   }
-  const day = new Date(date).getDay();
-  return day === 0 || day === 6;
+  return new Date(date).getDay() === 0;
+}
+
+function isWeekend(date, tz) {
+  return isSunday(date, tz);
 }
 
 module.exports = {
@@ -204,5 +207,6 @@ module.exports = {
   formatDuration,
   monthRange,
   diffDays,
+  isSunday,
   isWeekend,
 };
