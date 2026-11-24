@@ -244,6 +244,9 @@ const checkIn = asyncHandler(async (req, res) => {
     });
     return res.status(500).json({ success: false, message: 'Failed to save attendance photo. Please try again.' });
   }
+  if (checkInPhoto) {
+    console.log('[Attendance] Photo saved', { event: 'attendance.photo_saved', mode: 'check-in', employeeId: empDoc.employeeId, photo: checkInPhoto });
+  }
   const checkInDistanceFromCompany = geofence.distance;
 
   const { status, lateMinutes } = await evaluateCheckInStatus(today, now, empDoc);
@@ -375,6 +378,9 @@ const checkOut = asyncHandler(async (req, res) => {
       reason: 'empty_save_result',
     });
     return res.status(500).json({ success: false, message: 'Failed to save attendance photo. Please try again.' });
+  }
+  if (checkOutPhoto) {
+    console.log('[Attendance] Photo saved', { event: 'attendance.photo_saved', mode: 'check-out', employeeId: empDoc.employeeId, photo: checkOutPhoto });
   }
 
   const workingHoursMinutes = Math.max(0, Math.round((now - record.checkInTime) / 60000));
@@ -738,6 +744,9 @@ async function performMarkAttendance(employeeId, mode, req) {
       reason: 'empty_save_result',
     });
     return { status: 500, message: 'Failed to save attendance photo. Please try again.' };
+  }
+  if (photo) {
+    console.log('[Attendance] Photo saved', { event: 'attendance.photo_saved', mode: `admin-${mode}`, employeeId, photo });
   }
 
   const deviceInfo = {

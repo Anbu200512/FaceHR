@@ -191,7 +191,7 @@ export default function Attendance() {
                       <div className="flex justify-end gap-1.5">
                         {r.checkInPhoto && <PhotoThumb src={resolveAsset(r.checkInPhoto)} label={`Check-in · ${formatTime(r.checkInTime)}`} onView={() => setView({ src: resolveAsset(r.checkInPhoto), label: `Check-in · ${formatTime(r.checkInTime)}` })} />}
                         {r.checkOutPhoto && <PhotoThumb src={resolveAsset(r.checkOutPhoto)} label={`Check-out · ${formatTime(r.checkOutTime)}`} onView={() => setView({ src: resolveAsset(r.checkOutPhoto), label: `Check-out · ${formatTime(r.checkOutTime)}` })} />}
-                        {!r.checkInPhoto && !r.checkOutPhoto && <span className="text-xs text-slate-400 dark:text-slate-400" title={r.faceVerified ? 'Photo expired or not captured' : 'No photo for this record'}>{r.faceVerified ? 'Expired' : 'No photo'}</span>}
+                        {!r.checkInPhoto && !r.checkOutPhoto && <span className="text-xs text-slate-400 dark:text-slate-400" title={r.faceVerified ? 'Photo auto-deleted after 12h or missing' : 'No photo for this record'}>{r.faceVerified ? 'Expired' : 'No photo'}</span>}
                       </div>
                     </td>
                   </tr>
